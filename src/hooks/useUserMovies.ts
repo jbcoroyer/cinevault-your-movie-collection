@@ -48,12 +48,26 @@ export const useUserMovies = () => {
       const existing = getUserMovie(tmdbId);
       
       if (existing) {
-        const { error } = await supabase
-          .from('user_movies')
-          .update({ status: 'watchlist', updated_at: new Date().toISOString() })
-          .eq('id', existing.id);
-        
-        if (error) throw error;
+        if (existing.status === 'watchlist') {
+          // Remove from watchlist if already there
+          const { error } = await supabase
+            .from('user_movies')
+            .update({ status: 'none' })
+            .eq('id', existing.id);
+          
+          if (error) throw error;
+          await fetchUserMovies();
+          toast({ title: 'Retiré de la watchlist' });
+        } else {
+          const { error } = await supabase
+            .from('user_movies')
+            .update({ status: 'watchlist' })
+            .eq('id', existing.id);
+          
+          if (error) throw error;
+          await fetchUserMovies();
+          toast({ title: 'Ajouté à la watchlist' });
+        }
       } else {
         const { error } = await supabase.from('user_movies').insert({
           user_id: user.id,
@@ -63,13 +77,12 @@ export const useUserMovies = () => {
         });
         
         if (error) throw error;
+        await fetchUserMovies();
+        toast({ title: 'Ajouté à la watchlist' });
       }
-      
-      await fetchUserMovies();
-      toast({ title: 'Ajouté à la watchlist' });
     } catch (error) {
-      console.error('Error adding to watchlist:', error);
-      toast({ title: 'Erreur', description: 'Impossible d\'ajouter à la watchlist', variant: 'destructive' });
+      console.error('Error toggling watchlist:', error);
+      toast({ title: 'Erreur', variant: 'destructive' });
     }
   };
 
@@ -80,12 +93,26 @@ export const useUserMovies = () => {
       const existing = getUserMovie(tmdbId);
       
       if (existing) {
-        const { error } = await supabase
-          .from('user_movies')
-          .update({ status: 'watched', updated_at: new Date().toISOString() })
-          .eq('id', existing.id);
-        
-        if (error) throw error;
+        if (existing.status === 'watched') {
+          // Remove from watched if already there
+          const { error } = await supabase
+            .from('user_movies')
+            .update({ status: 'none' })
+            .eq('id', existing.id);
+          
+          if (error) throw error;
+          await fetchUserMovies();
+          toast({ title: 'Retiré des films vus' });
+        } else {
+          const { error } = await supabase
+            .from('user_movies')
+            .update({ status: 'watched' })
+            .eq('id', existing.id);
+          
+          if (error) throw error;
+          await fetchUserMovies();
+          toast({ title: 'Marqué comme vu' });
+        }
       } else {
         const { error } = await supabase.from('user_movies').insert({
           user_id: user.id,
@@ -95,13 +122,12 @@ export const useUserMovies = () => {
         });
         
         if (error) throw error;
+        await fetchUserMovies();
+        toast({ title: 'Marqué comme vu' });
       }
-      
-      await fetchUserMovies();
-      toast({ title: 'Marqué comme vu' });
     } catch (error) {
-      console.error('Error marking as watched:', error);
-      toast({ title: 'Erreur', description: 'Impossible de marquer comme vu', variant: 'destructive' });
+      console.error('Error toggling watched:', error);
+      toast({ title: 'Erreur', variant: 'destructive' });
     }
   };
 
@@ -114,23 +140,25 @@ export const useUserMovies = () => {
       if (existing) {
         const { error } = await supabase
           .from('user_movies')
-          .update({ is_favorite: !existing.is_favorite, updated_at: new Date().toISOString() })
+          .update({ is_favorite: !existing.is_favorite })
           .eq('id', existing.id);
         
         if (error) throw error;
+        await fetchUserMovies();
+        toast({ title: existing.is_favorite ? 'Retiré des favoris' : 'Ajouté aux favoris' });
       } else {
+        // Create entry with only favorite flag, no automatic watchlist
         const { error } = await supabase.from('user_movies').insert({
           user_id: user.id,
           tmdb_id: tmdbId,
-          status: 'watchlist',
+          status: 'none',
           is_favorite: true,
         });
         
         if (error) throw error;
+        await fetchUserMovies();
+        toast({ title: 'Ajouté aux favoris' });
       }
-      
-      await fetchUserMovies();
-      toast({ title: existing?.is_favorite ? 'Retiré des favoris' : 'Ajouté aux favoris' });
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast({ title: 'Erreur', variant: 'destructive' });
@@ -146,7 +174,7 @@ export const useUserMovies = () => {
       if (existing) {
         const { error } = await supabase
           .from('user_movies')
-          .update({ rating, updated_at: new Date().toISOString() })
+          .update({ rating })
           .eq('id', existing.id);
         
         if (error) throw error;
@@ -154,7 +182,7 @@ export const useUserMovies = () => {
         const { error } = await supabase.from('user_movies').insert({
           user_id: user.id,
           tmdb_id: tmdbId,
-          status: 'watchlist',
+          status: 'none',
           is_favorite: false,
           rating,
         });
@@ -179,7 +207,7 @@ export const useUserMovies = () => {
       if (existing) {
         const { error } = await supabase
           .from('user_movies')
-          .update({ review, updated_at: new Date().toISOString() })
+          .update({ review })
           .eq('id', existing.id);
         
         if (error) throw error;
@@ -187,7 +215,7 @@ export const useUserMovies = () => {
         const { error } = await supabase.from('user_movies').insert({
           user_id: user.id,
           tmdb_id: tmdbId,
-          status: 'watchlist',
+          status: 'none',
           is_favorite: false,
           review,
         });

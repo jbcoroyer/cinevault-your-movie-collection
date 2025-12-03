@@ -123,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { error } = await supabase
       .from('profiles')
-      .update({ ...data, updated_at: new Date().toISOString() })
+      .update(data)
       .eq('id', user.id);
 
     if (!error) {
