@@ -122,7 +122,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <div className="min-h-screen mx-auto w-full max-w-[70%]">
+            <AppRoutes />
+          </div>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
