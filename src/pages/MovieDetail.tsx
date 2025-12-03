@@ -1,0 +1,306 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  getMovieDetails,
+  getImageUrl,
+  formatRuntime,
+  getYear,
+  MovieDetails,
+} from '@/services/tmdb';
+import { useUserMovies } from '@/hooks/useUserMovies';
+import { StarRating } from '@/components/StarRating';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  ArrowLeft,
+  Plus,
+  Check,
+  Heart,
+  Star,
+  Clock,
+  Calendar,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+export default function MovieDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [movie, setMovie] = useState<MovieDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [review, setReview] = useState('');
+  const [savingReview, setSavingReview] = useState(false);
+
+  const {
+    getUserMovie,
+    addToWatchlist,
+    markAsWatched,
+    toggleFavorite,
+    updateRating,
+    updateReview,
+  } = useUserMovies();
+
+  const userMovie = movie ? getUserMovie(movie.id) : undefined;
+  const isInWatchlist = userMovie?.status === 'watchlist';
+  const isWatched = userMovie?.status === 'watched';
+  const isFavorite = userMovie?.is_favorite ?? false;
+
+  useEffect(() => {
+    const fetchMovie = async () => {
+      if (!id) return;
+      try {
+        const data = await getMovieDetails(Number(id));
+        setMovie(data);
+        
+        const userMovieData = getUserMovie(Number(id));
+        if (userMovieData?.review) {
+          setReview(userMovieData.review);
+        }
+      } catch (error) {
+        console.error('Error fetching movie:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMovie();
+  }, [id]);
+
+  useEffect(() => {
+    if (userMovie?.review && !review) {
+      setReview(userMovie.review);
+    }
+  }, [userMovie]);
+
+  const handleSaveReview = async () => {
+    if (!movie) return;
+    setSavingReview(true);
+    await updateReview(movie.id, review);
+    setSavingReview(false);
+  };
+
+  const director = movie?.credits?.crew.find((c) => c.job === 'Director');
+  const cast = movie?.credits?.cast.slice(0, 5) || [];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="skeleton-shimmer h-64 w-full" />
+        <div className="p-4 space-y-4">
+          <div className="skeleton-shimmer h-8 w-3/4" />
+          <div className="skeleton-shimmer h-4 w-1/2" />
+          <div className="skeleton-shimmer h-24 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!movie) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Film non trouvé</p>
+      </div>
+    );
+  }
+
+  const backdropUrl = getImageUrl(movie.backdrop_path, 'original');
+  const posterUrl = getImageUrl(movie.poster_path, 'w500');
+
+  return (
+    <div className="min-h-screen bg-background pb-8">
+      {/* Backdrop */}
+      <div className="relative h-64 md:h-80 overflow-hidden">
+        {backdropUrl ? (
+          <img
+            src={backdropUrl}
+            alt={movie.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-card" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+        
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute top-4 left-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-foreground hover:bg-background transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 -mt-20 relative">
+        <div className="flex gap-4 mb-6">
+          {/* Poster */}
+          <div className="flex-shrink-0 w-28 md:w-36">
+            {posterUrl ? (
+              <img
+                src={posterUrl}
+                alt={movie.title}
+                className="w-full rounded-card shadow-elevated"
+              />
+            ) : (
+              <div className="w-full aspect-[2/3] bg-card rounded-card" />
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 pt-16 md:pt-20">
+            <h1 className="text-xl md:text-2xl font-bold mb-1">{movie.title}</h1>
+            {movie.original_title !== movie.title && (
+              <p className="text-sm text-muted-foreground mb-2">
+                {movie.original_title}
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mb-3">
+              {movie.release_date && (
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  {getYear(movie.release_date)}
+                </div>
+              )}
+              {movie.runtime > 0 && (
+                <div className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  {formatRuntime(movie.runtime)}
+                </div>
+              )}
+              {movie.vote_average > 0 && (
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 fill-primary text-primary" />
+                  {movie.vote_average.toFixed(1)}
+                </div>
+              )}
+            </div>
+
+            {/* Genres */}
+            <div className="flex flex-wrap gap-2">
+              {movie.genres?.map((genre) => (
+                <span
+                  key={genre.id}
+                  className="px-3 py-1 text-xs bg-card rounded-full text-muted-foreground"
+                >
+                  {genre.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 mb-6">
+          <Button
+            variant={isInWatchlist ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => addToWatchlist(movie.id)}
+            className="flex-1"
+          >
+            {isInWatchlist ? (
+              <Check className="w-4 h-4 mr-2" />
+            ) : (
+              <Plus className="w-4 h-4 mr-2" />
+            )}
+            Watchlist
+          </Button>
+          <Button
+            variant={isWatched ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => markAsWatched(movie.id)}
+            className="flex-1"
+          >
+            {isWatched ? (
+              <Check className="w-4 h-4 mr-2" />
+            ) : (
+              <Clock className="w-4 h-4 mr-2" />
+            )}
+            Vu
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => toggleFavorite(movie.id)}
+            className={cn(isFavorite && 'text-primary border-primary')}
+          >
+            <Heart
+              className={cn('w-4 h-4', isFavorite && 'fill-primary')}
+            />
+          </Button>
+        </div>
+
+        {/* Synopsis */}
+        {movie.overview && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-2">Synopsis</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              {movie.overview}
+            </p>
+          </div>
+        )}
+
+        {/* Director */}
+        {director && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-2">Réalisateur</h2>
+            <p className="text-muted-foreground">{director.name}</p>
+          </div>
+        )}
+
+        {/* Cast */}
+        {cast.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3">Casting</h2>
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+              {cast.map((actor) => (
+                <div key={actor.id} className="flex-shrink-0 w-20 text-center">
+                  {actor.profile_path ? (
+                    <img
+                      src={getImageUrl(actor.profile_path, 'w200') || ''}
+                      alt={actor.name}
+                      className="w-16 h-16 rounded-full object-cover mx-auto mb-2"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-card mx-auto mb-2 flex items-center justify-center text-muted-foreground text-xs">
+                      {actor.name.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <p className="text-xs font-medium truncate">{actor.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {actor.character}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* User Rating */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-3">Votre note</h2>
+          <StarRating
+            value={userMovie?.rating || 0}
+            onChange={(rating) => updateRating(movie.id, rating)}
+          />
+        </div>
+
+        {/* User Review */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-3">Votre avis</h2>
+          <Textarea
+            placeholder="Écrivez votre avis sur ce film..."
+            value={review}
+            onChange={(e) => setReview(e.target.value)}
+            className="mb-3 min-h-[100px]"
+          />
+          <Button
+            onClick={handleSaveReview}
+            disabled={savingReview}
+            size="sm"
+          >
+            {savingReview ? 'Enregistrement...' : 'Enregistrer l\'avis'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

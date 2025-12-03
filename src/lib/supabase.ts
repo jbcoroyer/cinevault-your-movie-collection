@@ -1,0 +1,34 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase credentials not found. Please connect your Supabase project.');
+}
+
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key'
+);
+
+export type Profile = {
+  id: string;
+  username: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserMovie = {
+  id: string;
+  user_id: string;
+  tmdb_id: number;
+  status: 'watchlist' | 'watched';
+  is_favorite: boolean;
+  rating: number | null;
+  review: string | null;
+  created_at: string;
+  updated_at: string;
+};
