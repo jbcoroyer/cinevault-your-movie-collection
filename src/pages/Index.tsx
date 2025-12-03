@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { BottomNav } from '@/components/BottomNav';
 import { MovieSection } from '@/components/MovieSection';
+import { WatchedTimeline } from '@/components/WatchedTimeline';
 import { getTrendingMovies, getPopularMovies, Movie } from '@/services/tmdb';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Index() {
+  const { user } = useAuth();
   const [trending, setTrending] = useState<Movie[]>([]);
   const [popular, setPopular] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +36,9 @@ export default function Index() {
       <Header />
       
       <main className="py-6">
+        {/* Timeline of watched movies (only for logged in users) */}
+        {user && <WatchedTimeline />}
+        
         <MovieSection title="Films tendance" movies={trending} loading={loading} />
         <MovieSection title="Films populaires" movies={popular} loading={loading} />
       </main>

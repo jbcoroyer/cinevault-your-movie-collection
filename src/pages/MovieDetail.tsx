@@ -9,6 +9,7 @@ import {
 } from '@/services/tmdb';
 import { useUserMovies } from '@/hooks/useUserMovies';
 import { StarRating } from '@/components/StarRating';
+import { WatchedDialog } from '@/components/WatchedDialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -29,11 +30,12 @@ export default function MovieDetail() {
   const [loading, setLoading] = useState(true);
   const [review, setReview] = useState('');
   const [savingReview, setSavingReview] = useState(false);
+  const [watchedDialogOpen, setWatchedDialogOpen] = useState(false);
 
   const {
     getUserMovie,
     addToWatchlist,
-    markAsWatched,
+    markAsWatchedWithDetails,
     toggleFavorite,
     updateRating,
     updateReview,
@@ -78,8 +80,26 @@ export default function MovieDetail() {
     setSavingReview(false);
   };
 
-  const director = movie?.credits?.crew.find((c) => c.job === 'Director');
-  const cast = movie?.credits?.cast.slice(0, 5) || [];
+  const handleWatchedClick = () => {
+    if (isWatched) {
+      // If already watched, clicking will remove it
+      markAsWatchedWithDetails(movie!.id, {});
+    } else {
+      // Open dialog for new watch
+      setWatchedDialogOpen(true);
+    }
+  };
+
+  const handleWatchedSave = async (data: { watchedDate?: string; rating?: number; review?: string }) => {
+    if (!movie) return;
+    await markAsWatchedWithDetails(movie.id, data);
+    if (data.review) {
+      setReview(data.review);
+    }
+  };
+
+  const directors = movie?.credits?.crew.filter((c) => c.job === 'Director') || [];
+  const cast = movie?.credits?.cast.slice(0, 6) || [];
 
   if (loading) {
     return (
@@ -166,13 +186,19 @@ export default function MovieDetail() {
                   {formatRuntime(movie.runtime)}
                 </div>
               )}
-              {movie.vote_average > 0 && (
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-primary text-primary" />
-                  {movie.vote_average.toFixed(1)}
-                </div>
-              )}
             </div>
+
+            {/* TMDB Rating */}
+            {movie.vote_average > 0 && (
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-1 bg-card px-2 py-1 rounded-md">
+                  <Star className="w-4 h-4 fill-primary text-primary" />
+                  <span className="font-semibold">{movie.vote_average.toFixed(1)}</span>
+                  <span className="text-xs text-muted-foreground">/10</span>
+                </div>
+                <span className="text-xs text-muted-foreground">TMDB</span>
+              </div>
+            )}
 
             {/* Genres */}
             <div className="flex flex-wrap gap-2">
@@ -206,7 +232,7 @@ export default function MovieDetail() {
           <Button
             variant={isWatched ? 'default' : 'outline'}
             size="sm"
-            onClick={() => markAsWatched(movie.id)}
+            onClick={handleWatchedClick}
             className="flex-1"
           >
             {isWatched ? (
@@ -238,11 +264,35 @@ export default function MovieDetail() {
           </div>
         )}
 
-        {/* Director */}
-        {director && (
+        {/* Directors */}
+        {directors.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">Réalisateur</h2>
-            <p className="text-muted-foreground">{director.name}</p>
+            <h2 className="text-lg font-semibold mb-3">
+              {directors.length > 1 ? 'Réalisateurs' : 'Réalisateur'}
+            </h2>
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+              {directors.map((director) => (
+                <div
+                  key={director.id}
+                  className="flex-shrink-0 w-20 text-center cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/person/${director.id}`)}
+                >
+                  {director.profile_path ? (
+                    <img
+                      src={getImageUrl(director.profile_path, 'w200') || ''}
+                      alt={director.name}
+                      className="w-16 h-16 rounded-full object-cover mx-auto mb-2"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-card mx-auto mb-2 flex items-center justify-center text-muted-foreground text-xs">
+                      {director.name.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <p className="text-xs font-medium truncate">{director.name}</p>
+                  <p className="text-xs text-muted-foreground">Réalisateur</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -252,7 +302,11 @@ export default function MovieDetail() {
             <h2 className="text-lg font-semibold mb-3">Casting</h2>
             <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
               {cast.map((actor) => (
-                <div key={actor.id} className="flex-shrink-0 w-20 text-center">
+                <div
+                  key={actor.id}
+                  className="flex-shrink-0 w-20 text-center cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/person/${actor.id}`)}
+                >
                   {actor.profile_path ? (
                     <img
                       src={getImageUrl(actor.profile_path, 'w200') || ''}
@@ -281,6 +335,9 @@ export default function MovieDetail() {
             value={userMovie?.rating || 0}
             onChange={(rating) => updateRating(movie.id, rating)}
           />
+          {userMovie?.rating && (
+            <p className="text-sm text-muted-foreground mt-1">{userMovie.rating}/10</p>
+          )}
         </div>
 
         {/* User Review */}
@@ -301,6 +358,17 @@ export default function MovieDetail() {
           </Button>
         </div>
       </div>
+
+      {/* Watched Dialog */}
+      <WatchedDialog
+        open={watchedDialogOpen}
+        onOpenChange={setWatchedDialogOpen}
+        movieTitle={movie.title}
+        initialDate={userMovie?.watched_at?.split('T')[0]}
+        initialRating={userMovie?.rating || undefined}
+        initialReview={userMovie?.review || undefined}
+        onSave={handleWatchedSave}
+      />
     </div>
   );
 }
