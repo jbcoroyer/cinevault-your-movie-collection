@@ -94,6 +94,16 @@ export default function Collection() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="watched" className="p-4">
+          {isLoading ? (
+            <MovieGrid loading />
+          ) : watchedMovies.length > 0 ? (
+            <MovieGrid movies={watchedMovies} />
+          ) : (
+            <EmptyState icon={Eye} title="Aucun film vu" description="Marquez vos films comme vus pour les voir ici" />
+          )}
+        </TabsContent>
+
         <TabsContent value="watchlist" className="p-4">
           {isLoading ? (
             <MovieGrid loading />
@@ -105,16 +115,6 @@ export default function Collection() {
               title="Watchlist vide"
               description="Les films que vous voulez voir apparaîtront ici"
             />
-          )}
-        </TabsContent>
-
-        <TabsContent value="watched" className="p-4">
-          {isLoading ? (
-            <MovieGrid loading />
-          ) : watchedMovies.length > 0 ? (
-            <MovieGrid movies={watchedMovies} />
-          ) : (
-            <EmptyState icon={Eye} title="Aucun film vu" description="Marquez vos films comme vus pour les voir ici" />
           )}
         </TabsContent>
 
