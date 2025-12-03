@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, UserMovie } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -7,6 +7,12 @@ export const useUserMovies = () => {
   const { user } = useAuth();
   const [userMovies, setUserMovies] = useState<UserMovie[]>([]);
   const [loading, setLoading] = useState(true);
+  const userMoviesRef = useRef<UserMovie[]>([]);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    userMoviesRef.current = userMovies;
+  }, [userMovies]);
 
   const fetchUserMovies = useCallback(async () => {
     if (!user) {
@@ -34,6 +40,11 @@ export const useUserMovies = () => {
     fetchUserMovies();
   }, [fetchUserMovies]);
 
+  // Use ref to always get latest data
+  const getLatestUserMovie = (tmdbId: number): UserMovie | undefined => {
+    return userMoviesRef.current.find((m) => m.tmdb_id === tmdbId);
+  };
+
   const getUserMovie = useCallback(
     (tmdbId: number): UserMovie | undefined => {
       return userMovies.find((m) => m.tmdb_id === tmdbId);
@@ -45,11 +56,11 @@ export const useUserMovies = () => {
     if (!user) return;
 
     try {
-      const existing = getUserMovie(tmdbId);
+      const existing = getLatestUserMovie(tmdbId);
       
       if (existing) {
         if (existing.status === 'watchlist') {
-          // Remove from watchlist if already there
+          // Remove from watchlist
           const { error } = await supabase
             .from('user_movies')
             .update({ status: 'none' })
@@ -90,11 +101,11 @@ export const useUserMovies = () => {
     if (!user) return;
 
     try {
-      const existing = getUserMovie(tmdbId);
+      const existing = getLatestUserMovie(tmdbId);
       
       if (existing) {
         if (existing.status === 'watched') {
-          // Remove from watched if already there
+          // Remove from watched
           const { error } = await supabase
             .from('user_movies')
             .update({ status: 'none' })
@@ -135,19 +146,19 @@ export const useUserMovies = () => {
     if (!user) return;
 
     try {
-      const existing = getUserMovie(tmdbId);
+      const existing = getLatestUserMovie(tmdbId);
       
       if (existing) {
+        const newValue = !existing.is_favorite;
         const { error } = await supabase
           .from('user_movies')
-          .update({ is_favorite: !existing.is_favorite })
+          .update({ is_favorite: newValue })
           .eq('id', existing.id);
         
         if (error) throw error;
         await fetchUserMovies();
-        toast({ title: existing.is_favorite ? 'Retiré des favoris' : 'Ajouté aux favoris' });
+        toast({ title: newValue ? 'Ajouté aux favoris' : 'Retiré des favoris' });
       } else {
-        // Create entry with only favorite flag, no automatic watchlist
         const { error } = await supabase.from('user_movies').insert({
           user_id: user.id,
           tmdb_id: tmdbId,
