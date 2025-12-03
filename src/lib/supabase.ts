@@ -25,10 +25,10 @@ export type UserMovie = {
   id: string;
   user_id: string;
   tmdb_id: number;
-  status: 'watchlist' | 'watched';
+  status: 'watchlist' | 'watched' | 'none';
   is_favorite: boolean;
   rating: number | null;
   review: string | null;
   created_at: string;
-  updated_at: string;
+  watched_at: string | null;
 };
