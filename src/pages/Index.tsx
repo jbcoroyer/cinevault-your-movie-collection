@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { MovieSection } from "@/components/MovieSection";
-import { getTrendingMovies, Movie } from "@/services/tmdb";
+import { getTrendingMovies, getPopularMovies, Movie } from "@/services/tmdb";
 import { WatchedTimeline } from "@/components/WatchedTimeline";
 import { useAuth } from "@/contexts/AuthContext";
 
