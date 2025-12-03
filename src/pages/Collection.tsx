@@ -66,7 +66,16 @@ export default function Collection() {
         </div>
       </header>
 
-      <Tabs defaultValue="watchlist" className="w-full">
+
+            <Eye className="w-4 h-4" />
+            Vus
+            <span className="text-xs opacity-70">({watchedMovies.length})</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="favorites"
+            className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+          >
+                    <Tabs defaultValue="watchlist" className="w-full">
         <TabsList className="w-full justify-start px-4 pt-4 bg-transparent gap-2">
           <TabsTrigger
             value="watchlist"
@@ -78,14 +87,6 @@ export default function Collection() {
           </TabsTrigger>
           <TabsTrigger
             value="watched"
-            className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-          >
-            <Eye className="w-4 h-4" />
-            Vus
-            <span className="text-xs opacity-70">({watchedMovies.length})</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="favorites"
             className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
           >
             <Heart className="w-4 h-4" />
