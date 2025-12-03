@@ -42,6 +42,32 @@ export interface CrewMember {
   profile_path: string | null;
 }
 
+export interface PersonMovieCredit {
+  id: number;
+  title: string;
+  original_title?: string;
+  poster_path: string | null;
+  release_date?: string;
+  character?: string;
+  job?: string;
+  vote_average?: number;
+}
+
+export interface PersonDetails {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  deathday: string | null;
+  place_of_birth: string | null;
+  profile_path: string | null;
+  known_for_department: string;
+  movie_credits?: {
+    cast: PersonMovieCredit[];
+    crew: PersonMovieCredit[];
+  };
+}
+
 export interface MovieDetails extends Movie {
   genres: Genre[];
   runtime: number;
@@ -87,6 +113,13 @@ export const getPopularMovies = async (): Promise<Movie[]> => {
 export const getMovieDetails = async (movieId: number): Promise<MovieDetails> => {
   const data = await fetchTMDB<MovieDetails>(`/movie/${movieId}`, {
     append_to_response: 'credits',
+  });
+  return data;
+};
+
+export const getPersonDetails = async (personId: number): Promise<PersonDetails> => {
+  const data = await fetchTMDB<PersonDetails>(`/person/${personId}`, {
+    append_to_response: 'movie_credits',
   });
   return data;
 };

@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import MovieDetail from "./pages/MovieDetail";
+import PersonDetail from "./pages/PersonDetail";
 import Search from "./pages/Search";
 import Collection from "./pages/Collection";
 import Profile from "./pages/Profile";
@@ -83,6 +84,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <MovieDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/person/:id"
+        element={
+          <ProtectedRoute>
+            <PersonDetail />
           </ProtectedRoute>
         }
       />

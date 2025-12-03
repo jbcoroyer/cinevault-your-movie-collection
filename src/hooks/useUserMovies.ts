@@ -108,7 +108,7 @@ export const useUserMovies = () => {
           // Remove from watched
           const { error } = await supabase
             .from('user_movies')
-            .update({ status: 'none' })
+            .update({ status: 'none', watched_at: null })
             .eq('id', existing.id);
           
           if (error) throw error;
@@ -117,7 +117,7 @@ export const useUserMovies = () => {
         } else {
           const { error } = await supabase
             .from('user_movies')
-            .update({ status: 'watched' })
+            .update({ status: 'watched', watched_at: new Date().toISOString() })
             .eq('id', existing.id);
           
           if (error) throw error;
@@ -130,6 +130,7 @@ export const useUserMovies = () => {
           tmdb_id: tmdbId,
           status: 'watched',
           is_favorite: false,
+          watched_at: new Date().toISOString(),
         });
         
         if (error) throw error;
@@ -138,6 +139,63 @@ export const useUserMovies = () => {
       }
     } catch (error) {
       console.error('Error toggling watched:', error);
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
+  const markAsWatchedWithDetails = async (
+    tmdbId: number,
+    details: { watchedDate?: string; rating?: number; review?: string }
+  ) => {
+    if (!user) return;
+
+    try {
+      const existing = getLatestUserMovie(tmdbId);
+      
+      if (existing) {
+        if (existing.status === 'watched' && !details.watchedDate && !details.rating && !details.review) {
+          // Remove from watched if no details provided (toggle off)
+          const { error } = await supabase
+            .from('user_movies')
+            .update({ status: 'none', watched_at: null })
+            .eq('id', existing.id);
+          
+          if (error) throw error;
+          await fetchUserMovies();
+          toast({ title: 'Retiré des films vus' });
+        } else {
+          // Update with details
+          const { error } = await supabase
+            .from('user_movies')
+            .update({
+              status: 'watched',
+              watched_at: details.watchedDate ? new Date(details.watchedDate).toISOString() : new Date().toISOString(),
+              rating: details.rating || existing.rating,
+              review: details.review || existing.review,
+            })
+            .eq('id', existing.id);
+          
+          if (error) throw error;
+          await fetchUserMovies();
+          toast({ title: 'Marqué comme vu' });
+        }
+      } else {
+        const { error } = await supabase.from('user_movies').insert({
+          user_id: user.id,
+          tmdb_id: tmdbId,
+          status: 'watched',
+          is_favorite: false,
+          watched_at: details.watchedDate ? new Date(details.watchedDate).toISOString() : new Date().toISOString(),
+          rating: details.rating,
+          review: details.review,
+        });
+        
+        if (error) throw error;
+        await fetchUserMovies();
+        toast({ title: 'Marqué comme vu' });
+      }
+    } catch (error) {
+      console.error('Error marking as watched:', error);
       toast({ title: 'Erreur', variant: 'destructive' });
     }
   };
@@ -270,6 +328,7 @@ export const useUserMovies = () => {
     getUserMovie,
     addToWatchlist,
     markAsWatched,
+    markAsWatchedWithDetails,
     toggleFavorite,
     updateRating,
     updateReview,
