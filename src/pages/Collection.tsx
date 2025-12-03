@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BottomNav } from '@/components/BottomNav';
-import { MovieCard, MovieCardSkeleton } from '@/components/MovieCard';
-import { useUserMovies } from '@/hooks/useUserMovies';
-import { getMovieDetails, Movie } from '@/services/tmdb';
-import { Clock, Eye, Heart } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BottomNav } from "@/components/BottomNav";
+import { MovieCard, MovieCardSkeleton } from "@/components/MovieCard";
+import { useUserMovies } from "@/hooks/useUserMovies";
+import { getMovieDetails, Movie } from "@/services/tmdb";
+import { Clock, Eye, Heart } from "lucide-react";
 
 export default function Collection() {
   const { userMovies, loading } = useUserMovies();
@@ -29,7 +29,7 @@ export default function Collection() {
           } catch (error) {
             console.error(`Error fetching movie ${um.tmdb_id}:`, error);
           }
-        })
+        }),
       );
 
       setMovies(movieDetails);
@@ -41,13 +41,13 @@ export default function Collection() {
     }
   }, [userMovies, loading]);
 
-  const watchlistMovies = userMovies
-    .filter((um) => um.status === 'watchlist')
+  const watchedMovies = userMovies
+    .filter((um) => um.status === "watched")
     .map((um) => movies[um.tmdb_id])
     .filter(Boolean);
 
-  const watchedMovies = userMovies
-    .filter((um) => um.status === 'watched')
+  const watchlistMovies = userMovies
+    .filter((um) => um.status === "watchlist")
     .map((um) => movies[um.tmdb_id])
     .filter(Boolean);
 
@@ -114,11 +114,7 @@ export default function Collection() {
           ) : watchedMovies.length > 0 ? (
             <MovieGrid movies={watchedMovies} />
           ) : (
-            <EmptyState
-              icon={Eye}
-              title="Aucun film vu"
-              description="Marquez vos films comme vus pour les voir ici"
-            />
+            <EmptyState icon={Eye} title="Aucun film vu" description="Marquez vos films comme vus pour les voir ici" />
           )}
         </TabsContent>
 
@@ -128,11 +124,7 @@ export default function Collection() {
           ) : favoriteMovies.length > 0 ? (
             <MovieGrid movies={favoriteMovies} />
           ) : (
-            <EmptyState
-              icon={Heart}
-              title="Pas de favoris"
-              description="Vos films préférés apparaîtront ici"
-            />
+            <EmptyState icon={Heart} title="Pas de favoris" description="Vos films préférés apparaîtront ici" />
           )}
         </TabsContent>
       </Tabs>
@@ -142,13 +134,7 @@ export default function Collection() {
   );
 }
 
-function MovieGrid({
-  movies = [],
-  loading = false,
-}: {
-  movies?: Movie[];
-  loading?: boolean;
-}) {
+function MovieGrid({ movies = [], loading = false }: { movies?: Movie[]; loading?: boolean }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
       {loading
