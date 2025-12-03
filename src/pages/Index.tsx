@@ -33,11 +33,9 @@ export default function Index() {
       <Header />
 
       <main className="py-6">
+        <MovieSection title="Films populaires" movies={popular} loading={loading} />
         {/* Timeline of watched movies (only for logged in users) */}
         {user && <WatchedTimeline />}
-
-        <MovieSection title="Films tendance" movies={trending} loading={loading} />
-        <MovieSection title="Films populaires" movies={popular} loading={loading} />
       </main>
 
       <BottomNav />
