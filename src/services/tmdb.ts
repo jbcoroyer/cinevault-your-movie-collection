@@ -4,51 +4,6 @@ const API_KEY = "c0cfa8d140fb26ff2a4b624502be9a95";
 const BASE_URL = "https://api.themoviedb.org/3";
 export const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
-// ... Imports existants ...
-import { supabase } from "@/lib/supabase"; // Assure-toi d'avoir cet import
-
-// Ajoute cette fonction à la fin du fichier ou avec les autres exports
-export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
-  if (!prompt.trim()) return [];
-
-  try {
-    // 1. Appel à la Edge Function
-    const { data: aiData, error: aiError } = await supabase.functions.invoke("analyze-movie-prompt", {
-      body: { prompt },
-    });
-
-    if (aiError) throw aiError;
-    const filters = aiData.filters;
-    console.log("Filtres IA reçus:", filters);
-
-    // 2. Appel à TMDB Discover avec les filtres intelligents
-    // On construit les paramètres dynamiquement
-    const params: Record<string, string> = {
-      include_adult: "false",
-      include_video: "false",
-      page: "1",
-      // Paramètres de base
-      ...(filters.sort_by && { sort_by: filters.sort_by }),
-      ...(filters.with_genres && { with_genres: filters.with_genres }),
-      ...(filters.without_genres && { without_genres: filters.without_genres }), // NOUVEAU
-      ...(filters.with_people && { with_people: filters.with_people }),
-      ...(filters.with_original_language && { with_original_language: filters.with_original_language }), // NOUVEAU
-
-      // Filtres numériques (dates, notes)
-      ...(filters["primary_release_date.gte"] && { "primary_release_date.gte": filters["primary_release_date.gte"] }),
-      ...(filters["primary_release_date.lte"] && { "primary_release_date.lte": filters["primary_release_date.lte"] }),
-      ...(filters["vote_count.gte"] && { "vote_count.gte": filters["vote_count.gte"] }),
-      ...(filters["vote_average.gte"] && { "vote_average.gte": filters["vote_average.gte"] }),
-    };
-
-    const data = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", params);
-    return data.results;
-  } catch (error) {
-    console.error("Erreur recherche IA:", error);
-    return [];
-  }
-};
-
 export const getImageUrl = (path: string | null, size: "w200" | "w300" | "w500" | "original" = "w500") => {
   if (!path) return null;
   return `${IMAGE_BASE_URL}/${size}${path}`;
@@ -210,6 +165,7 @@ export const getWatchProviders = async (movieId: number, country: string = "FR")
 
 export interface AIFilters {
   with_genres?: string;
+  without_genres?: string;
   "primary_release_date.gte"?: string;
   "primary_release_date.lte"?: string;
   with_people?: string;
@@ -240,10 +196,17 @@ export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
   console.log("AI Filters:", filters);
 
   // Build params for discover endpoint
-  const params: Record<string, string> = {};
+  const params: Record<string, string> = {
+    include_adult: "false",
+    include_video: "false",
+    page: "1",
+  };
 
   if (filters.with_genres) {
     params.with_genres = filters.with_genres;
+  }
+  if (filters.without_genres) {
+    params.without_genres = filters.without_genres;
   }
   if (filters["primary_release_date.gte"]) {
     params["primary_release_date.gte"] = filters["primary_release_date.gte"];
