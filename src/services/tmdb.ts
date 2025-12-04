@@ -41,7 +41,28 @@ export interface CrewMember {
   id: number;
   name: string;
   job: string;
+  department: string;
   profile_path: string | null;
+}
+
+export interface Video {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  type: string;
+  official: boolean;
+}
+
+export interface ReleaseDate {
+  certification: string;
+  release_date: string;
+  type: number;
+}
+
+export interface ReleaseDatesResult {
+  iso_3166_1: string;
+  release_dates: ReleaseDate[];
 }
 
 export interface PersonMovieCredit {
@@ -76,6 +97,15 @@ export interface MovieDetails extends Movie {
   credits?: {
     cast: CastMember[];
     crew: CrewMember[];
+  };
+  videos?: {
+    results: Video[];
+  };
+  recommendations?: {
+    results: Movie[];
+  };
+  release_dates?: {
+    results: ReleaseDatesResult[];
   };
 }
 
@@ -128,9 +158,30 @@ export const getPopularMovies = async (): Promise<Movie[]> => {
 
 export const getMovieDetails = async (movieId: number): Promise<MovieDetails> => {
   const data = await fetchTMDB<MovieDetails>(`/movie/${movieId}`, {
-    append_to_response: "credits",
+    append_to_response: "credits,videos,recommendations,release_dates,watch/providers",
   });
   return data;
+};
+
+// Extract director from credits
+export const getDirector = (movie: MovieDetails): CrewMember | undefined => {
+  return movie.credits?.crew.find((c) => c.job === "Director");
+};
+
+// Extract certification (age rating) for a specific country
+export const getCertification = (movie: MovieDetails, country: string = "FR"): string | null => {
+  const countryRelease = movie.release_dates?.results.find((r) => r.iso_3166_1 === country);
+  if (!countryRelease) return null;
+  
+  const certification = countryRelease.release_dates.find((rd) => rd.certification)?.certification;
+  return certification || null;
+};
+
+// Get trailers from videos
+export const getTrailers = (movie: MovieDetails): Video[] => {
+  return movie.videos?.results.filter(
+    (v) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser")
+  ) || [];
 };
 
 export const getPersonDetails = async (personId: number): Promise<PersonDetails> => {

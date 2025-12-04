@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserMovies } from '@/hooks/useUserMovies';
 import { useUserTopMovies } from '@/hooks/useUserTopMovies';
+import { useFollows } from '@/hooks/useFollows';
+import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { BottomNav } from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
@@ -10,21 +12,65 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { LogOut, Edit2, Check, X, Film, Clock, Heart } from 'lucide-react';
+import { LogOut, Edit2, Check, X, Film, Clock, Heart, UserPlus, UserMinus, Users } from 'lucide-react';
 import { Top5Section } from '@/components/Top5Section';
 import { WatchedTimeline } from '@/components/WatchedTimeline';
 
+interface ProfileData {
+  id: string;
+  username: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+}
+
 export default function Profile() {
-  const { user, profile, signOut, updateProfile } = useAuth();
-  const { userMovies } = useUserMovies();
-  const { topMovies, setTopMovie } = useUserTopMovies();
+  const { userId } = useParams<{ userId?: string }>();
+  const { user, profile: myProfile, signOut, updateProfile } = useAuth();
   const navigate = useNavigate();
   
+  const isOwnProfile = !userId || userId === user?.id;
+  const targetUserId = userId || user?.id;
+  
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(!isOwnProfile);
+  
+  const { userMovies } = useUserMovies();
+  const { topMovies, setTopMovie } = useUserTopMovies(isOwnProfile ? undefined : targetUserId);
+  const { isFollowing, stats, loading: followLoading, toggleFollow } = useFollows(targetUserId);
+  
   const [editing, setEditing] = useState(false);
-  const [username, setUsername] = useState(profile?.username || '');
-  const [bio, setBio] = useState(profile?.bio || '');
+  const [username, setUsername] = useState(myProfile?.username || '');
+  const [bio, setBio] = useState(myProfile?.bio || '');
   const [saving, setSaving] = useState(false);
 
+  // Fetch other user's profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (isOwnProfile || !targetUserId) return;
+      
+      setLoadingProfile(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', targetUserId)
+          .single();
+        
+        if (error) throw error;
+        setProfileData(data);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        toast({ title: 'Erreur', description: 'Profil introuvable', variant: 'destructive' });
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+    
+    fetchProfile();
+  }, [targetUserId, isOwnProfile]);
+
+  const currentProfile = isOwnProfile ? myProfile : profileData;
+  
   const watchedCount = userMovies.filter((m) => m.status === 'watched').length;
   const watchlistCount = userMovies.filter((m) => m.status === 'watchlist').length;
   const favoritesCount = userMovies.filter((m) => m.is_favorite).length;
@@ -48,24 +94,40 @@ export default function Profile() {
   };
 
   const handleCancel = () => {
-    setUsername(profile?.username || '');
-    setBio(profile?.bio || '');
+    setUsername(myProfile?.username || '');
+    setBio(myProfile?.bio || '');
     setEditing(false);
   };
 
   const getInitials = () => {
-    if (profile?.username) {
-      return profile.username.slice(0, 2).toUpperCase();
+    if (currentProfile?.username) {
+      return currentProfile.username.slice(0, 2).toUpperCase();
     }
-    if (user?.email) {
+    if (isOwnProfile && user?.email) {
       return user.email.slice(0, 2).toUpperCase();
     }
     return 'U';
   };
 
   const getDisplayName = () => {
-    return profile?.username || user?.email?.split('@')[0] || 'Utilisateur';
+    return currentProfile?.username || (isOwnProfile ? user?.email?.split('@')[0] : 'Utilisateur');
   };
+
+  if (loadingProfile) {
+    return (
+      <div className="min-h-screen bg-background pb-20 md:pb-8">
+        <Header />
+        <main className="container mx-auto p-4">
+          <div className="flex flex-col items-center">
+            <div className="w-24 h-24 rounded-full bg-muted animate-pulse mb-4" />
+            <div className="h-6 w-32 bg-muted animate-pulse rounded mb-2" />
+            <div className="h-4 w-48 bg-muted animate-pulse rounded" />
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
@@ -82,7 +144,7 @@ export default function Profile() {
                 {getInitials()}
               </div>
               
-              {editing ? (
+              {isOwnProfile && editing ? (
                 <div className="w-full max-w-sm space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="username">Pseudo</Label>
@@ -107,19 +169,11 @@ export default function Profile() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="flex-1"
-                    >
+                    <Button onClick={handleSave} disabled={saving} className="flex-1">
                       <Check className="w-4 h-4 mr-2" />
                       {saving ? 'Enregistrement...' : 'Enregistrer'}
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={handleCancel}
-                      disabled={saving}
-                    >
+                    <Button variant="outline" onClick={handleCancel} disabled={saving}>
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
@@ -128,58 +182,92 @@ export default function Profile() {
                 <>
                   <div className="flex items-center gap-2">
                     <h2 className="text-xl md:text-2xl font-semibold">{getDisplayName()}</h2>
-                    <button
-                      onClick={() => setEditing(true)}
-                      className="p-2 text-muted-foreground hover:text-foreground"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
+                    {isOwnProfile && (
+                      <button
+                        onClick={() => setEditing(true)}
+                        className="p-2 text-muted-foreground hover:text-foreground"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
-                  {profile?.bio && (
+                  {currentProfile?.bio && (
                     <p className="text-muted-foreground text-center mt-2 max-w-xs md:text-base">
-                      {profile.bio}
+                      {currentProfile.bio}
                     </p>
+                  )}
+                  
+                  {/* Follow Stats */}
+                  <div className="flex gap-6 mt-4 text-sm">
+                    <div className="text-center">
+                      <p className="font-semibold">{stats.followers}</p>
+                      <p className="text-muted-foreground">Abonnés</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold">{stats.following}</p>
+                      <p className="text-muted-foreground">Abonnements</p>
+                    </div>
+                  </div>
+
+                  {/* Follow Button */}
+                  {!isOwnProfile && user && (
+                    <Button
+                      onClick={toggleFollow}
+                      disabled={followLoading}
+                      variant={isFollowing ? "outline" : "default"}
+                      className="mt-4"
+                    >
+                      {isFollowing ? (
+                        <>
+                          <UserMinus className="w-4 h-4 mr-2" />
+                          Ne plus suivre
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Suivre
+                        </>
+                      )}
+                    </Button>
                   )}
                 </>
               )}
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <StatCard icon={Film} value={watchedCount} label="Films vus" />
-              <StatCard icon={Clock} value={watchlistCount} label="Watchlist" />
-              <StatCard icon={Heart} value={favoritesCount} label="Favoris" />
-            </div>
+            {/* Stats - Only show for own profile */}
+            {isOwnProfile && (
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                <StatCard icon={Film} value={watchedCount} label="Films vus" />
+                <StatCard icon={Clock} value={watchlistCount} label="Watchlist" />
+                <StatCard icon={Heart} value={favoritesCount} label="Favoris" />
+              </div>
+            )}
 
-            {/* Email info */}
-            <div className="bg-card rounded-card p-4 mb-6">
-              <p className="text-sm text-muted-foreground mb-1">Email</p>
-              <p className="font-medium md:text-base">{user?.email}</p>
-            </div>
-
-            {/* Sign out */}
-            <Button
-              variant="outline"
-              onClick={handleSignOut}
-              className="w-full text-destructive border-destructive/20 hover:bg-destructive/10"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Se déconnecter
-            </Button>
+            {/* Sign out - Only show for own profile */}
+            {isOwnProfile && (
+              <Button
+                variant="outline"
+                onClick={handleSignOut}
+                className="w-full text-destructive border-destructive/20 hover:bg-destructive/10"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Se déconnecter
+              </Button>
+            )}
           </div>
 
           {/* Right column - Content */}
           <div className="flex-1">
             {/* Top 5 Films */}
-            <Top5Section topMovies={topMovies} onSetMovie={setTopMovie} />
+            <Top5Section topMovies={topMovies} onSetMovie={setTopMovie} editable={isOwnProfile} />
 
-            {/* Historique des films vus */}
-            <div className="mb-8">
-              <h3 className="text-lg md:text-xl font-semibold mb-4">Historique des films vus</h3>
-              <div className="max-h-[500px] overflow-y-auto rounded-card bg-card/50 p-2">
+            {/* Historique des films vus - Only show for own profile */}
+            {isOwnProfile && (
+              <div className="mb-8">
+                <h3 className="text-lg md:text-xl font-semibold mb-4">Historique des films vus</h3>
                 <WatchedTimeline />
               </div>
-            </div>
+            )}
           </div>
         </div>
       </main>

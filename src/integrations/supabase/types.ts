@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json | null
+          movie_poster_path: string | null
+          movie_title: string
+          tmdb_id: number
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          movie_poster_path?: string | null
+          movie_title: string
+          tmdb_id: number
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          movie_poster_path?: string | null
+          movie_title?: string
+          tmdb_id?: number
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       list_items: {
         Row: {
           added_at: string
@@ -88,6 +142,7 @@ export type Database = {
           bio: string | null
           created_at: string | null
           id: string
+          streaming_services: string[] | null
           username: string | null
         }
         Insert: {
@@ -95,6 +150,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           id: string
+          streaming_services?: string[] | null
           username?: string | null
         }
         Update: {
@@ -102,6 +158,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           id?: string
+          streaming_services?: string[] | null
           username?: string | null
         }
         Relationships: []
