@@ -15,7 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { LogOut, Edit2, Check, X, Film, Clock, Heart, UserPlus, UserMinus, Users } from "lucide-react";
 import { Top5Section } from "@/components/Top5Section";
 import { WatchedTimeline } from "@/components/WatchedTimeline";
-import { useParams } from "react-router-dom"; // Pour récupérer l'ID dans l'URL
+
 import { FollowButton } from "@/components/FollowButton";
 interface ProfileData {
   id: string;
