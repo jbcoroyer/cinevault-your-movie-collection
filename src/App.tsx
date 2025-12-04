@@ -54,6 +54,30 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+<Routes>
+  {/* ... autres routes ... */}
+
+  {/* Route pour mon profil */}
+  <Route
+    path="/profile"
+    element={
+      <ProtectedRoute>
+        <Profile />
+      </ProtectedRoute>
+    }
+  />
+
+  {/* NOUVELLE ROUTE pour le profil des autres */}
+  <Route
+    path="/profile/:id"
+    element={
+      <ProtectedRoute>
+        <Profile />
+      </ProtectedRoute>
+    }
+  />
+</Routes>;
+
 const AppRoutes = () => {
   return (
     <Routes>
