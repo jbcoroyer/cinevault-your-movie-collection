@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPersonDetails, getImageUrl, PersonDetails, getYear } from '@/services/tmdb';
+import { getPersonDetails, getImageUrl, PersonDetails } from '@/services/tmdb';
 import { MovieCard, MovieCardSkeleton } from '@/components/MovieCard';
+import { Header } from '@/components/Header';
+import { BottomNav } from '@/components/BottomNav';
 import { ArrowLeft, Calendar, MapPin } from 'lucide-react';
 
 export default function PersonDetail() {
@@ -28,20 +30,22 @@ export default function PersonDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="skeleton-shimmer h-10 w-10 rounded-full mb-4" />
-        <div className="flex gap-4 mb-6">
-          <div className="skeleton-shimmer w-32 h-48 rounded-card" />
-          <div className="flex-1 space-y-3">
-            <div className="skeleton-shimmer h-8 w-3/4" />
-            <div className="skeleton-shimmer h-4 w-1/2" />
-            <div className="skeleton-shimmer h-20 w-full" />
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto p-4">
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="skeleton-shimmer w-32 md:w-64 h-48 md:h-96 rounded-card" />
+            <div className="flex-1 space-y-3">
+              <div className="skeleton-shimmer h-8 w-3/4" />
+              <div className="skeleton-shimmer h-4 w-1/2" />
+              <div className="skeleton-shimmer h-32 w-full" />
+            </div>
           </div>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <MovieCardSkeleton key={i} size="sm" />
-          ))}
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mt-8">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <MovieCardSkeleton key={i} size="sm" />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -73,83 +77,74 @@ export default function PersonDetail() {
     }) || [];
 
   return (
-    <div className="min-h-screen bg-background pb-8">
-      {/* Header */}
-      <div className="p-4">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
+      <Header />
+      
+      <div className="container mx-auto p-4">
+        {/* Back button - mobile only */}
         <button
           onClick={() => navigate(-1)}
-          className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-foreground hover:bg-card/80 transition-colors mb-4"
+          className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-foreground hover:bg-card/80 transition-colors mb-4 md:hidden"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        <div className="flex gap-4 mb-6">
-          {/* Photo */}
-          <div className="flex-shrink-0 w-32">
-            {profileUrl ? (
-              <img
-                src={profileUrl}
-                alt={person.name}
-                className="w-full rounded-card shadow-elevated"
-              />
-            ) : (
-              <div className="w-full aspect-[2/3] bg-card rounded-card flex items-center justify-center text-muted-foreground text-2xl">
-                {person.name.slice(0, 2).toUpperCase()}
-              </div>
-            )}
-          </div>
-
-          {/* Info */}
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold mb-2">{person.name}</h1>
-            
-            {person.known_for_department && (
-              <p className="text-sm text-primary mb-2">{person.known_for_department}</p>
-            )}
-
-            <div className="space-y-1 text-sm text-muted-foreground">
-              {person.birthday && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>
-                    {new Date(person.birthday).toLocaleDateString('fr-FR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
-                    {person.deathday && ` - ${new Date(person.deathday).toLocaleDateString('fr-FR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}`}
-                  </span>
-                </div>
-              )}
-              {person.place_of_birth && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  <span className="line-clamp-2">{person.place_of_birth}</span>
+        {/* Two column layout on desktop */}
+        <div className="flex flex-col md:flex-row gap-6 lg:gap-10 mb-8">
+          {/* Left column - Photo (sticky on desktop) */}
+          <div className="flex gap-4 md:flex-col md:w-64 lg:w-72 md:sticky md:top-20 md:self-start">
+            <div className="flex-shrink-0 w-32 md:w-full">
+              {profileUrl ? (
+                <img
+                  src={profileUrl}
+                  alt={person.name}
+                  className="w-full rounded-card shadow-elevated"
+                />
+              ) : (
+                <div className="w-full aspect-[2/3] bg-card rounded-card flex items-center justify-center text-muted-foreground text-2xl">
+                  {person.name.slice(0, 2).toUpperCase()}
                 </div>
               )}
             </div>
+
+            {/* Mobile: Info next to photo */}
+            <div className="flex-1 md:hidden">
+              <h1 className="text-2xl font-bold mb-2">{person.name}</h1>
+              {person.known_for_department && (
+                <p className="text-sm text-primary mb-2">{person.known_for_department}</p>
+              )}
+              <PersonMeta person={person} />
+            </div>
+          </div>
+
+          {/* Right column - Main content */}
+          <div className="flex-1">
+            {/* Desktop: Name & Info */}
+            <div className="hidden md:block mb-6">
+              <h1 className="text-3xl lg:text-4xl font-bold mb-2">{person.name}</h1>
+              {person.known_for_department && (
+                <p className="text-lg text-primary mb-4">{person.known_for_department}</p>
+              )}
+              <PersonMeta person={person} />
+            </div>
+
+            {/* Biography */}
+            {person.biography && (
+              <div className="mb-6">
+                <h2 className="text-lg md:text-xl font-semibold mb-2">Biographie</h2>
+                <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
+                  {person.biography}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Biography */}
-        {person.biography && (
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">Biographie</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed line-clamp-6">
-              {person.biography}
-            </p>
-          </div>
-        )}
-
         {/* Directed Movies */}
         {directedMovies.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-3">En tant que réalisateur</h2>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+          <div className="mb-8">
+            <h2 className="text-lg md:text-xl font-semibold mb-4">En tant que réalisateur</h2>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
               {directedMovies.map((movie) => (
                 <MovieCard
                   key={`dir-${movie.id}`}
@@ -174,8 +169,8 @@ export default function PersonDetail() {
         {/* Filmography */}
         {movies.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold mb-3">Filmographie ({movies.length} films)</h2>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+            <h2 className="text-lg md:text-xl font-semibold mb-4">Filmographie ({movies.length} films)</h2>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
               {movies.map((movie) => (
                 <MovieCard
                   key={`cast-${movie.id}-${movie.character}`}
@@ -197,6 +192,38 @@ export default function PersonDetail() {
           </div>
         )}
       </div>
+
+      <BottomNav />
+    </div>
+  );
+}
+
+function PersonMeta({ person }: { person: PersonDetails }) {
+  return (
+    <div className="space-y-1 text-sm text-muted-foreground md:text-base">
+      {person.birthday && (
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4" />
+          <span>
+            {new Date(person.birthday).toLocaleDateString('fr-FR', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}
+            {person.deathday && ` - ${new Date(person.deathday).toLocaleDateString('fr-FR', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}`}
+          </span>
+        </div>
+      )}
+      {person.place_of_birth && (
+        <div className="flex items-center gap-2">
+          <MapPin className="w-4 h-4" />
+          <span className="line-clamp-2">{person.place_of_birth}</span>
+        </div>
+      )}
     </div>
   );
 }

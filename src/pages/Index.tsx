@@ -29,10 +29,10 @@ export default function Index() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Header />
 
-      <main className="py-6">
+      <main className="py-6 container mx-auto">
         <MovieSection title="Films populaires" movies={popular} loading={loading} />
         {/* Timeline of watched movies (only for logged in users) */}
         {user && <WatchedTimeline />}

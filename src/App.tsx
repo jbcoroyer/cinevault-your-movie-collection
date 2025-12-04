@@ -131,7 +131,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <div className="min-h-screen mx-auto w-full max-w-[70%]">
+          <div className="min-h-screen w-full bg-background">
             <AppRoutes />
           </div>
         </AuthProvider>
