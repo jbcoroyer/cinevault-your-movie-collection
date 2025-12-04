@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { MovieSection } from "@/components/MovieSection";
 import { useUserMovies } from "@/hooks/useUserMovies";
-import { getTrendingMovies, getPopularMovies, getImageUrl, Movie } from "@/services/tmdb";
+import { getTrendingMovies, getPopularMovies, getRecommendations, getMovieDetails, getImageUrl, Movie } from "@/services/tmdb";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActivities, Activity } from "@/hooks/useActivities";
 import { Star, Eye, Heart, ListPlus, MessageSquare } from "lucide-react";
@@ -12,7 +12,10 @@ import { Star, Eye, Heart, ListPlus, MessageSquare } from "lucide-react";
 export default function Index() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [trending, setTrending] = useState<Movie[]>([]);
+  const { userMovies, loading: userMoviesLoading } = useUserMovies();
+  
+  const [recommendations, setRecommendations] = useState<Movie[]>([]);
+  const [recommendationTitle, setRecommendationTitle] = useState("Conseillé pour toi");
   const [popular, setPopular] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -23,9 +26,40 @@ export default function Index() {
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        const [trendingData, popularData] = await Promise.all([getTrendingMovies(), getPopularMovies()]);
-        setTrending(trendingData);
+        const popularData = await getPopularMovies();
         setPopular(popularData);
+
+        if (user && !userMoviesLoading && userMovies.length > 0) {
+          const lastFavorite = userMovies
+            .filter(m => m.is_favorite)
+            .sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())[0];
+
+          const lastWatched = userMovies
+            .filter(m => m.status === 'watched')
+            .sort((a, b) => new Date(b.watched_at || b.created_at || '').getTime() - new Date(a.watched_at || a.created_at || '').getTime())[0];
+
+          const sourceMovie = lastFavorite || lastWatched;
+
+          if (sourceMovie) {
+            const recs = await getRecommendations(sourceMovie.tmdb_id);
+            const sourceDetails = await getMovieDetails(sourceMovie.tmdb_id);
+            
+            if (recs.length > 0) {
+              setRecommendations(recs);
+              setRecommendationTitle(`Parce que vous avez aimé "${sourceDetails.title}"`);
+            } else {
+              const trendingData = await getTrendingMovies();
+              setRecommendations(trendingData);
+              setRecommendationTitle("Conseillé pour toi");
+            }
+          } else {
+            const trendingData = await getTrendingMovies();
+            setRecommendations(trendingData);
+          }
+        } else {
+          const trendingData = await getTrendingMovies();
+          setRecommendations(trendingData);
+        }
       } catch (error) {
         console.error("Error fetching movies:", error);
       } finally {
@@ -34,7 +68,7 @@ export default function Index() {
     };
 
     fetchMovies();
-  }, []);
+  }, [user, userMovies, userMoviesLoading]);
 
   useEffect(() => {
     const fetchActivities = async () => {
@@ -163,8 +197,8 @@ export default function Index() {
           </div>
         )}
 
+        <MovieSection title={recommendationTitle} movies={recommendations} loading={loading} />
         <MovieSection title="Films populaires" movies={popular} loading={loading} />
-        <MovieSection title="Tendances de la semaine" movies={trending} loading={loading} />
       </main>
 
       <BottomNav />
