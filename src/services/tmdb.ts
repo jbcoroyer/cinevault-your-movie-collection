@@ -168,8 +168,10 @@ export interface AIFilters {
   'primary_release_date.gte'?: string;
   'primary_release_date.lte'?: string;
   with_people?: string;
+  with_original_language?: string;
   sort_by?: string;
   'vote_count.gte'?: string;
+  'vote_average.gte'?: string;
 }
 
 export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
@@ -207,11 +209,17 @@ export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
   if (filters.with_people) {
     params.with_people = filters.with_people;
   }
+  if (filters.with_original_language) {
+    params.with_original_language = filters.with_original_language;
+  }
   if (filters.sort_by) {
     params.sort_by = filters.sort_by;
   }
   if (filters['vote_count.gte']) {
     params['vote_count.gte'] = filters['vote_count.gte'];
+  }
+  if (filters['vote_average.gte']) {
+    params['vote_average.gte'] = filters['vote_average.gte'];
   }
 
   // Call TMDB discover endpoint with filters
