@@ -12,6 +12,8 @@ import PersonDetail from "./pages/PersonDetail";
 import Search from "./pages/Search";
 import Collection from "./pages/Collection";
 import Profile from "./pages/Profile";
+import Lists from "./pages/Lists";
+import ListDetail from "./pages/ListDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -116,6 +118,22 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/lists"
+        element={
+          <ProtectedRoute>
+            <Lists />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/lists/:listId"
+        element={
+          <ProtectedRoute>
+            <ListDetail />
           </ProtectedRoute>
         }
       />

@@ -12,11 +12,12 @@ import {
 import { useUserMovies } from "@/hooks/useUserMovies";
 import { StarRating } from "@/components/StarRating";
 import { WatchedDialog } from "@/components/WatchedDialog";
+import { AddToListDialog } from "@/components/AddToListDialog";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Check, Heart, Star, Clock, Calendar, Tv } from "lucide-react";
+import { ArrowLeft, Plus, Check, Heart, Star, Clock, Calendar, Tv, ListPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function MovieDetail() {
@@ -29,6 +30,7 @@ export default function MovieDetail() {
   const [review, setReview] = useState("");
   const [savingReview, setSavingReview] = useState(false);
   const [watchedDialogOpen, setWatchedDialogOpen] = useState(false);
+  const [addToListOpen, setAddToListOpen] = useState(false);
 
   const { getUserMovie, addToWatchlist, markAsWatchedWithDetails, toggleFavorite, updateRating, updateReview } =
     useUserMovies();
@@ -199,6 +201,14 @@ export default function MovieDetail() {
                   <Heart className={cn("w-4 h-4 mr-2", isFavorite && "fill-primary")} />
                   Favoris
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setAddToListOpen(true)}
+                  className="w-full"
+                >
+                  <ListPlus className="w-4 h-4 mr-2" />
+                  Ajouter à une liste
+                </Button>
               </div>
             </div>
           </div>
@@ -233,12 +243,12 @@ export default function MovieDetail() {
             </div>
 
             {/* Mobile: Actions */}
-            <div className="flex gap-2 mb-6 md:hidden">
+            <div className="flex gap-2 mb-6 md:hidden flex-wrap">
               <Button
                 variant={isInWatchlist ? "default" : "outline"}
                 size="sm"
                 onClick={() => addToWatchlist(movie.id)}
-                className="flex-1"
+                className="flex-1 min-w-[100px]"
               >
                 {isInWatchlist ? <Check className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
                 Watchlist
@@ -247,7 +257,7 @@ export default function MovieDetail() {
                 variant={isWatched ? "default" : "outline"}
                 size="sm"
                 onClick={handleWatchedClick}
-                className="flex-1"
+                className="flex-1 min-w-[80px]"
               >
                 {isWatched ? <Check className="w-4 h-4 mr-2" /> : <Clock className="w-4 h-4 mr-2" />}
                 Vu
@@ -259,6 +269,13 @@ export default function MovieDetail() {
                 className={cn(isFavorite && "text-primary border-primary")}
               >
                 <Heart className={cn("w-4 h-4", isFavorite && "fill-primary")} />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAddToListOpen(true)}
+              >
+                <ListPlus className="w-4 h-4" />
               </Button>
             </div>
 
@@ -349,6 +366,19 @@ export default function MovieDetail() {
         initialReview={userMovie?.review || undefined}
         onSave={handleWatchedSave}
       />
+
+      {/* Add to List Dialog */}
+      {movie && (
+        <AddToListDialog
+          open={addToListOpen}
+          onOpenChange={setAddToListOpen}
+          movie={{
+            tmdb_id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+          }}
+        />
+      )}
 
       <BottomNav />
     </div>
