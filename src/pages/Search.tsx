@@ -1,24 +1,91 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search as SearchIcon, X, Sparkles } from 'lucide-react';
+import { Search as SearchIcon, X, Sparkles, Film } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Header } from '@/components/Header';
 import { BottomNav } from '@/components/BottomNav';
 import { MovieCard, MovieCardSkeleton } from '@/components/MovieCard';
-import { searchMovies, getGenres, discoverMoviesByGenre, searchMoviesByAI, Movie, Genre } from '@/services/tmdb';
+import { searchMovies, getGenres, discoverMoviesByGenre, searchMoviesByAI, getMovieDetails, Movie, Genre } from '@/services/tmdb';
+import { useUserMovies } from '@/hooks/useUserMovies';
 import { cn } from '@/lib/utils';
 
 export default function Search() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Movie[]>([]);
+  const [recommendations, setRecommendations] = useState<Movie[]>([]);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [selectedGenre, setSelectedGenre] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(true);
   const [searched, setSearched] = useState(false);
   const [isAIResults, setIsAIResults] = useState(false);
+
+  const { userMovies } = useUserMovies();
 
   useEffect(() => {
     getGenres().then(setGenres);
   }, []);
+
+  // Fetch personalized recommendations based on user's favorites
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      setLoadingRecommendations(true);
+      
+      // Get user's favorite movies
+      const favorites = userMovies.filter(m => m.is_favorite);
+      const watched = userMovies.filter(m => m.status === 'watched' && m.rating && m.rating >= 4);
+      
+      const topMovies = [...favorites, ...watched].slice(0, 5);
+      
+      if (topMovies.length === 0) {
+        setLoadingRecommendations(false);
+        return;
+      }
+
+      try {
+        const allRecommendations: Movie[] = [];
+        const seenIds = new Set<number>();
+        
+        // Get user's watched movie IDs to filter them out
+        const userMovieIds = new Set(userMovies.map(m => m.tmdb_id));
+
+        // Fetch recommendations for each top movie
+        await Promise.all(
+          topMovies.map(async (movie) => {
+            try {
+              const details = await getMovieDetails(movie.tmdb_id);
+              if (details.recommendations?.results) {
+                details.recommendations.results.forEach((rec) => {
+                  if (!seenIds.has(rec.id) && !userMovieIds.has(rec.id)) {
+                    seenIds.add(rec.id);
+                    allRecommendations.push(rec);
+                  }
+                });
+              }
+            } catch (error) {
+              console.error('Error fetching recommendations:', error);
+            }
+          })
+        );
+
+        // Sort by vote average and take top 18
+        const sortedRecommendations = allRecommendations
+          .sort((a, b) => b.vote_average - a.vote_average)
+          .slice(0, 18);
+
+        setRecommendations(sortedRecommendations);
+      } catch (error) {
+        console.error('Error fetching recommendations:', error);
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    };
+
+    if (userMovies.length > 0) {
+      fetchRecommendations();
+    } else {
+      setLoadingRecommendations(false);
+    }
+  }, [userMovies]);
 
   const performSearch = useCallback(async () => {
     if (!query.trim() && !selectedGenre) {
@@ -81,6 +148,8 @@ export default function Search() {
     setSearched(false);
     setIsAIResults(false);
   };
+
+  const showRecommendations = !searched && !loading && recommendations.length > 0;
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
@@ -154,6 +223,29 @@ export default function Search() {
         ) : searched ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground md:text-base">Aucun film trouvé</p>
+          </div>
+        ) : showRecommendations ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold">Pour vous</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Basé sur vos films préférés
+            </p>
+            {loadingRecommendations ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <MovieCardSkeleton key={i} size="lg" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {recommendations.map((movie) => (
+                  <MovieCard key={movie.id} movie={movie} size="lg" />
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-12">

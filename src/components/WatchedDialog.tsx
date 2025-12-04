@@ -31,7 +31,7 @@ export const WatchedDialog: React.FC<WatchedDialogProps> = ({
   initialReview,
   onSave,
 }) => {
-  const [watchedDate, setWatchedDate] = useState(initialDate || '');
+  const [watchedDate, setWatchedDate] = useState(initialDate || new Date().toISOString().split('T')[0]);
   const [rating, setRating] = useState(initialRating || 0);
   const [review, setReview] = useState(initialReview || '');
 
@@ -66,7 +66,6 @@ export const WatchedDialog: React.FC<WatchedDialogProps> = ({
               max={new Date().toISOString().split('T')[0]}
               className="w-full"
             />
-            <p className="text-xs text-muted-foreground">Optionnel</p>
           </div>
 
           {/* Rating */}
@@ -77,7 +76,7 @@ export const WatchedDialog: React.FC<WatchedDialogProps> = ({
             </Label>
             <StarRating value={rating} onChange={setRating} />
             <p className="text-xs text-muted-foreground">
-              {rating > 0 ? `${rating}/10` : 'Optionnel'}
+              {rating > 0 ? `${rating}/5` : 'Optionnel'}
             </p>
           </div>
 

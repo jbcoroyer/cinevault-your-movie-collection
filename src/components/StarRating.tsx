@@ -15,12 +15,12 @@ export const StarRating: React.FC<StarRatingProps> = ({
   size = 'md',
 }) => {
   const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-5 h-5',
-    lg: 'w-6 h-6',
+    sm: 'w-5 h-5',
+    md: 'w-7 h-7',
+    lg: 'w-8 h-8',
   };
 
-  // 10 stars, each can be half (0.5) or full (1)
+  // 5 stars, each can be half (0.5) or full (1)
   // Click on left half = 0.5, right half = 1.0 for that star position
   const handleClick = (starIndex: number, isRightHalf: boolean) => {
     if (readonly || !onChange) return;
@@ -34,8 +34,8 @@ export const StarRating: React.FC<StarRatingProps> = ({
   };
 
   return (
-    <div className="flex gap-0.5">
-      {Array.from({ length: 10 }).map((_, i) => {
+    <div className="flex gap-1">
+      {Array.from({ length: 5 }).map((_, i) => {
         const starValue = i + 1;
         const isFull = value >= starValue;
         const isHalf = !isFull && value >= starValue - 0.5;
