@@ -65,6 +65,21 @@ export interface ReleaseDatesResult {
   release_dates: ReleaseDate[];
 }
 
+export interface MovieImage {
+  aspect_ratio: number;
+  height: number;
+  width: number;
+  file_path: string;
+  vote_average: number;
+  vote_count: number;
+}
+
+export interface MovieImages {
+  backdrops: MovieImage[];
+  posters: MovieImage[];
+  logos?: MovieImage[];
+}
+
 export interface PersonMovieCredit {
   id: number;
   title: string;
@@ -94,6 +109,12 @@ export interface PersonDetails {
 export interface MovieDetails extends Movie {
   genres: Genre[];
   runtime: number;
+  budget?: number;
+  revenue?: number;
+  production_countries?: { iso_3166_1: string; name: string }[];
+  spoken_languages?: { iso_639_1: string; name: string; english_name: string }[];
+  original_language?: string;
+  imdb_id?: string;
   credits?: {
     cast: CastMember[];
     crew: CrewMember[];
@@ -107,6 +128,7 @@ export interface MovieDetails extends Movie {
   release_dates?: {
     results: ReleaseDatesResult[];
   };
+  images?: MovieImages;
 }
 
 export interface WatchProvider {
@@ -158,9 +180,32 @@ export const getPopularMovies = async (): Promise<Movie[]> => {
 
 export const getMovieDetails = async (movieId: number): Promise<MovieDetails> => {
   const data = await fetchTMDB<MovieDetails>(`/movie/${movieId}`, {
-    append_to_response: "credits,videos,recommendations,release_dates,watch/providers",
+    append_to_response: "credits,videos,recommendations,release_dates,watch/providers,images",
   });
   return data;
+};
+
+export const getMovieImages = async (movieId: number): Promise<MovieImages> => {
+  const data = await fetchTMDB<MovieImages>(`/movie/${movieId}/images`, {
+    include_image_language: "fr,en,null",
+  });
+  return data;
+};
+
+// Get writers from credits
+export const getWriters = (movie: MovieDetails): CrewMember[] => {
+  return movie.credits?.crew.filter((c) => c.job === "Writer" || c.job === "Screenplay" || c.department === "Writing").slice(0, 3) || [];
+};
+
+// Get composer from credits
+export const getComposer = (movie: MovieDetails): CrewMember | undefined => {
+  return movie.credits?.crew.find((c) => c.job === "Original Music Composer" || c.job === "Music");
+};
+
+// Format budget/revenue
+export const formatMoney = (amount: number): string => {
+  if (!amount) return "N/A";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
 };
 
 // Extract director from credits
