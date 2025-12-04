@@ -1,21 +1,22 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { useUserMovies } from '@/hooks/useUserMovies';
-import { useUserTopMovies } from '@/hooks/useUserTopMovies';
-import { useFollows } from '@/hooks/useFollows';
-import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
-import { BottomNav } from '@/components/BottomNav';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { toast } from '@/hooks/use-toast';
-import { LogOut, Edit2, Check, X, Film, Clock, Heart, UserPlus, UserMinus, Users } from 'lucide-react';
-import { Top5Section } from '@/components/Top5Section';
-import { WatchedTimeline } from '@/components/WatchedTimeline';
-
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserMovies } from "@/hooks/useUserMovies";
+import { useUserTopMovies } from "@/hooks/useUserTopMovies";
+import { useFollows } from "@/hooks/useFollows";
+import { supabase } from "@/integrations/supabase/client";
+import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { LogOut, Edit2, Check, X, Film, Clock, Heart, UserPlus, UserMinus, Users } from "lucide-react";
+import { Top5Section } from "@/components/Top5Section";
+import { WatchedTimeline } from "@/components/WatchedTimeline";
+import { useParams } from "react-router-dom"; // Pour récupérer l'ID dans l'URL
+import { FollowButton } from "@/components/FollowButton";
 interface ProfileData {
   id: string;
   username: string | null;
@@ -27,75 +28,71 @@ export default function Profile() {
   const { userId } = useParams<{ userId?: string }>();
   const { user, profile: myProfile, signOut, updateProfile } = useAuth();
   const navigate = useNavigate();
-  
+
   const isOwnProfile = !userId || userId === user?.id;
   const targetUserId = userId || user?.id;
-  
+
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(!isOwnProfile);
-  
+
   const { userMovies } = useUserMovies();
   const { topMovies, setTopMovie } = useUserTopMovies(isOwnProfile ? undefined : targetUserId);
   const { isFollowing, stats, loading: followLoading, toggleFollow } = useFollows(targetUserId);
-  
+
   const [editing, setEditing] = useState(false);
-  const [username, setUsername] = useState(myProfile?.username || '');
-  const [bio, setBio] = useState(myProfile?.bio || '');
+  const [username, setUsername] = useState(myProfile?.username || "");
+  const [bio, setBio] = useState(myProfile?.bio || "");
   const [saving, setSaving] = useState(false);
 
   // Fetch other user's profile
   useEffect(() => {
     const fetchProfile = async () => {
       if (isOwnProfile || !targetUserId) return;
-      
+
       setLoadingProfile(true);
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', targetUserId)
-          .single();
-        
+        const { data, error } = await supabase.from("profiles").select("*").eq("id", targetUserId).single();
+
         if (error) throw error;
         setProfileData(data);
       } catch (error) {
-        console.error('Error fetching profile:', error);
-        toast({ title: 'Erreur', description: 'Profil introuvable', variant: 'destructive' });
+        console.error("Error fetching profile:", error);
+        toast({ title: "Erreur", description: "Profil introuvable", variant: "destructive" });
       } finally {
         setLoadingProfile(false);
       }
     };
-    
+
     fetchProfile();
   }, [targetUserId, isOwnProfile]);
 
   const currentProfile = isOwnProfile ? myProfile : profileData;
-  
-  const watchedCount = userMovies.filter((m) => m.status === 'watched').length;
-  const watchlistCount = userMovies.filter((m) => m.status === 'watchlist').length;
+
+  const watchedCount = userMovies.filter((m) => m.status === "watched").length;
+  const watchlistCount = userMovies.filter((m) => m.status === "watchlist").length;
   const favoritesCount = userMovies.filter((m) => m.is_favorite).length;
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    navigate("/auth");
   };
 
   const handleSave = async () => {
     setSaving(true);
     const { error } = await updateProfile({ username, bio });
-    
+
     if (error) {
-      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: 'Profil mis à jour' });
+      toast({ title: "Profil mis à jour" });
       setEditing(false);
     }
     setSaving(false);
   };
 
   const handleCancel = () => {
-    setUsername(myProfile?.username || '');
-    setBio(myProfile?.bio || '');
+    setUsername(myProfile?.username || "");
+    setBio(myProfile?.bio || "");
     setEditing(false);
   };
 
@@ -106,11 +103,11 @@ export default function Profile() {
     if (isOwnProfile && user?.email) {
       return user.email.slice(0, 2).toUpperCase();
     }
-    return 'U';
+    return "U";
   };
 
   const getDisplayName = () => {
-    return currentProfile?.username || (isOwnProfile ? user?.email?.split('@')[0] : 'Utilisateur');
+    return currentProfile?.username || (isOwnProfile ? user?.email?.split("@")[0] : "Utilisateur");
   };
 
   if (loadingProfile) {
@@ -143,7 +140,7 @@ export default function Profile() {
               <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl md:text-3xl font-bold mb-4">
                 {getInitials()}
               </div>
-              
+
               {isOwnProfile && editing ? (
                 <div className="w-full max-w-sm space-y-4">
                   <div className="space-y-2">
@@ -156,7 +153,7 @@ export default function Profile() {
                       className="md:text-base"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="bio">Bio</Label>
                     <Textarea
@@ -171,7 +168,7 @@ export default function Profile() {
                   <div className="flex gap-2">
                     <Button onClick={handleSave} disabled={saving} className="flex-1">
                       <Check className="w-4 h-4 mr-2" />
-                      {saving ? 'Enregistrement...' : 'Enregistrer'}
+                      {saving ? "Enregistrement..." : "Enregistrer"}
                     </Button>
                     <Button variant="outline" onClick={handleCancel} disabled={saving}>
                       <X className="w-4 h-4" />
@@ -192,11 +189,9 @@ export default function Profile() {
                     )}
                   </div>
                   {currentProfile?.bio && (
-                    <p className="text-muted-foreground text-center mt-2 max-w-xs md:text-base">
-                      {currentProfile.bio}
-                    </p>
+                    <p className="text-muted-foreground text-center mt-2 max-w-xs md:text-base">{currentProfile.bio}</p>
                   )}
-                  
+
                   {/* Follow Stats */}
                   <div className="flex gap-6 mt-4 text-sm">
                     <div className="text-center">
