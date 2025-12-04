@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserMovies } from '@/hooks/useUserMovies';
+import { useUserTopMovies } from '@/hooks/useUserTopMovies';
 import { BottomNav } from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,10 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { LogOut, Edit2, Check, X, Film, Clock, Heart } from 'lucide-react';
+import { Top5Section } from '@/components/Top5Section';
 
 export default function Profile() {
   const { user, profile, signOut, updateProfile } = useAuth();
   const { userMovies } = useUserMovies();
+  const { topMovies, setTopMovie } = useUserTopMovies();
   const navigate = useNavigate();
   
   const [editing, setEditing] = useState(false);
@@ -137,6 +140,9 @@ export default function Profile() {
             </>
           )}
         </div>
+
+        {/* Top 5 Films */}
+        <Top5Section topMovies={topMovies} onSetMovie={setTopMovie} />
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">

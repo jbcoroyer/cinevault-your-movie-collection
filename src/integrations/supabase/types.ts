@@ -82,6 +82,44 @@ export type Database = {
           },
         ]
       }
+      user_top_movies: {
+        Row: {
+          created_at: string
+          id: string
+          poster_path: string | null
+          slot: number
+          title: string
+          tmdb_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          poster_path?: string | null
+          slot: number
+          title: string
+          tmdb_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          poster_path?: string | null
+          slot?: number
+          title?: string
+          tmdb_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_top_movies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
