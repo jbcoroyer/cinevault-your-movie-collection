@@ -35,11 +35,33 @@ export default function Search() {
     try {
       if (query.trim()) {
         if (isAIMode) {
+          // Already in AI mode, use AI search directly
           const data = await searchMoviesByAI(query);
           setResults(data);
         } else {
+          // Standard search first
           const data = await searchMovies(query);
-          setResults(data);
+          
+          if (data.length > 0) {
+            // Standard search found results
+            setResults(data);
+          } else {
+            // No results - automatically try AI search
+            toast.info('Aucun titre exact trouvé, recherche intelligente activée...', {
+              icon: <Sparkles className="w-4 h-4" />,
+              duration: 3000,
+            });
+            
+            try {
+              const aiData = await searchMoviesByAI(query);
+              setResults(aiData);
+              // Visually activate AI mode to show user what happened
+              setIsAIMode(true);
+            } catch (aiError) {
+              console.error('AI fallback error:', aiError);
+              setResults([]);
+            }
+          }
         }
       } else if (selectedGenre) {
         const data = await discoverMoviesByGenre(selectedGenre);
