@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { MovieSection } from "@/components/MovieSection";
+import { useUserMovies } from "@/hooks/useUserMovies";
 import { getTrendingMovies, getPopularMovies, getImageUrl, Movie } from "@/services/tmdb";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActivities, Activity } from "@/hooks/useActivities";
@@ -16,7 +17,7 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
-  
+
   const { getFollowingActivities } = useActivities();
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function Index() {
       setActivities(data);
       setActivitiesLoading(false);
     };
-    
+
     fetchActivities();
   }, [user]);
 
@@ -85,7 +86,7 @@ export default function Index() {
     const date = new Date(dateString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
-    
+
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
@@ -121,9 +122,7 @@ export default function Index() {
                         className="w-full h-full object-cover rounded"
                       />
                     ) : (
-                      <div className="w-full h-full bg-muted rounded flex items-center justify-center text-xs">
-                        🎬
-                      </div>
+                      <div className="w-full h-full bg-muted rounded flex items-center justify-center text-xs">🎬</div>
                     )}
                   </div>
 
@@ -140,9 +139,7 @@ export default function Index() {
                         {activity.username}
                       </button>
                       {getActivityIcon(activity.type)}
-                      <span className="text-muted-foreground text-sm truncate">
-                        {getActivityText(activity)}
-                      </span>
+                      <span className="text-muted-foreground text-sm truncate">{getActivityText(activity)}</span>
                     </div>
                     <p className="font-medium truncate">{activity.movie_title}</p>
                     <p className="text-xs text-muted-foreground">{formatTimeAgo(activity.created_at)}</p>
@@ -158,9 +155,7 @@ export default function Index() {
           <div className="px-4 mb-8">
             <h2 className="text-xl md:text-2xl font-bold mb-4">Quoi de neuf ?</h2>
             <div className="bg-card rounded-lg p-6 text-center">
-              <p className="text-muted-foreground mb-2">
-                Suivez d'autres utilisateurs pour voir leur activité ici
-              </p>
+              <p className="text-muted-foreground mb-2">Suivez d'autres utilisateurs pour voir leur activité ici</p>
               <p className="text-sm text-muted-foreground">
                 Découvrez des profils en cliquant sur les noms d'utilisateurs
               </p>
