@@ -1,10 +1,55 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 
-const API_KEY = 'c0cfa8d140fb26ff2a4b624502be9a95';
-const BASE_URL = 'https://api.themoviedb.org/3';
-export const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
+const API_KEY = "c0cfa8d140fb26ff2a4b624502be9a95";
+const BASE_URL = "https://api.themoviedb.org/3";
+export const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
-export const getImageUrl = (path: string | null, size: 'w200' | 'w300' | 'w500' | 'original' = 'w500') => {
+// ... Imports existants ...
+import { supabase } from "@/lib/supabase"; // Assure-toi d'avoir cet import
+
+// Ajoute cette fonction à la fin du fichier ou avec les autres exports
+export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
+  if (!prompt.trim()) return [];
+
+  try {
+    // 1. Appel à la Edge Function
+    const { data: aiData, error: aiError } = await supabase.functions.invoke("analyze-movie-prompt", {
+      body: { prompt },
+    });
+
+    if (aiError) throw aiError;
+    const filters = aiData.filters;
+    console.log("Filtres IA reçus:", filters);
+
+    // 2. Appel à TMDB Discover avec les filtres intelligents
+    // On construit les paramètres dynamiquement
+    const params: Record<string, string> = {
+      include_adult: "false",
+      include_video: "false",
+      page: "1",
+      // Paramètres de base
+      ...(filters.sort_by && { sort_by: filters.sort_by }),
+      ...(filters.with_genres && { with_genres: filters.with_genres }),
+      ...(filters.without_genres && { without_genres: filters.without_genres }), // NOUVEAU
+      ...(filters.with_people && { with_people: filters.with_people }),
+      ...(filters.with_original_language && { with_original_language: filters.with_original_language }), // NOUVEAU
+
+      // Filtres numériques (dates, notes)
+      ...(filters["primary_release_date.gte"] && { "primary_release_date.gte": filters["primary_release_date.gte"] }),
+      ...(filters["primary_release_date.lte"] && { "primary_release_date.lte": filters["primary_release_date.lte"] }),
+      ...(filters["vote_count.gte"] && { "vote_count.gte": filters["vote_count.gte"] }),
+      ...(filters["vote_average.gte"] && { "vote_average.gte": filters["vote_average.gte"] }),
+    };
+
+    const data = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", params);
+    return data.results;
+  } catch (error) {
+    console.error("Erreur recherche IA:", error);
+    return [];
+  }
+};
+
+export const getImageUrl = (path: string | null, size: "w200" | "w300" | "w500" | "original" = "w500") => {
   if (!path) return null;
   return `${IMAGE_BASE_URL}/${size}${path}`;
 };
@@ -100,15 +145,15 @@ interface TMDBResponse<T> {
   total_results: number;
 }
 
-const fetchTMDB = async <T>(endpoint: string, params: Record<string, string> = {}): Promise<T> => {
+const fetchTMDB = async <T,>(endpoint: string, params: Record<string, string> = {}): Promise<T> => {
   const queryParams = new URLSearchParams({
     api_key: API_KEY,
-    language: 'fr-FR',
+    language: "fr-FR",
     ...params,
   });
 
   const response = await fetch(`${BASE_URL}${endpoint}?${queryParams}`);
-  
+
   if (!response.ok) {
     throw new Error(`TMDB API error: ${response.status}`);
   }
@@ -117,82 +162,82 @@ const fetchTMDB = async <T>(endpoint: string, params: Record<string, string> = {
 };
 
 export const getTrendingMovies = async (): Promise<Movie[]> => {
-  const data = await fetchTMDB<TMDBResponse<Movie>>('/trending/movie/week');
+  const data = await fetchTMDB<TMDBResponse<Movie>>("/trending/movie/week");
   return data.results;
 };
 
 export const getPopularMovies = async (): Promise<Movie[]> => {
-  const data = await fetchTMDB<TMDBResponse<Movie>>('/movie/popular');
+  const data = await fetchTMDB<TMDBResponse<Movie>>("/movie/popular");
   return data.results;
 };
 
 export const getMovieDetails = async (movieId: number): Promise<MovieDetails> => {
   const data = await fetchTMDB<MovieDetails>(`/movie/${movieId}`, {
-    append_to_response: 'credits',
+    append_to_response: "credits",
   });
   return data;
 };
 
 export const getPersonDetails = async (personId: number): Promise<PersonDetails> => {
   const data = await fetchTMDB<PersonDetails>(`/person/${personId}`, {
-    append_to_response: 'movie_credits',
+    append_to_response: "movie_credits",
   });
   return data;
 };
 
 export const searchMovies = async (query: string): Promise<Movie[]> => {
   if (!query.trim()) return [];
-  const data = await fetchTMDB<TMDBResponse<Movie>>('/search/movie', { query });
+  const data = await fetchTMDB<TMDBResponse<Movie>>("/search/movie", { query });
   return data.results;
 };
 
 export const getGenres = async (): Promise<Genre[]> => {
-  const data = await fetchTMDB<{ genres: Genre[] }>('/genre/movie/list');
+  const data = await fetchTMDB<{ genres: Genre[] }>("/genre/movie/list");
   return data.genres;
 };
 
 export const discoverMoviesByGenre = async (genreId: number): Promise<Movie[]> => {
-  const data = await fetchTMDB<TMDBResponse<Movie>>('/discover/movie', {
+  const data = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", {
     with_genres: genreId.toString(),
   });
   return data.results;
 };
 
-export const getWatchProviders = async (movieId: number, country: string = 'FR'): Promise<WatchProviders | null> => {
+export const getWatchProviders = async (movieId: number, country: string = "FR"): Promise<WatchProviders | null> => {
   const data = await fetchTMDB<{ results: Record<string, WatchProviders> }>(`/movie/${movieId}/watch/providers`);
   return data.results[country] || null;
 };
 
 export interface AIFilters {
   with_genres?: string;
-  'primary_release_date.gte'?: string;
-  'primary_release_date.lte'?: string;
+  "primary_release_date.gte"?: string;
+  "primary_release_date.lte"?: string;
   with_people?: string;
   with_original_language?: string;
   sort_by?: string;
-  'vote_count.gte'?: string;
-  'vote_average.gte'?: string;
+  "vote_count.gte"?: string;
+  "vote_average.gte"?: string;
 }
 
 export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
   if (!prompt.trim()) return [];
 
   // Call the edge function to analyze the prompt
-  const { data, error } = await supabase.functions.invoke('analyze-movie-prompt', {
+  const { data, error } = await supabase.functions.invoke("analyze-movie-prompt", {
     body: { prompt },
   });
 
   if (error) {
-    console.error('Error calling AI analysis:', error);
-    throw new Error('Erreur lors de l\'analyse IA');
+    console.error("Error calling AI analysis:", error);
+    throw new Error("Erreur lors de l'analyse IA");
   }
 
   if (!data?.filters) {
-    throw new Error('Aucun filtre retourné par l\'IA');
+    throw new Error("Aucun filtre retourné par l'IA");
   }
 
   const filters: AIFilters = data.filters;
-  console.log('AI Filters:', filters);
+  console.log("AI Filters:", filters);
 
   // Build params for discover endpoint
   const params: Record<string, string> = {};
@@ -200,11 +245,11 @@ export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
   if (filters.with_genres) {
     params.with_genres = filters.with_genres;
   }
-  if (filters['primary_release_date.gte']) {
-    params['primary_release_date.gte'] = filters['primary_release_date.gte'];
+  if (filters["primary_release_date.gte"]) {
+    params["primary_release_date.gte"] = filters["primary_release_date.gte"];
   }
-  if (filters['primary_release_date.lte']) {
-    params['primary_release_date.lte'] = filters['primary_release_date.lte'];
+  if (filters["primary_release_date.lte"]) {
+    params["primary_release_date.lte"] = filters["primary_release_date.lte"];
   }
   if (filters.with_people) {
     params.with_people = filters.with_people;
@@ -215,15 +260,15 @@ export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
   if (filters.sort_by) {
     params.sort_by = filters.sort_by;
   }
-  if (filters['vote_count.gte']) {
-    params['vote_count.gte'] = filters['vote_count.gte'];
+  if (filters["vote_count.gte"]) {
+    params["vote_count.gte"] = filters["vote_count.gte"];
   }
-  if (filters['vote_average.gte']) {
-    params['vote_average.gte'] = filters['vote_average.gte'];
+  if (filters["vote_average.gte"]) {
+    params["vote_average.gte"] = filters["vote_average.gte"];
   }
 
   // Call TMDB discover endpoint with filters
-  const movieData = await fetchTMDB<TMDBResponse<Movie>>('/discover/movie', params);
+  const movieData = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", params);
   return movieData.results;
 };
 
@@ -234,6 +279,6 @@ export const formatRuntime = (minutes: number): string => {
 };
 
 export const getYear = (dateString: string): string => {
-  if (!dateString) return '';
+  if (!dateString) return "";
   return new Date(dateString).getFullYear().toString();
 };
