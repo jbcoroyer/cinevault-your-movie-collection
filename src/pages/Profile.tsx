@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { LogOut, Edit2, Check, X, Film, Clock, Heart } from 'lucide-react';
 import { Top5Section } from '@/components/Top5Section';
+import { WatchedTimeline } from '@/components/WatchedTimeline';
 
 export default function Profile() {
   const { user, profile, signOut, updateProfile } = useAuth();
@@ -143,6 +144,14 @@ export default function Profile() {
 
         {/* Top 5 Films */}
         <Top5Section topMovies={topMovies} onSetMovie={setTopMovie} />
+
+        {/* Historique des films vus */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold mb-4">Historique des films vus</h3>
+          <div className="max-h-[500px] overflow-y-auto rounded-card bg-card/50 p-2">
+            <WatchedTimeline />
+          </div>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
