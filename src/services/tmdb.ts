@@ -194,7 +194,11 @@ export const getMovieImages = async (movieId: number): Promise<MovieImages> => {
 
 // Get writers from credits
 export const getWriters = (movie: MovieDetails): CrewMember[] => {
-  return movie.credits?.crew.filter((c) => c.job === "Writer" || c.job === "Screenplay" || c.department === "Writing").slice(0, 3) || [];
+  return (
+    movie.credits?.crew
+      .filter((c) => c.job === "Writer" || c.job === "Screenplay" || c.department === "Writing")
+      .slice(0, 3) || []
+  );
 };
 
 // Get composer from credits
@@ -205,7 +209,9 @@ export const getComposer = (movie: MovieDetails): CrewMember | undefined => {
 // Format budget/revenue
 export const formatMoney = (amount: number): string => {
   if (!amount) return "N/A";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(
+    amount,
+  );
 };
 
 // Extract director from credits
@@ -217,16 +223,22 @@ export const getDirector = (movie: MovieDetails): CrewMember | undefined => {
 export const getCertification = (movie: MovieDetails, country: string = "FR"): string | null => {
   const countryRelease = movie.release_dates?.results.find((r) => r.iso_3166_1 === country);
   if (!countryRelease) return null;
-  
+
   const certification = countryRelease.release_dates.find((rd) => rd.certification)?.certification;
   return certification || null;
 };
 
+// Ajoutez cette fonction avec les autres exports
+export const getRecommendations = async (movieId: number): Promise<Movie[]> => {
+  const data = await fetchTMDB<TMDBResponse<Movie>>(`/movie/${movieId}/recommendations`);
+  return data.results;
+};
+
 // Get trailers from videos
 export const getTrailers = (movie: MovieDetails): Video[] => {
-  return movie.videos?.results.filter(
-    (v) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser")
-  ) || [];
+  return (
+    movie.videos?.results.filter((v) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser")) || []
+  );
 };
 
 export const getPersonDetails = async (personId: number): Promise<PersonDetails> => {
