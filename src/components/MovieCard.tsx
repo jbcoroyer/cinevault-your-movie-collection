@@ -45,10 +45,16 @@ export const MovieCardSkeleton: React.FC<{
 }> = ({
   size = 'md'
 }) => {
-  const sizeClasses = {
-    sm: 'w-28 min-w-[7rem]',
-    md: 'w-36 min-w-[9rem]',
-    lg: 'w-44 min-w-[11rem]'
+ const sizeClasses = {
+  // Mobile : w-24 (96px) | Desktop : w-28 (112px)
+  sm: 'w-24 min-w-[6rem] md:w-28 md:min-w-[7rem]',
+  
+  // Mobile : w-28 (112px) | Desktop : w-36 (144px)
+  md: 'w-28 min-w-[7rem] md:w-36 md:min-w-[9rem]',
+  
+  // Mobile : w-36 (144px) | Desktop : w-44 (176px)
+  lg: 'w-36 min-w-[9rem] md:w-44 md:min-w-[11rem]'
+};
   };
   return <div className={sizeClasses[size]}>
       <div className="skeleton-shimmer aspect-[2/3] mb-3" />
