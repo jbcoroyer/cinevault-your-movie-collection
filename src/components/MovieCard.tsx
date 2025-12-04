@@ -55,7 +55,6 @@ export const MovieCardSkeleton: React.FC<{
   // Mobile : w-36 (144px) | Desktop : w-44 (176px)
   lg: 'w-36 min-w-[9rem] md:w-44 md:min-w-[11rem]'
 };
-  };
   return <div className={sizeClasses[size]}>
       <div className="skeleton-shimmer aspect-[2/3] mb-3" />
       <div className="skeleton-shimmer h-4 w-full mb-2" />
