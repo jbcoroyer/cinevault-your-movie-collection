@@ -1,3 +1,5 @@
+import { supabase } from '@/integrations/supabase/client';
+
 const API_KEY = 'c0cfa8d140fb26ff2a4b624502be9a95';
 const BASE_URL = 'https://api.themoviedb.org/3';
 export const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
@@ -159,6 +161,62 @@ export const discoverMoviesByGenre = async (genreId: number): Promise<Movie[]> =
 export const getWatchProviders = async (movieId: number, country: string = 'FR'): Promise<WatchProviders | null> => {
   const data = await fetchTMDB<{ results: Record<string, WatchProviders> }>(`/movie/${movieId}/watch/providers`);
   return data.results[country] || null;
+};
+
+export interface AIFilters {
+  with_genres?: string;
+  'primary_release_date.gte'?: string;
+  'primary_release_date.lte'?: string;
+  with_people?: string;
+  sort_by?: string;
+  'vote_count.gte'?: string;
+}
+
+export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
+  if (!prompt.trim()) return [];
+
+  // Call the edge function to analyze the prompt
+  const { data, error } = await supabase.functions.invoke('analyze-movie-prompt', {
+    body: { prompt },
+  });
+
+  if (error) {
+    console.error('Error calling AI analysis:', error);
+    throw new Error('Erreur lors de l\'analyse IA');
+  }
+
+  if (!data?.filters) {
+    throw new Error('Aucun filtre retourné par l\'IA');
+  }
+
+  const filters: AIFilters = data.filters;
+  console.log('AI Filters:', filters);
+
+  // Build params for discover endpoint
+  const params: Record<string, string> = {};
+
+  if (filters.with_genres) {
+    params.with_genres = filters.with_genres;
+  }
+  if (filters['primary_release_date.gte']) {
+    params['primary_release_date.gte'] = filters['primary_release_date.gte'];
+  }
+  if (filters['primary_release_date.lte']) {
+    params['primary_release_date.lte'] = filters['primary_release_date.lte'];
+  }
+  if (filters.with_people) {
+    params.with_people = filters.with_people;
+  }
+  if (filters.sort_by) {
+    params.sort_by = filters.sort_by;
+  }
+  if (filters['vote_count.gte']) {
+    params['vote_count.gte'] = filters['vote_count.gte'];
+  }
+
+  // Call TMDB discover endpoint with filters
+  const movieData = await fetchTMDB<TMDBResponse<Movie>>('/discover/movie', params);
+  return movieData.results;
 };
 
 export const formatRuntime = (minutes: number): string => {
