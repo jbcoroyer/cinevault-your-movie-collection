@@ -262,6 +262,32 @@ export default function MovieDetail() {
           </div>
         )}
 
+        {/* Director - Highlighted */}
+        {director && (
+          <div
+            className="mb-6 p-4 bg-card rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors"
+            onClick={() => navigate(`/person/${director.id}`)}
+          >
+            <div className="flex items-center gap-4">
+              {director.profile_path ? (
+                <img
+                  src={getImageUrl(director.profile_path, "w200") || ""}
+                  alt={director.name}
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-lg font-semibold">
+                  {director.name.slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-muted-foreground">Réalisé par</p>
+                <p className="text-lg font-semibold">{director.name}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Casting - Always Visible */}
         {cast.length > 0 && (
           <div className="mb-8">
@@ -316,29 +342,6 @@ export default function MovieDetail() {
               {/* Crew */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Équipe technique</h3>
-                
-                {director && (
-                  <div
-                    className="flex items-center gap-3 cursor-pointer hover:opacity-80"
-                    onClick={() => navigate(`/person/${director.id}`)}
-                  >
-                    {director.profile_path ? (
-                      <img
-                        src={getImageUrl(director.profile_path, "w200") || ""}
-                        alt={director.name}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-sm">
-                        {director.name.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium">{director.name}</p>
-                      <p className="text-xs text-muted-foreground">Réalisateur</p>
-                    </div>
-                  </div>
-                )}
 
                 {writers.length > 0 && (
                   <div>
@@ -437,7 +440,7 @@ export default function MovieDetail() {
             <div>
               <h3 className="text-lg font-semibold mb-3">Votre note</h3>
               <StarRating value={userMovie?.rating || 0} onChange={(rating) => updateRating(movie.id, rating)} />
-              {userMovie?.rating && <p className="text-sm text-muted-foreground mt-1">{userMovie.rating}/10</p>}
+              {userMovie?.rating && <p className="text-sm text-muted-foreground mt-1">{userMovie.rating}/5</p>}
             </div>
 
             {/* User Review */}
@@ -601,69 +604,30 @@ function WatchProvidersSection({ providers, loading }: { providers: WatchProvide
     );
   }
 
-  if (!providers || (!providers.flatrate && !providers.rent && !providers.buy)) {
-    return <p className="text-muted-foreground">Aucune offre disponible pour le moment</p>;
+  if (!providers || !providers.flatrate || providers.flatrate.length === 0) {
+    return <p className="text-muted-foreground">Pas disponible en streaming dans votre région</p>;
   }
 
   return (
     <div className="space-y-4">
-      {providers.flatrate && providers.flatrate.length > 0 && (
-        <div>
-          <p className="text-sm text-muted-foreground mb-2">Abonnement</p>
-          <div className="flex flex-wrap gap-2">
-            {providers.flatrate.map((p) => (
-              <img
-                key={p.provider_id}
-                src={getImageUrl(p.logo_path, "w200") || ""}
-                alt={p.provider_name}
-                title={p.provider_name}
-                className="w-12 h-12 rounded-lg"
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {providers.rent && providers.rent.length > 0 && (
-        <div>
-          <p className="text-sm text-muted-foreground mb-2">Location</p>
-          <div className="flex flex-wrap gap-2">
-            {providers.rent.map((p) => (
-              <img
-                key={p.provider_id}
-                src={getImageUrl(p.logo_path, "w200") || ""}
-                alt={p.provider_name}
-                title={p.provider_name}
-                className="w-10 h-10 rounded-lg opacity-80"
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {providers.buy && providers.buy.length > 0 && (
-        <div>
-          <p className="text-sm text-muted-foreground mb-2">Achat</p>
-          <div className="flex flex-wrap gap-2">
-            {providers.buy.map((p) => (
-              <img
-                key={p.provider_id}
-                src={getImageUrl(p.logo_path, "w200") || ""}
-                alt={p.provider_name}
-                title={p.provider_name}
-                className="w-10 h-10 rounded-lg opacity-80"
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="flex flex-wrap gap-3">
+        {providers.flatrate.map((p) => (
+          <img
+            key={p.provider_id}
+            src={getImageUrl(p.logo_path, "w200") || ""}
+            alt={p.provider_name}
+            title={p.provider_name}
+            className="w-12 h-12 rounded-lg"
+          />
+        ))}
+      </div>
 
       {providers.link && (
         <a
           href={providers.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block text-xs text-muted-foreground hover:underline mt-2"
+          className="inline-block text-xs text-muted-foreground hover:underline"
         >
           Fourni par JustWatch
         </a>

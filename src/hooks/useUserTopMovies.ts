@@ -42,9 +42,24 @@ export function useUserTopMovies(targetUserId?: string) {
 
   const setTopMovie = async (
     slot: number,
-    movie: { tmdb_id: number; title: string; poster_path: string | null }
+    movie: { tmdb_id: number; title: string; poster_path: string | null } | null
   ) => {
     if (!user) return { error: new Error('Not authenticated') };
+
+    // If movie is null, delete the entry
+    if (movie === null) {
+      const { error } = await supabase
+        .from('user_top_movies')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('slot', slot);
+
+      if (!error) {
+        await fetchTopMovies();
+      }
+
+      return { error };
+    }
 
     // Upsert: insert or update if slot already exists
     const { error } = await supabase
