@@ -27,36 +27,34 @@ export const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-      <div className="flex items-center justify-between px-4 h-14 container mx-auto">
-        <div className="flex items-center gap-8">
-          <h1 
-            className="text-xl font-bold text-foreground cursor-pointer"
-            onClick={() => navigate('/')}
-          >
-            Cine<span className="text-primary">Vault</span>
-          </h1>
-          
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map(({ to, icon: Icon, label }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-2 px-4 py-2 rounded-button text-sm font-medium transition-all duration-200',
-                    isActive
-                      ? 'text-primary bg-primary/10'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  )
-                }
-              >
-                <Icon className="w-4 h-4" />
-                <span>{label}</span>
-              </NavLink>
-            ))}
-          </nav>
-        </div>
+      <div className="flex items-center justify-between px-4 h-14 container mx-auto relative">
+      <h1 
+          className="text-xl font-bold text-foreground cursor-pointer"
+          onClick={() => navigate('/')}
+        >
+          Cine<span className="text-primary">Vault</span>
+        </h1>
+        
+        {/* Desktop Navigation - Centered */}
+        <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+          {navItems.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-button text-sm font-medium transition-all duration-200',
+                  isActive
+                    ? 'text-primary bg-primary/10'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                )
+              }
+            >
+              <Icon className="w-4 h-4" />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
         
         <button
           onClick={() => navigate('/profile')}
