@@ -251,48 +251,7 @@ export default function MovieDetail() {
           </div>
         </div>
       </div>
-
-      {/* Content */}
-      <div className="container mx-auto px-4 py-6">
-        {/* Synopsis */}
-        {movie.overview && (
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">Synopsis</h2>
-            <p className="text-muted-foreground leading-relaxed">{movie.overview}</p>
-          </div>
-        )}
-
-        {/* Casting - Always Visible */}
-        {cast.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Casting principal</h2>
-            <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
-              {cast.map((actor) => (
-                <div
-                  key={actor.id}
-                  className="flex-shrink-0 w-24 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => navigate(`/person/${actor.id}`)}
-                >
-                  {actor.profile_path ? (
-                    <img
-                      src={getImageUrl(actor.profile_path, "w200") || ""}
-                      alt={actor.name}
-                      className="w-full aspect-[2/3] rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="w-full aspect-[2/3] bg-muted rounded-lg flex items-center justify-center text-muted-foreground text-xs">
-                      {actor.name.slice(0, 2).toUpperCase()}
-                    </div>
-                  )}
-                  <p className="font-medium text-xs mt-2 line-clamp-1">{actor.name}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-1">{actor.character}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Tabs */}
+  {/* Tabs */}
         <Tabs defaultValue="infos" className="w-full">
           <TabsList className="w-full justify-start mb-6 bg-transparent gap-1">
             <TabsTrigger value="infos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
@@ -423,6 +382,47 @@ export default function MovieDetail() {
                 )}
               </div>
             </div>
+      {/* Content */}
+      <div className="container mx-auto px-4 py-6">
+        {/* Synopsis */}
+        {movie.overview && (
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-3">Synopsis</h2>
+            <p className="text-muted-foreground leading-relaxed">{movie.overview}</p>
+          </div>
+        )}
+
+        {/* Casting - Always Visible */}
+        {cast.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Casting principal</h2>
+            <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+              {cast.map((actor) => (
+                <div
+                  key={actor.id}
+                  className="flex-shrink-0 w-24 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/person/${actor.id}`)}
+                >
+                  {actor.profile_path ? (
+                    <img
+                      src={getImageUrl(actor.profile_path, "w200") || ""}
+                      alt={actor.name}
+                      className="w-full aspect-[2/3] rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-full aspect-[2/3] bg-muted rounded-lg flex items-center justify-center text-muted-foreground text-xs">
+                      {actor.name.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <p className="font-medium text-xs mt-2 line-clamp-1">{actor.name}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1">{actor.character}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      
 
             {/* Streaming Availability */}
             <div>
