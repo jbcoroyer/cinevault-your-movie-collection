@@ -9,6 +9,9 @@ import {
   getDirector,
   getCertification,
   getTrailers,
+  getWriters,
+  getComposer,
+  formatMoney,
   MovieDetails,
   WatchProviders,
 } from "@/services/tmdb";
@@ -22,7 +25,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Check, Heart, Star, Clock, Calendar, Tv, ListPlus, Play, Users, Info, Video } from "lucide-react";
+import { ArrowLeft, Plus, Check, Heart, Star, Clock, Tv, ListPlus, Info, Video, Image as ImageIcon, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function MovieDetail() {
@@ -106,7 +109,6 @@ export default function MovieDetail() {
     if (!movie) return;
     await markAsWatchedWithDetails(movie.id, data);
     
-    // Create activity
     await createActivity("watched", {
       tmdb_id: movie.id,
       title: movie.title,
@@ -119,10 +121,15 @@ export default function MovieDetail() {
   };
 
   const director = movie ? getDirector(movie) : undefined;
+  const writers = movie ? getWriters(movie) : [];
+  const composer = movie ? getComposer(movie) : undefined;
   const certification = movie ? getCertification(movie) : null;
+  const usCertification = movie ? getCertification(movie, "US") : null;
+  const finalCertification = certification || usCertification;
   const trailers = movie ? getTrailers(movie) : [];
-  const cast = movie?.credits?.cast.slice(0, 15) || [];
+  const cast = movie?.credits?.cast.slice(0, 12) || [];
   const recommendations = movie?.recommendations?.results.slice(0, 10) || [];
+  const images = movie?.images;
 
   if (loading) {
     return (
@@ -194,8 +201,8 @@ export default function MovieDetail() {
                 {movie.runtime > 0 && (
                   <span className="text-white/80">{formatRuntime(movie.runtime)}</span>
                 )}
-                {certification && (
-                  <span className="px-2 py-0.5 bg-white/20 rounded text-sm text-white">{certification}</span>
+                {finalCertification && (
+                  <span className="px-2 py-0.5 bg-white/20 rounded text-sm text-white">{finalCertification}</span>
                 )}
                 {movie.vote_average > 0 && (
                   <div className="flex items-center gap-1 bg-primary/90 px-2 py-1 rounded">
@@ -245,17 +252,56 @@ export default function MovieDetail() {
         </div>
       </div>
 
-      {/* Content with Tabs */}
+      {/* Content */}
       <div className="container mx-auto px-4 py-6">
+        {/* Synopsis */}
+        {movie.overview && (
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-3">Synopsis</h2>
+            <p className="text-muted-foreground leading-relaxed">{movie.overview}</p>
+          </div>
+        )}
+
+        {/* Casting - Always Visible */}
+        {cast.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Casting principal</h2>
+            <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+              {cast.map((actor) => (
+                <div
+                  key={actor.id}
+                  className="flex-shrink-0 w-24 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate(`/person/${actor.id}`)}
+                >
+                  {actor.profile_path ? (
+                    <img
+                      src={getImageUrl(actor.profile_path, "w200") || ""}
+                      alt={actor.name}
+                      className="w-full aspect-[2/3] rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-full aspect-[2/3] bg-muted rounded-lg flex items-center justify-center text-muted-foreground text-xs">
+                      {actor.name.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <p className="font-medium text-xs mt-2 line-clamp-1">{actor.name}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1">{actor.character}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Tabs */}
         <Tabs defaultValue="infos" className="w-full">
           <TabsList className="w-full justify-start mb-6 bg-transparent gap-1">
             <TabsTrigger value="infos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Info className="w-4 h-4 mr-2" />
               Infos
             </TabsTrigger>
-            <TabsTrigger value="casting" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Users className="w-4 h-4 mr-2" />
-              Casting
+            <TabsTrigger value="photos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <ImageIcon className="w-4 h-4 mr-2" />
+              Photos
             </TabsTrigger>
             <TabsTrigger value="videos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Video className="w-4 h-4 mr-2" />
@@ -265,57 +311,138 @@ export default function MovieDetail() {
 
           {/* Infos Tab */}
           <TabsContent value="infos" className="space-y-8">
-            {/* Synopsis */}
-            {movie.overview && (
-              <div>
-                <h2 className="text-xl font-semibold mb-3">Synopsis</h2>
-                <p className="text-muted-foreground leading-relaxed">{movie.overview}</p>
-              </div>
-            )}
+            {/* Technical Credits */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Crew */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Équipe technique</h3>
+                
+                {director && (
+                  <div
+                    className="flex items-center gap-3 cursor-pointer hover:opacity-80"
+                    onClick={() => navigate(`/person/${director.id}`)}
+                  >
+                    {director.profile_path ? (
+                      <img
+                        src={getImageUrl(director.profile_path, "w200") || ""}
+                        alt={director.name}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-sm">
+                        {director.name.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium">{director.name}</p>
+                      <p className="text-xs text-muted-foreground">Réalisateur</p>
+                    </div>
+                  </div>
+                )}
 
-            {/* Director */}
-            {director && (
-              <div>
-                <h2 className="text-xl font-semibold mb-3">Réalisateur</h2>
-                <div
-                  className="flex items-center gap-3 cursor-pointer hover:opacity-80"
-                  onClick={() => navigate(`/person/${director.id}`)}
-                >
-                  {director.profile_path ? (
-                    <img
-                      src={getImageUrl(director.profile_path, "w200") || ""}
-                      alt={director.name}
-                      className="w-14 h-14 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                      {director.name.slice(0, 2).toUpperCase()}
+                {writers.length > 0 && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Scénaristes</p>
+                    <div className="flex flex-wrap gap-2">
+                      {writers.map((writer) => (
+                        <span
+                          key={writer.id}
+                          className="text-sm bg-muted px-2 py-1 rounded cursor-pointer hover:bg-muted/80"
+                          onClick={() => navigate(`/person/${writer.id}`)}
+                        >
+                          {writer.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {composer && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Compositeur</p>
+                    <span
+                      className="text-sm bg-muted px-2 py-1 rounded cursor-pointer hover:bg-muted/80"
+                      onClick={() => navigate(`/person/${composer.id}`)}
+                    >
+                      {composer.name}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Metadata */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg">Informations</h3>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {movie.budget && movie.budget > 0 && (
+                    <div>
+                      <p className="text-muted-foreground">Budget</p>
+                      <p className="font-medium">{formatMoney(movie.budget)}</p>
                     </div>
                   )}
-                  <span className="font-medium">{director.name}</span>
+                  {movie.revenue && movie.revenue > 0 && (
+                    <div>
+                      <p className="text-muted-foreground">Box-office</p>
+                      <p className="font-medium">{formatMoney(movie.revenue)}</p>
+                    </div>
+                  )}
+                  {movie.production_countries && movie.production_countries.length > 0 && (
+                    <div>
+                      <p className="text-muted-foreground">Pays</p>
+                      <p className="font-medium">{movie.production_countries.map(c => c.name).join(", ")}</p>
+                    </div>
+                  )}
+                  {movie.original_language && (
+                    <div>
+                      <p className="text-muted-foreground">Langue originale</p>
+                      <p className="font-medium uppercase">{movie.original_language}</p>
+                    </div>
+                  )}
+                  {finalCertification && (
+                    <div>
+                      <p className="text-muted-foreground">Classification</p>
+                      <p className="font-medium">{finalCertification}</p>
+                    </div>
+                  )}
                 </div>
+
+                {/* External Links */}
+                {movie.imdb_id && (
+                  <div className="pt-2">
+                    <a
+                      href={`https://www.imdb.com/title/${movie.imdb_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-3 py-1.5 rounded hover:bg-yellow-500/30 transition-colors"
+                    >
+                      IMDb
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Streaming Availability */}
             <div>
-              <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                 <Tv className="w-5 h-5" />
                 Où regarder ?
-              </h2>
+              </h3>
               <WatchProvidersSection providers={watchProviders} loading={providersLoading} />
             </div>
 
             {/* User Rating */}
             <div>
-              <h2 className="text-xl font-semibold mb-3">Votre note</h2>
+              <h3 className="text-lg font-semibold mb-3">Votre note</h3>
               <StarRating value={userMovie?.rating || 0} onChange={(rating) => updateRating(movie.id, rating)} />
               {userMovie?.rating && <p className="text-sm text-muted-foreground mt-1">{userMovie.rating}/10</p>}
             </div>
 
             {/* User Review */}
             <div>
-              <h2 className="text-xl font-semibold mb-3">Votre avis</h2>
+              <h3 className="text-lg font-semibold mb-3">Votre avis</h3>
               <Textarea
                 placeholder="Écrivez votre avis sur ce film..."
                 value={review}
@@ -330,7 +457,7 @@ export default function MovieDetail() {
             {/* Recommendations */}
             {recommendations.length > 0 && (
               <div>
-                <h2 className="text-xl font-semibold mb-3">Films similaires</h2>
+                <h3 className="text-lg font-semibold mb-3">Films similaires</h3>
                 <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
                   {recommendations.map((rec) => (
                     <div
@@ -357,34 +484,58 @@ export default function MovieDetail() {
             )}
           </TabsContent>
 
-          {/* Casting Tab */}
-          <TabsContent value="casting">
-            {cast.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {cast.map((actor) => (
-                  <div
-                    key={actor.id}
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => navigate(`/person/${actor.id}`)}
-                  >
-                    {actor.profile_path ? (
-                      <img
-                        src={getImageUrl(actor.profile_path, "w200") || ""}
-                        alt={actor.name}
-                        className="w-full aspect-[2/3] rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="w-full aspect-[2/3] bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
-                        {actor.name.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                    <p className="font-medium text-sm mt-2 line-clamp-1">{actor.name}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-1">{actor.character}</p>
+          {/* Photos Tab */}
+          <TabsContent value="photos">
+            {images && (images.backdrops?.length > 0 || images.posters?.length > 0) ? (
+              <div className="space-y-6">
+                {images.backdrops && images.backdrops.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3">Fonds ({images.backdrops.length})</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {images.backdrops.slice(0, 9).map((img, idx) => (
+                        <a
+                          key={idx}
+                          href={getImageUrl(img.file_path, "original") || ""}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block aspect-video rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          <img
+                            src={getImageUrl(img.file_path, "w500") || ""}
+                            alt={`Backdrop ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
+
+                {images.posters && images.posters.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3">Affiches ({images.posters.length})</h3>
+                    <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                      {images.posters.slice(0, 12).map((img, idx) => (
+                        <a
+                          key={idx}
+                          href={getImageUrl(img.file_path, "original") || ""}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block aspect-[2/3] rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          <img
+                            src={getImageUrl(img.file_path, "w300") || ""}
+                            alt={`Poster ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
-              <p className="text-muted-foreground">Aucune information sur le casting</p>
+              <p className="text-muted-foreground">Aucune image disponible</p>
             )}
           </TabsContent>
 
@@ -458,28 +609,63 @@ function WatchProvidersSection({ providers, loading }: { providers: WatchProvide
     <div className="space-y-4">
       {providers.flatrate && providers.flatrate.length > 0 && (
         <div>
-          <p className="text-sm text-muted-foreground mb-2">Streaming</p>
-          <div className="flex gap-2 flex-wrap">
-            {providers.flatrate.map((provider) => (
+          <p className="text-sm text-muted-foreground mb-2">Abonnement</p>
+          <div className="flex flex-wrap gap-2">
+            {providers.flatrate.map((p) => (
               <img
-                key={provider.provider_id}
-                src={getImageUrl(provider.logo_path, "w200") || ""}
-                alt={provider.provider_name}
-                title={provider.provider_name}
-                className="w-12 h-12 rounded-lg object-cover"
+                key={p.provider_id}
+                src={getImageUrl(p.logo_path, "w200") || ""}
+                alt={p.provider_name}
+                title={p.provider_name}
+                className="w-12 h-12 rounded-lg"
               />
             ))}
           </div>
         </div>
       )}
+
+      {providers.rent && providers.rent.length > 0 && (
+        <div>
+          <p className="text-sm text-muted-foreground mb-2">Location</p>
+          <div className="flex flex-wrap gap-2">
+            {providers.rent.map((p) => (
+              <img
+                key={p.provider_id}
+                src={getImageUrl(p.logo_path, "w200") || ""}
+                alt={p.provider_name}
+                title={p.provider_name}
+                className="w-10 h-10 rounded-lg opacity-80"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {providers.buy && providers.buy.length > 0 && (
+        <div>
+          <p className="text-sm text-muted-foreground mb-2">Achat</p>
+          <div className="flex flex-wrap gap-2">
+            {providers.buy.map((p) => (
+              <img
+                key={p.provider_id}
+                src={getImageUrl(p.logo_path, "w200") || ""}
+                alt={p.provider_name}
+                title={p.provider_name}
+                className="w-10 h-10 rounded-lg opacity-80"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {providers.link && (
         <a
           href={providers.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors inline-block"
+          className="inline-block text-xs text-muted-foreground hover:underline mt-2"
         >
-          Données fournies par JustWatch
+          Fourni par JustWatch
         </a>
       )}
     </div>
