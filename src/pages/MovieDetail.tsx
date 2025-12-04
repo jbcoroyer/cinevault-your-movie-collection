@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   getMovieDetails,
   getWatchProviders,
@@ -8,25 +8,16 @@ import {
   getYear,
   MovieDetails,
   WatchProviders,
-} from '@/services/tmdb';
-import { useUserMovies } from '@/hooks/useUserMovies';
-import { StarRating } from '@/components/StarRating';
-import { WatchedDialog } from '@/components/WatchedDialog';
-import { Header } from '@/components/Header';
-import { BottomNav } from '@/components/BottomNav';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  ArrowLeft,
-  Plus,
-  Check,
-  Heart,
-  Star,
-  Clock,
-  Calendar,
-  Tv,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+} from "@/services/tmdb";
+import { useUserMovies } from "@/hooks/useUserMovies";
+import { StarRating } from "@/components/StarRating";
+import { WatchedDialog } from "@/components/WatchedDialog";
+import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Plus, Check, Heart, Star, Clock, Calendar, Tv } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function MovieDetail() {
   const { id } = useParams<{ id: string }>();
@@ -35,22 +26,16 @@ export default function MovieDetail() {
   const [watchProviders, setWatchProviders] = useState<WatchProviders | null>(null);
   const [loading, setLoading] = useState(true);
   const [providersLoading, setProvidersLoading] = useState(true);
-  const [review, setReview] = useState('');
+  const [review, setReview] = useState("");
   const [savingReview, setSavingReview] = useState(false);
   const [watchedDialogOpen, setWatchedDialogOpen] = useState(false);
 
-  const {
-    getUserMovie,
-    addToWatchlist,
-    markAsWatchedWithDetails,
-    toggleFavorite,
-    updateRating,
-    updateReview,
-  } = useUserMovies();
+  const { getUserMovie, addToWatchlist, markAsWatchedWithDetails, toggleFavorite, updateRating, updateReview } =
+    useUserMovies();
 
   const userMovie = movie ? getUserMovie(movie.id) : undefined;
-  const isInWatchlist = userMovie?.status === 'watchlist';
-  const isWatched = userMovie?.status === 'watched';
+  const isInWatchlist = userMovie?.status === "watchlist";
+  const isWatched = userMovie?.status === "watched";
   const isFavorite = userMovie?.is_favorite ?? false;
 
   useEffect(() => {
@@ -59,13 +44,13 @@ export default function MovieDetail() {
       try {
         const data = await getMovieDetails(Number(id));
         setMovie(data);
-        
+
         const userMovieData = getUserMovie(Number(id));
         if (userMovieData?.review) {
           setReview(userMovieData.review);
         }
       } catch (error) {
-        console.error('Error fetching movie:', error);
+        console.error("Error fetching movie:", error);
       } finally {
         setLoading(false);
       }
@@ -78,7 +63,7 @@ export default function MovieDetail() {
         const providers = await getWatchProviders(Number(id));
         setWatchProviders(providers);
       } catch (error) {
-        console.error('Error fetching watch providers:', error);
+        console.error("Error fetching watch providers:", error);
       } finally {
         setProvidersLoading(false);
       }
@@ -117,7 +102,7 @@ export default function MovieDetail() {
     }
   };
 
-  const directors = movie?.credits?.crew.filter((c) => c.job === 'Director') || [];
+  const directors = movie?.credits?.crew.filter((c) => c.job === "Director") || [];
   const cast = movie?.credits?.cast.slice(0, 10) || [];
 
   if (loading) {
@@ -142,26 +127,22 @@ export default function MovieDetail() {
     );
   }
 
-  const backdropUrl = getImageUrl(movie.backdrop_path, 'original');
-  const posterUrl = getImageUrl(movie.poster_path, 'w500');
+  const backdropUrl = getImageUrl(movie.backdrop_path, "original");
+  const posterUrl = getImageUrl(movie.poster_path, "w500");
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Header />
-      
+
       {/* Backdrop */}
       <div className="relative h-64 md:h-80 lg:h-96 overflow-hidden">
         {backdropUrl ? (
-          <img
-            src={backdropUrl}
-            alt={movie.title}
-            className="w-full h-full object-cover"
-          />
+          <img src={backdropUrl} alt={movie.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full bg-card" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
-        
+
         <button
           onClick={() => navigate(-1)}
           className="absolute top-4 left-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-foreground hover:bg-background transition-colors md:hidden"
@@ -179,11 +160,7 @@ export default function MovieDetail() {
             {/* Poster */}
             <div className="flex-shrink-0 w-28 md:w-full">
               {posterUrl ? (
-                <img
-                  src={posterUrl}
-                  alt={movie.title}
-                  className="w-full rounded-card shadow-elevated"
-                />
+                <img src={posterUrl} alt={movie.title} className="w-full rounded-card shadow-elevated" />
               ) : (
                 <div className="w-full aspect-[2/3] bg-card rounded-card" />
               )}
@@ -195,9 +172,7 @@ export default function MovieDetail() {
               <div className="md:hidden">
                 <h1 className="text-xl font-bold mb-1">{movie.title}</h1>
                 {movie.original_title !== movie.title && (
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {movie.original_title}
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-2">{movie.original_title}</p>
                 )}
                 <MovieMeta movie={movie} />
               </div>
@@ -205,27 +180,23 @@ export default function MovieDetail() {
               {/* Desktop: Actions */}
               <div className="hidden md:block space-y-3">
                 <Button
-                  variant={isInWatchlist ? 'default' : 'outline'}
+                  variant={isInWatchlist ? "default" : "outline"}
                   onClick={() => addToWatchlist(movie.id)}
                   className="w-full"
                 >
                   {isInWatchlist ? <Check className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
                   Watchlist
                 </Button>
-                <Button
-                  variant={isWatched ? 'default' : 'outline'}
-                  onClick={handleWatchedClick}
-                  className="w-full"
-                >
+                <Button variant={isWatched ? "default" : "outline"} onClick={handleWatchedClick} className="w-full">
                   {isWatched ? <Check className="w-4 h-4 mr-2" /> : <Clock className="w-4 h-4 mr-2" />}
                   Vu
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => toggleFavorite(movie.id)}
-                  className={cn('w-full', isFavorite && 'text-primary border-primary')}
+                  className={cn("w-full", isFavorite && "text-primary border-primary")}
                 >
-                  <Heart className={cn('w-4 h-4 mr-2', isFavorite && 'fill-primary')} />
+                  <Heart className={cn("w-4 h-4 mr-2", isFavorite && "fill-primary")} />
                   Favoris
                 </Button>
               </div>
@@ -241,14 +212,11 @@ export default function MovieDetail() {
                 <p className="text-muted-foreground mb-4">{movie.original_title}</p>
               )}
               <MovieMeta movie={movie} />
-              
+
               {/* Genres */}
               <div className="flex flex-wrap gap-2 mt-4">
                 {movie.genres?.map((genre) => (
-                  <span
-                    key={genre.id}
-                    className="px-3 py-1 text-sm bg-card rounded-full text-muted-foreground"
-                  >
+                  <span key={genre.id} className="px-3 py-1 text-sm bg-card rounded-full text-muted-foreground">
                     {genre.name}
                   </span>
                 ))}
@@ -258,10 +226,7 @@ export default function MovieDetail() {
             {/* Mobile: Genres */}
             <div className="flex flex-wrap gap-2 mb-6 md:hidden">
               {movie.genres?.map((genre) => (
-                <span
-                  key={genre.id}
-                  className="px-3 py-1 text-xs bg-card rounded-full text-muted-foreground"
-                >
+                <span key={genre.id} className="px-3 py-1 text-xs bg-card rounded-full text-muted-foreground">
                   {genre.name}
                 </span>
               ))}
@@ -270,7 +235,7 @@ export default function MovieDetail() {
             {/* Mobile: Actions */}
             <div className="flex gap-2 mb-6 md:hidden">
               <Button
-                variant={isInWatchlist ? 'default' : 'outline'}
+                variant={isInWatchlist ? "default" : "outline"}
                 size="sm"
                 onClick={() => addToWatchlist(movie.id)}
                 className="flex-1"
@@ -279,7 +244,7 @@ export default function MovieDetail() {
                 Watchlist
               </Button>
               <Button
-                variant={isWatched ? 'default' : 'outline'}
+                variant={isWatched ? "default" : "outline"}
                 size="sm"
                 onClick={handleWatchedClick}
                 className="flex-1"
@@ -291,9 +256,9 @@ export default function MovieDetail() {
                 variant="outline"
                 size="sm"
                 onClick={() => toggleFavorite(movie.id)}
-                className={cn(isFavorite && 'text-primary border-primary')}
+                className={cn(isFavorite && "text-primary border-primary")}
               >
-                <Heart className={cn('w-4 h-4', isFavorite && 'fill-primary')} />
+                <Heart className={cn("w-4 h-4", isFavorite && "fill-primary")} />
               </Button>
             </div>
 
@@ -310,9 +275,7 @@ export default function MovieDetail() {
             {movie.overview && (
               <div className="mb-6">
                 <h2 className="text-lg md:text-xl font-semibold mb-2">Synopsis</h2>
-                <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
-                  {movie.overview}
-                </p>
+                <p className="text-muted-foreground text-sm md:text-base leading-relaxed">{movie.overview}</p>
               </div>
             )}
 
@@ -320,7 +283,7 @@ export default function MovieDetail() {
             {directors.length > 0 && (
               <div className="mb-6">
                 <h2 className="text-lg md:text-xl font-semibold mb-3">
-                  {directors.length > 1 ? 'Réalisateurs' : 'Réalisateur'}
+                  {directors.length > 1 ? "Réalisateurs" : "Réalisateur"}
                 </h2>
                 <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
                   {directors.map((director) => (
@@ -355,13 +318,8 @@ export default function MovieDetail() {
             {/* User Rating */}
             <div className="mb-6">
               <h2 className="text-lg md:text-xl font-semibold mb-3">Votre note</h2>
-              <StarRating
-                value={userMovie?.rating || 0}
-                onChange={(rating) => updateRating(movie.id, rating)}
-              />
-              {userMovie?.rating && (
-                <p className="text-sm text-muted-foreground mt-1">{userMovie.rating}/10</p>
-              )}
+              <StarRating value={userMovie?.rating || 0} onChange={(rating) => updateRating(movie.id, rating)} />
+              {userMovie?.rating && <p className="text-sm text-muted-foreground mt-1">{userMovie.rating}/10</p>}
             </div>
 
             {/* User Review */}
@@ -373,11 +331,8 @@ export default function MovieDetail() {
                 onChange={(e) => setReview(e.target.value)}
                 className="mb-3 min-h-[100px] md:text-base"
               />
-              <Button
-                onClick={handleSaveReview}
-                disabled={savingReview}
-              >
-                {savingReview ? 'Enregistrement...' : 'Enregistrer l\'avis'}
+              <Button onClick={handleSaveReview} disabled={savingReview}>
+                {savingReview ? "Enregistrement..." : "Enregistrer l'avis"}
               </Button>
             </div>
           </div>
@@ -389,7 +344,7 @@ export default function MovieDetail() {
         open={watchedDialogOpen}
         onOpenChange={setWatchedDialogOpen}
         movieTitle={movie.title}
-        initialDate={userMovie?.watched_at?.split('T')[0]}
+        initialDate={userMovie?.watched_at?.split("T")[0]}
         initialRating={userMovie?.rating || undefined}
         initialReview={userMovie?.review || undefined}
         onSave={handleWatchedSave}
@@ -438,23 +393,13 @@ function WatchProvidersSection({ providers, loading }: { providers: WatchProvide
   }
 
   if (!providers || (!providers.flatrate && !providers.rent && !providers.buy)) {
-    return (
-      <p className="text-sm text-muted-foreground md:text-base">
-        Aucune offre disponible pour le moment
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground md:text-base">Aucune offre disponible pour le moment</p>;
   }
 
   return (
     <div className="space-y-4">
       {providers.flatrate && providers.flatrate.length > 0 && (
         <ProviderRow label="Streaming" providers={providers.flatrate} />
-      )}
-      {providers.rent && providers.rent.length > 0 && (
-        <ProviderRow label="Location" providers={providers.rent} />
-      )}
-      {providers.buy && providers.buy.length > 0 && (
-        <ProviderRow label="Achat" providers={providers.buy} />
       )}
       <a
         href={providers.link}
@@ -468,7 +413,13 @@ function WatchProvidersSection({ providers, loading }: { providers: WatchProvide
   );
 }
 
-function ProviderRow({ label, providers }: { label: string; providers: Array<{ provider_id: number; provider_name: string; logo_path: string }> }) {
+function ProviderRow({
+  label,
+  providers,
+}: {
+  label: string;
+  providers: Array<{ provider_id: number; provider_name: string; logo_path: string }>;
+}) {
   return (
     <div>
       <p className="text-sm text-muted-foreground mb-2">{label}</p>
@@ -476,7 +427,7 @@ function ProviderRow({ label, providers }: { label: string; providers: Array<{ p
         {providers.map((provider) => (
           <img
             key={provider.provider_id}
-            src={getImageUrl(provider.logo_path, 'w200') || ''}
+            src={getImageUrl(provider.logo_path, "w200") || ""}
             alt={provider.provider_name}
             title={provider.provider_name}
             className="w-12 h-12 rounded-lg object-cover"
@@ -487,12 +438,12 @@ function ProviderRow({ label, providers }: { label: string; providers: Array<{ p
   );
 }
 
-function PersonCard({ 
-  person, 
-  subtitle, 
-  onClick 
-}: { 
-  person: { id: number; name: string; profile_path: string | null }; 
+function PersonCard({
+  person,
+  subtitle,
+  onClick,
+}: {
+  person: { id: number; name: string; profile_path: string | null };
   subtitle: string;
   onClick: () => void;
 }) {
@@ -503,7 +454,7 @@ function PersonCard({
     >
       {person.profile_path ? (
         <img
-          src={getImageUrl(person.profile_path, 'w200') || ''}
+          src={getImageUrl(person.profile_path, "w200") || ""}
           alt={person.name}
           className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover mx-auto mb-2"
         />
