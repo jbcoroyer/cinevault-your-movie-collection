@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   getMovieDetails,
+  getWatchProviders,
   getImageUrl,
   formatRuntime,
   getYear,
   MovieDetails,
+  WatchProviders,
 } from '@/services/tmdb';
 import { useUserMovies } from '@/hooks/useUserMovies';
 import { StarRating } from '@/components/StarRating';
@@ -20,6 +22,7 @@ import {
   Star,
   Clock,
   Calendar,
+  Tv,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +30,9 @@ export default function MovieDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [movie, setMovie] = useState<MovieDetails | null>(null);
+  const [watchProviders, setWatchProviders] = useState<WatchProviders | null>(null);
   const [loading, setLoading] = useState(true);
+  const [providersLoading, setProvidersLoading] = useState(true);
   const [review, setReview] = useState('');
   const [savingReview, setSavingReview] = useState(false);
   const [watchedDialogOpen, setWatchedDialogOpen] = useState(false);
@@ -64,7 +69,21 @@ export default function MovieDetail() {
       }
     };
 
+    const fetchProviders = async () => {
+      if (!id) return;
+      setProvidersLoading(true);
+      try {
+        const providers = await getWatchProviders(Number(id));
+        setWatchProviders(providers);
+      } catch (error) {
+        console.error('Error fetching watch providers:', error);
+      } finally {
+        setProvidersLoading(false);
+      }
+    };
+
     fetchMovie();
+    fetchProviders();
   }, [id]);
 
   useEffect(() => {
@@ -252,6 +271,84 @@ export default function MovieDetail() {
               className={cn('w-4 h-4', isFavorite && 'fill-primary')}
             />
           </Button>
+        </div>
+
+        {/* Watch Providers */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <Tv className="w-5 h-5" />
+            Où regarder ?
+          </h2>
+          {providersLoading ? (
+            <div className="flex gap-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="skeleton-shimmer w-12 h-12 rounded-lg" />
+              ))}
+            </div>
+          ) : watchProviders && (watchProviders.flatrate || watchProviders.rent || watchProviders.buy) ? (
+            <div className="space-y-4">
+              {watchProviders.flatrate && watchProviders.flatrate.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Streaming</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {watchProviders.flatrate.map((provider) => (
+                      <img
+                        key={provider.provider_id}
+                        src={getImageUrl(provider.logo_path, 'w200') || ''}
+                        alt={provider.provider_name}
+                        title={provider.provider_name}
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {watchProviders.rent && watchProviders.rent.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Location</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {watchProviders.rent.map((provider) => (
+                      <img
+                        key={provider.provider_id}
+                        src={getImageUrl(provider.logo_path, 'w200') || ''}
+                        alt={provider.provider_name}
+                        title={provider.provider_name}
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {watchProviders.buy && watchProviders.buy.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Achat</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {watchProviders.buy.map((provider) => (
+                      <img
+                        key={provider.provider_id}
+                        src={getImageUrl(provider.logo_path, 'w200') || ''}
+                        alt={provider.provider_name}
+                        title={provider.provider_name}
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              <a
+                href={watchProviders.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Données fournies par JustWatch
+              </a>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Aucune offre disponible pour le moment
+            </p>
+          )}
         </div>
 
         {/* Synopsis */}

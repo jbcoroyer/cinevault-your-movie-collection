@@ -77,6 +77,20 @@ export interface MovieDetails extends Movie {
   };
 }
 
+export interface WatchProvider {
+  logo_path: string;
+  provider_id: number;
+  provider_name: string;
+  display_priority: number;
+}
+
+export interface WatchProviders {
+  link?: string;
+  flatrate?: WatchProvider[];
+  rent?: WatchProvider[];
+  buy?: WatchProvider[];
+}
+
 interface TMDBResponse<T> {
   page: number;
   results: T[];
@@ -140,6 +154,11 @@ export const discoverMoviesByGenre = async (genreId: number): Promise<Movie[]> =
     with_genres: genreId.toString(),
   });
   return data.results;
+};
+
+export const getWatchProviders = async (movieId: number, country: string = 'FR'): Promise<WatchProviders | null> => {
+  const data = await fetchTMDB<{ results: Record<string, WatchProviders> }>(`/movie/${movieId}/watch/providers`);
+  return data.results[country] || null;
 };
 
 export const formatRuntime = (minutes: number): string => {
