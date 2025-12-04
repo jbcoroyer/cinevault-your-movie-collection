@@ -10,13 +10,15 @@ export interface TopMovie {
   poster_path: string | null;
 }
 
-export function useUserTopMovies() {
+export function useUserTopMovies(targetUserId?: string) {
   const { user } = useAuth();
   const [topMovies, setTopMovies] = useState<TopMovie[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const userId = targetUserId || user?.id;
+
   const fetchTopMovies = async () => {
-    if (!user) {
+    if (!userId) {
       setTopMovies([]);
       setLoading(false);
       return;
@@ -25,7 +27,7 @@ export function useUserTopMovies() {
     const { data, error } = await supabase
       .from('user_top_movies')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('slot', { ascending: true });
 
     if (!error && data) {
@@ -36,7 +38,7 @@ export function useUserTopMovies() {
 
   useEffect(() => {
     fetchTopMovies();
-  }, [user]);
+  }, [userId]);
 
   const setTopMovie = async (
     slot: number,
