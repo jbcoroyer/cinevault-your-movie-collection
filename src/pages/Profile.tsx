@@ -110,44 +110,6 @@ export default function Profile() {
     return currentProfile?.username || (isOwnProfile ? user?.email?.split("@")[0] : "Utilisateur");
   };
 
-  // ... imports existants ...
-
-  export default function Profile() {
-    const { id } = useParams<{ id?: string }>(); // Récupère l'ID optionnel
-    const { user, profile: myProfile, signOut, updateProfile } = useAuth();
-
-    // Déterminer quel profil afficher
-    const isOwnProfile = !id || id === user?.id;
-    const displayProfileId = isOwnProfile ? user?.id : id;
-
-    // Si c'est un autre profil, il faudrait idéalement fetcher ses infos (username, bio, stats)
-    // Pour ce tuto simple, on ajoute juste le bouton à l'endroit adéquat.
-
-    // ... reste du code existant ...
-
-    return (
-      <div className="min-h-screen bg-background pb-20">
-        <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-          <div className="px-4 h-14 flex items-center justify-between">
-            <h1 className="text-xl font-bold">Profil</h1>
-
-            {/* LOGIQUE D'AFFICHAGE DES BOUTONS D'ACTION */}
-            <div className="flex gap-2">
-              {!isOwnProfile && displayProfileId && <FollowButton targetUserId={displayProfileId} />}
-
-              {isOwnProfile && !editing && (
-                <button onClick={() => setEditing(true)} className="p-2 text-muted-foreground hover:text-foreground">
-                  <Edit2 className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-          </div>
-        </header>
-
-        {/* ... reste du main ... */}
-      </div>
-    );
-  }
 
   if (loadingProfile) {
     return (
