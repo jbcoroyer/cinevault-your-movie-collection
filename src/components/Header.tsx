@@ -1,7 +1,7 @@
-import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { Home, Search, Library, User, ListVideo } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ProfileMenu } from './ProfileMenu';
 
 const navItems = [
   { to: '/', icon: Home, label: 'Accueil' },
@@ -12,18 +12,7 @@ const navItems = [
 ];
 
 export const Header: React.FC = () => {
-  const { user, profile } = useAuth();
   const navigate = useNavigate();
-
-  const getInitials = () => {
-    if (profile?.username) {
-      return profile.username.slice(0, 2).toUpperCase();
-    }
-    if (user?.email) {
-      return user.email.slice(0, 2).toUpperCase();
-    }
-    return 'U';
-  };
 
   return (
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
@@ -56,12 +45,7 @@ export const Header: React.FC = () => {
           ))}
         </nav>
         
-        <button
-          onClick={() => navigate('/profile')}
-          className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold transition-transform hover:scale-105"
-        >
-          {getInitials()}
-        </button>
+        <ProfileMenu />
       </div>
     </header>
   );
