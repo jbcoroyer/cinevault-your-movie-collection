@@ -374,3 +374,28 @@ export const getStreamingMovies = async (): Promise<Movie[]> => {
   });
   return data.results;
 };
+export const getNowAvailableMovies = async (): Promise<Movie[]> => {
+  const today = new Date();
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(today.getMonth() - 3);
+
+  const [nowPlayingData, streamingData] = await Promise.all([
+    fetchTMDB<TMDBResponse<Movie>>("/movie/now_playing", {
+      region: "FR",
+    }),
+    fetchTMDB<TMDBResponse<Movie>>("/discover/movie", {
+      watch_region: "FR",
+      with_watch_monetization_types: "flatrate",
+      sort_by: "primary_release_date.desc",
+      "primary_release_date.lte": today.toISOString().split("T")[0],
+      "primary_release_date.gte": threeMonthsAgo.toISOString().split("T")[0],
+    }),
+  ]);
+
+  // Fusionner et supprimer les doublons par ID
+  const allMovies = [...nowPlayingData.results, ...streamingData.results];
+  const uniqueMovies = allMovies.filter((movie, index, self) => index === self.findIndex((m) => m.id === movie.id));
+
+  // Trier par date de sortie (plus récent en premier)
+  return uniqueMovies.sort((a, b) => new Date(b.release_date).getTime() - new Date(a.release_date).getTime());
+};
