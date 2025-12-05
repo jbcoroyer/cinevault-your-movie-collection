@@ -1,0 +1,296 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Search, Plus, Disc, Info } from "lucide-react";
+import { searchMovies, Movie, getImageUrl } from "@/services/tmdb";
+import { PhysicalFormat, formatLabels, addPhysicalMovie } from "@/services/physicalMovies";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { useDebounce } from "@/hooks/useDebounce";
+
+interface AddPhysicalMovieDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onMovieAdded: () => void;
+}
+
+export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
+  open,
+  onOpenChange,
+  onMovieAdded,
+}) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [step, setStep] = useState<"search" | "details">("search");
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Movie[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [format, setFormat] = useState<PhysicalFormat>("bluray");
+  const [price, setPrice] = useState("");
+  const [purchaseDate, setPurchaseDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const debouncedQuery = useDebounce(query, 300);
+
+  // Search movies
+  useState(() => {
+    const search = async () => {
+      if (!debouncedQuery.trim()) {
+        setSearchResults([]);
+        return;
+      }
+      setSearching(true);
+      const results = await searchMovies(debouncedQuery);
+      setSearchResults(results);
+      setSearching(false);
+    };
+    search();
+  });
+
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+    setSearching(true);
+    const results = await searchMovies(query);
+    setSearchResults(results);
+    setSearching(false);
+  };
+
+  const handleSelectMovie = (movie: Movie) => {
+    setSelectedMovie(movie);
+    setStep("details");
+  };
+
+  const handleSave = async () => {
+    if (!user || !selectedMovie) return;
+
+    setSaving(true);
+    try {
+      await addPhysicalMovie(user.id, {
+        tmdb_id: selectedMovie.id,
+        format,
+        price: price ? parseFloat(price) : null,
+        purchase_date: purchaseDate || null,
+        notes: notes || null,
+      });
+
+      toast({ title: "Film ajouté à votre bibliothèque !" });
+      onMovieAdded();
+      handleClose();
+    } catch (error: any) {
+      if (error.code === "23505") {
+        toast({
+          title: "Ce film existe déjà",
+          description: "Vous possédez déjà ce film dans ce format.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Erreur lors de l'ajout", variant: "destructive" });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    setStep("search");
+    setQuery("");
+    setSearchResults([]);
+    setSelectedMovie(null);
+    setFormat("bluray");
+    setPrice("");
+    setPurchaseDate("");
+    setNotes("");
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Disc className="w-5 h-5" />
+            {step === "search" ? "Ajouter un DVD/Blu-ray" : "Détails du film"}
+          </DialogTitle>
+        </DialogHeader>
+
+        {step === "search" ? (
+          <div className="space-y-4">
+            {/* Info box */}
+            <div className="flex gap-3 p-3 bg-primary/10 rounded-lg text-sm">
+              <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <p className="text-muted-foreground">
+                Ajoutez les DVD et Blu-ray que vous possédez physiquement pour garder une trace de votre collection.
+              </p>
+            </div>
+
+            {/* Search input */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher un film..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="pl-9"
+                />
+              </div>
+              <Button onClick={handleSearch} disabled={searching}>
+                {searching ? "..." : "Rechercher"}
+              </Button>
+            </div>
+
+            {/* Results */}
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {searchResults.map((movie) => (
+                <button
+                  key={movie.id}
+                  onClick={() => handleSelectMovie(movie)}
+                  className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors text-left"
+                >
+                  {movie.poster_path ? (
+                    <img
+                      src={getImageUrl(movie.poster_path, "w200")!}
+                      alt={movie.title}
+                      className="w-12 h-18 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-12 h-18 bg-card rounded flex items-center justify-center">
+                      <Disc className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{movie.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {movie.release_date?.split("-")[0] || "Date inconnue"}
+                    </p>
+                  </div>
+                  <Plus className="w-5 h-5 text-muted-foreground" />
+                </button>
+              ))}
+
+              {query && !searching && searchResults.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">
+                  Aucun film trouvé
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Selected movie preview */}
+            {selectedMovie && (
+              <div className="flex gap-3 p-3 bg-card rounded-lg">
+                {selectedMovie.poster_path ? (
+                  <img
+                    src={getImageUrl(selectedMovie.poster_path, "w200")!}
+                    alt={selectedMovie.title}
+                    className="w-16 h-24 object-cover rounded"
+                  />
+                ) : (
+                  <div className="w-16 h-24 bg-muted rounded flex items-center justify-center">
+                    <Disc className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                )}
+                <div>
+                  <p className="font-semibold">{selectedMovie.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedMovie.release_date?.split("-")[0]}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Format */}
+            <div className="space-y-2">
+              <Label>Format *</Label>
+              <Select value={format} onValueChange={(v) => setFormat(v as PhysicalFormat)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(formatLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Price */}
+            <div className="space-y-2">
+              <Label>Prix d'achat (optionnel)</Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Ex: 14.99"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="pr-8"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  €
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Laissez vide si vous ne vous en souvenez pas
+              </p>
+            </div>
+
+            {/* Purchase date */}
+            <div className="space-y-2">
+              <Label>Date d'achat (optionnel)</Label>
+              <Input
+                type="date"
+                value={purchaseDate}
+                onChange={(e) => setPurchaseDate(e.target.value)}
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label>Notes (optionnel)</Label>
+              <Textarea
+                placeholder="Ex: Édition limitée, coffret spécial..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" onClick={() => setStep("search")} className="flex-1">
+                Retour
+              </Button>
+              <Button onClick={handleSave} disabled={saving} className="flex-1">
+                {saving ? "Ajout..." : "Ajouter à ma bibliothèque"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
