@@ -50,12 +50,13 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
     setDeleteDialogOpen(false);
   };
 
-  const posterUrl = movieDetails?.poster_path
-    ? getImageUrl(movieDetails.poster_path, "w200")
-    : null;
+  const posterUrl = movieDetails?.poster_path ? getImageUrl(movieDetails.poster_path, "w200") : null;
 
   const year = movieDetails?.release_date?.split("-")[0];
-  const genres = movieDetails?.genres?.slice(0, 2).map(g => g.name).join(", ");
+  const genres = movieDetails?.genres
+    ?.slice(0, 2)
+    .map((g) => g.name)
+    .join(", ");
 
   return (
     <>
@@ -63,11 +64,7 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
         {/* Poster */}
         <Link to={`/movie/${physicalMovie.tmdb_id}`} className="flex-shrink-0">
           {posterUrl ? (
-            <img
-              src={posterUrl}
-              alt={movieDetails?.title || "Film"}
-              className="w-16 h-24 object-cover rounded"
-            />
+            <img src={posterUrl} alt={movieDetails?.title || "Film"} className="w-16 h-24 object-cover rounded" />
           ) : (
             <div className="w-16 h-24 bg-muted rounded flex items-center justify-center">
               <Disc className="w-8 h-8 text-muted-foreground" />
@@ -82,7 +79,7 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
               {movieDetails?.title || "Chargement..."}
             </h3>
           </Link>
-          
+
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
             {year && (
               <span className="flex items-center gap-1">
@@ -117,9 +114,7 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
           </div>
 
           {physicalMovie.notes && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-              {physicalMovie.notes}
-            </p>
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{physicalMovie.notes}</p>
           )}
         </div>
 
@@ -148,6 +143,35 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Retirer ce film ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Vous avez vendu ou donné "{movieDetails?.title}" ? Cette action retirera le film de votre bibliothèque physique.
+              Vous avez vendu ou donné "{movieDetails?.title}" ? Cette action retirera le film de votre bibliothèque
+              physique.
             </AlertDialogDescription>
-          </AlertDia
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Suppression..." : "Retirer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+};
+
+export const PhysicalMovieListItemSkeleton: React.FC = () => {
+  return (
+    <div className="flex items-center gap-4 p-3 bg-card rounded-lg">
+      <div className="w-16 h-24 bg-muted rounded animate-pulse" />
+      <div className="flex-1 space-y-2">
+        <div className="h-5 bg-muted rounded animate-pulse w-1/2" />
+        <div className="h-4 bg-muted rounded animate-pulse w-1/3" />
+        <div className="h-4 bg-muted rounded animate-pulse w-1/4" />
+      </div>
+    </div>
+  );
+};
