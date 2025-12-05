@@ -15,7 +15,7 @@ import Profile from "./pages/Profile";
 import Lists from "./pages/Lists";
 import ListDetail from "./pages/ListDetail";
 import NotFound from "./pages/NotFound";
-import MovieList from "@/pages/MovieList";
+import MovieList from "./pages/MovieList";
 
 const queryClient = new QueryClient();
 
@@ -29,7 +29,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  <Route path="/movies/:type" element={<MovieList />} />;
 
   if (!user) {
     return <Navigate to="/auth" replace />;
@@ -55,30 +54,6 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
   return <>{children}</>;
 };
-
-<Routes>
-  {/* ... autres routes ... */}
-
-  {/* Route pour mon profil */}
-  <Route
-    path="/profile"
-    element={
-      <ProtectedRoute>
-        <Profile />
-      </ProtectedRoute>
-    }
-  />
-
-  {/* NOUVELLE ROUTE pour le profil des autres */}
-  <Route
-    path="/profile/:id"
-    element={
-      <ProtectedRoute>
-        <Profile />
-      </ProtectedRoute>
-    }
-  />
-</Routes>;
 
 const AppRoutes = () => {
   return (
@@ -112,6 +87,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <MovieDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/movies/:type"
+        element={
+          <ProtectedRoute>
+            <MovieList />
           </ProtectedRoute>
         }
       />
