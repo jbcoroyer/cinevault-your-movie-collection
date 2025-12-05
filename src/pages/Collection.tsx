@@ -12,6 +12,7 @@ import { getMovieDetails, Movie, MovieDetails } from "@/services/tmdb";
 import { getPhysicalMovies, getPhysicalMovieStats, PhysicalMovie } from "@/services/physicalMovies";
 import { Disc, Plus, Euro, Package, LayoutGrid, List, Image, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Header } from "@/components/Header";
 
 type ViewMode = "cards" | "list" | "posters";
 type SortBy = "title" | "year" | "price" | "genre" | "director" | "added";
@@ -144,13 +145,7 @@ export default function Collection() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="px-4 h-14 flex items-center gap-3">
-          <Disc className="w-5 h-5 text-primary" />
-          <h1 className="text-xl font-bold flex-1">Ma Collection</h1>
-        </div>
-      </header>
+      <Header />
 
       <main className="p-4">
         {/* CTA Button */}

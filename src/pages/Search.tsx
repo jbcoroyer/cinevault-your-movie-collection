@@ -8,6 +8,7 @@ import { searchMovies, getGenres, discoverMoviesByGenre, Movie, Genre } from "@/
 import { searchUsers, getPopularUsers, UserProfile } from "@/services/users";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
+import { Header } from "@/components/Header";
 
 type SearchTab = "films" | "users";
 
@@ -123,7 +124,8 @@ export default function Search() {
   return (
     <>
       <div className="min-h-screen bg-background pb-24">
-        <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border p-4">
+        <Header />
+        <div className="bg-background/80 backdrop-blur-lg border-b border-border p-4">
           {/* Tabs */}
           <div className="flex gap-2 mb-4">
             <button
