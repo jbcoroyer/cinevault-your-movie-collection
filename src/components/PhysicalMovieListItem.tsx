@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { Trash2, Disc, MoreVertical, Calendar, Euro, User, Film } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,6 +25,7 @@ interface PhysicalMovieListItemProps {
   movieDetails: Movie | null;
   director?: string;
   onDeleted: () => void;
+  onEdit: (physicalMovie: PhysicalMovie, movieDetails: Movie | null) => void;
 }
 
 export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
@@ -33,6 +33,7 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
   movieDetails,
   director,
   onDeleted,
+  onEdit,
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -50,6 +51,13 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
     setDeleteDialogOpen(false);
   };
 
+  const handleItemClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("[data-menu-trigger]")) {
+      return;
+    }
+    onEdit(physicalMovie, movieDetails);
+  };
+
   const posterUrl = movieDetails?.poster_path ? getImageUrl(movieDetails.poster_path, "w200") : null;
 
   const year = movieDetails?.release_date?.split("-")[0];
@@ -60,9 +68,12 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
 
   return (
     <>
-      <div className="flex items-center gap-4 p-3 bg-card rounded-lg group">
+      <div
+        className="flex items-center gap-4 p-3 bg-card rounded-lg group cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+        onClick={handleItemClick}
+      >
         {/* Poster */}
-        <Link to={`/movie/${physicalMovie.tmdb_id}`} className="flex-shrink-0">
+        <div className="flex-shrink-0">
           {posterUrl ? (
             <img src={posterUrl} alt={movieDetails?.title || "Film"} className="w-16 h-24 object-cover rounded" />
           ) : (
@@ -70,15 +81,11 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
               <Disc className="w-8 h-8 text-muted-foreground" />
             </div>
           )}
-        </Link>
+        </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <Link to={`/movie/${physicalMovie.tmdb_id}`}>
-            <h3 className="font-semibold truncate hover:text-primary transition-colors">
-              {movieDetails?.title || "Chargement..."}
-            </h3>
-          </Link>
+          <h3 className="font-semibold truncate">{movieDetails?.title || "Chargement..."}</h3>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
             {year && (
@@ -121,13 +128,20 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
         {/* Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              data-menu-trigger
+              className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
               <MoreVertical className="w-4 h-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              onClick={() => setDeleteDialogOpen(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteDialogOpen(true);
+              }}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="w-4 h-4 mr-2" />
