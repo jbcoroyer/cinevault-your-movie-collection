@@ -18,6 +18,7 @@ import ListDetail from "./pages/ListDetail";
 import NotFound from "./pages/NotFound";
 import MovieList from "./pages/MovieList";
 import Settings from "./pages/Settings";
+import Badges from "./pages/Badges";
 
 const queryClient = new QueryClient();
 
@@ -161,6 +162,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <ListDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/badges"
+        element={
+          <ProtectedRoute>
+            <Badges />
           </ProtectedRoute>
         }
       />
