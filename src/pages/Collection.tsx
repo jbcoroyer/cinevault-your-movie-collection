@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BottomNav } from "@/components/BottomNav";
-import { Header } from "@/components/Header";
 import { PhysicalMovieCard, PhysicalMovieCardSkeleton } from "@/components/PhysicalMovieCard";
 import { PhysicalMovieListItem, PhysicalMovieListItemSkeleton } from "@/components/PhysicalMovieListItem";
 import { PhysicalMoviePoster, PhysicalMoviePosterSkeleton } from "@/components/PhysicalMoviePoster";
@@ -133,9 +132,27 @@ export default function Collection() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Header />
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
+        <div className="px-4 h-14 flex items-center gap-3">
+          <Disc className="w-5 h-5 text-primary" />
+          <h1 className="text-xl font-bold flex-1">Ma Collection</h1>
+        </div>
+      </header>
 
       <main className="p-4">
+        {/* CTA Button - Toujours visible en haut */}
+        <Button
+          onClick={() => setAddDialogOpen(true)}
+          size="lg"
+          className="w-full mb-6 h-14 text-base font-semibold gap-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300"
+        >
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+            <Plus className="w-6 h-6" />
+          </div>
+          Ajouter un DVD / Blu-ray
+        </Button>
+
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -146,7 +163,7 @@ export default function Collection() {
           <>
             {/* Stats */}
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="bg-card p-4 rounded-lg">
+              <div className="bg-card p-4 rounded-lg border border-border">
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
                   <Package className="w-4 h-4" />
                   <span className="text-sm">Total</span>
@@ -154,7 +171,7 @@ export default function Collection() {
                 <p className="text-2xl font-bold">{physicalStats.totalMovies}</p>
                 <p className="text-xs text-muted-foreground">films physiques</p>
               </div>
-              <div className="bg-card p-4 rounded-lg">
+              <div className="bg-card p-4 rounded-lg border border-border">
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
                   <Euro className="w-4 h-4" />
                   <span className="text-sm">Valeur</span>
@@ -190,7 +207,7 @@ export default function Collection() {
               <div className="flex-1" />
 
               {/* View mode toggles */}
-              <div className="flex items-center bg-card rounded-lg p-1">
+              <div className="flex items-center bg-card rounded-lg p-1 border border-border">
                 <button
                   onClick={() => setViewMode("cards")}
                   className={cn(
@@ -273,18 +290,14 @@ export default function Collection() {
           </>
         ) : (
           // Empty state
-          <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="flex flex-col items-center justify-center py-12 px-4">
             <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
               <Disc className="w-12 h-12 text-primary" />
             </div>
             <h2 className="text-xl font-semibold mb-2 text-center">Votre collection est vide</h2>
-            <p className="text-muted-foreground text-center mb-8 max-w-sm">
+            <p className="text-muted-foreground text-center max-w-sm">
               Commencez à ajouter vos DVD et Blu-ray pour garder une trace de tous les films que vous possédez.
             </p>
-            <Button size="lg" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="w-5 h-5 mr-2" />
-              Ajouter mon premier film
-            </Button>
           </div>
         )}
       </main>
