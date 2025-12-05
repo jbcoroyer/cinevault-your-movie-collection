@@ -399,3 +399,47 @@ export const getNowAvailableMovies = async (): Promise<Movie[]> => {
   // Trier par date de sortie (plus récent en premier)
   return uniqueMovies.sort((a, b) => new Date(b.release_date).getTime() - new Date(a.release_date).getTime());
 };
+export const getNowAvailableMoviesPaginated = async (
+  page: number = 1,
+): Promise<{ movies: Movie[]; totalPages: number }> => {
+  const today = new Date();
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(today.getMonth() - 3);
+
+  const [nowPlayingData, streamingData] = await Promise.all([
+    fetchTMDB<TMDBResponse<Movie>>("/movie/now_playing", {
+      region: "FR",
+      page: page.toString(),
+    }),
+    fetchTMDB<TMDBResponse<Movie>>("/discover/movie", {
+      watch_region: "FR",
+      with_watch_monetization_types: "flatrate",
+      sort_by: "primary_release_date.desc",
+      "primary_release_date.lte": today.toISOString().split("T")[0],
+      "primary_release_date.gte": threeMonthsAgo.toISOString().split("T")[0],
+      page: page.toString(),
+    }),
+  ]);
+
+  const allMovies = [...nowPlayingData.results, ...streamingData.results];
+  const uniqueMovies = allMovies.filter((movie, index, self) => index === self.findIndex((m) => m.id === movie.id));
+
+  const sortedMovies = uniqueMovies.sort(
+    (a, b) => new Date(b.release_date).getTime() - new Date(a.release_date).getTime(),
+  );
+
+  return {
+    movies: sortedMovies,
+    totalPages: Math.max(nowPlayingData.total_pages, streamingData.total_pages),
+  };
+};
+
+export const getPopularMoviesPaginated = async (page: number = 1): Promise<{ movies: Movie[]; totalPages: number }> => {
+  const data = await fetchTMDB<TMDBResponse<Movie>>("/movie/popular", {
+    page: page.toString(),
+  });
+  return {
+    movies: data.results,
+    totalPages: data.total_pages,
+  };
+};
