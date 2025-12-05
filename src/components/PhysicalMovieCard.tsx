@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Trash2, Edit2, Disc, MoreVertical } from "lucide-react";
+import { Trash2, Disc, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,12 +24,14 @@ interface PhysicalMovieCardProps {
   physicalMovie: PhysicalMovie;
   movieDetails: Movie | null;
   onDeleted: () => void;
+  onEdit: (physicalMovie: PhysicalMovie, movieDetails: Movie | null) => void;
 }
 
 export const PhysicalMovieCard: React.FC<PhysicalMovieCardProps> = ({
   physicalMovie,
   movieDetails,
   onDeleted,
+  onEdit,
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -48,26 +49,29 @@ export const PhysicalMovieCard: React.FC<PhysicalMovieCardProps> = ({
     setDeleteDialogOpen(false);
   };
 
-  const posterUrl = movieDetails?.poster_path
-    ? getImageUrl(movieDetails.poster_path, "w300")
-    : null;
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Empêcher le clic si on clique sur le menu
+    if ((e.target as HTMLElement).closest("[data-menu-trigger]")) {
+      return;
+    }
+    onEdit(physicalMovie, movieDetails);
+  };
+
+  const posterUrl = movieDetails?.poster_path ? getImageUrl(movieDetails.poster_path, "w300") : null;
 
   return (
     <>
-      <div className="bg-card rounded-lg overflow-hidden group relative">
-        <Link to={`/movie/${physicalMovie.tmdb_id}`}>
-          {posterUrl ? (
-            <img
-              src={posterUrl}
-              alt={movieDetails?.title || "Film"}
-              className="w-full aspect-[2/3] object-cover"
-            />
-          ) : (
-            <div className="w-full aspect-[2/3] bg-muted flex items-center justify-center">
-              <Disc className="w-12 h-12 text-muted-foreground" />
-            </div>
-          )}
-        </Link>
+      <div
+        className="bg-card rounded-lg overflow-hidden group relative cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+        onClick={handleCardClick}
+      >
+        {posterUrl ? (
+          <img src={posterUrl} alt={movieDetails?.title || "Film"} className="w-full aspect-[2/3] object-cover" />
+        ) : (
+          <div className="w-full aspect-[2/3] bg-muted flex items-center justify-center">
+            <Disc className="w-12 h-12 text-muted-foreground" />
+          </div>
+        )}
 
         {/* Format badge */}
         <div className="absolute top-2 left-2 px-2 py-1 bg-primary text-primary-foreground text-xs font-medium rounded">
@@ -77,13 +81,20 @@ export const PhysicalMovieCard: React.FC<PhysicalMovieCardProps> = ({
         {/* Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="absolute top-2 right-2 w-8 h-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              data-menu-trigger
+              className="absolute top-2 right-2 w-8 h-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
               <MoreVertical className="w-4 h-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              onClick={() => setDeleteDialogOpen(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteDialogOpen(true);
+              }}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="w-4 h-4 mr-2" />
@@ -94,23 +105,15 @@ export const PhysicalMovieCard: React.FC<PhysicalMovieCardProps> = ({
 
         {/* Info */}
         <div className="p-3">
-          <h3 className="font-medium text-sm truncate">
-            {movieDetails?.title || "Chargement..."}
-          </h3>
+          <h3 className="font-medium text-sm truncate">{movieDetails?.title || "Chargement..."}</h3>
           <div className="flex items-center justify-between mt-1">
-            <span className="text-xs text-muted-foreground">
-              {movieDetails?.release_date?.split("-")[0] || ""}
-            </span>
+            <span className="text-xs text-muted-foreground">{movieDetails?.release_date?.split("-")[0] || ""}</span>
             {physicalMovie.price && (
-              <span className="text-xs font-medium text-primary">
-                {physicalMovie.price.toFixed(2)} €
-              </span>
+              <span className="text-xs font-medium text-primary">{physicalMovie.price.toFixed(2)} €</span>
             )}
           </div>
           {physicalMovie.notes && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-              {physicalMovie.notes}
-            </p>
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{physicalMovie.notes}</p>
           )}
         </div>
       </div>
@@ -121,7 +124,8 @@ export const PhysicalMovieCard: React.FC<PhysicalMovieCardProps> = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Retirer ce film ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Vous avez vendu ou donné "{movieDetails?.title}" ? Cette action retirera le film de votre bibliothèque physique.
+              Vous avez vendu ou donné "{movieDetails?.title}" ? Cette action retirera le film de votre bibliothèque
+              physique.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
