@@ -9,36 +9,15 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
 import { Separator } from "../components/ui/separator";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { toast } from "../hooks/use-toast";
-import { 
-  Moon, 
-  Sun, 
-  Laptop, 
-  Mail, 
-  Bell, 
-  RefreshCw, 
-  CheckCircle2, 
-  ShieldCheck 
-} from "lucide-react";
+import { Moon, Sun, Laptop, Mail, Bell, RefreshCw, CheckCircle2, ShieldCheck } from "lucide-react";
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
-  
+
   // États pour le changement d'email
   const [newEmail, setNewEmail] = useState("");
   const [emailLoading, setEmailLoading] = useState(false);
@@ -105,9 +84,7 @@ export default function Settings() {
               <Sun className="h-5 w-5" />
               Apparence
             </CardTitle>
-            <CardDescription>
-              Personnalisez l'apparence de l'application.
-            </CardDescription>
+            <CardDescription>Personnalisez l'apparence de l'application.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
@@ -145,9 +122,7 @@ export default function Settings() {
               <ShieldCheck className="h-5 w-5" />
               Sécurité du compte
             </CardTitle>
-            <CardDescription>
-              Gérez vos identifiants de connexion.
-            </CardDescription>
+            <CardDescription>Gérez vos identifiants de connexion.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleUpdateEmail} className="space-y-4">
@@ -155,7 +130,7 @@ export default function Settings() {
                 <Label>Email actuel</Label>
                 <Input value={user?.email || ""} disabled className="bg-muted" />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="new-email">Nouvel email</Label>
                 <div className="flex gap-2">
@@ -189,17 +164,13 @@ export default function Settings() {
               <Bell className="h-5 w-5" />
               Notifications
             </CardTitle>
-            <CardDescription>
-              Choisissez ce que vous souhaitez recevoir.
-            </CardDescription>
+            <CardDescription>Choisissez ce que vous souhaitez recevoir.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-base">Alertes de sécurité</Label>
-                <p className="text-xs text-muted-foreground">
-                  Emails concernant la sécurité de votre compte.
-                </p>
+                <p className="text-xs text-muted-foreground">Emails concernant la sécurité de votre compte.</p>
               </div>
               <Switch
                 checked={notifSecurity}
@@ -211,9 +182,7 @@ export default function Settings() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-base">Nouveautés & Marketing</Label>
-                <p className="text-xs text-muted-foreground">
-                  Recevoir des news sur les mises à jour de CineVault.
-                </p>
+                <p className="text-xs text-muted-foreground">Recevoir des news sur les mises à jour de CineVault.</p>
               </div>
               <Switch
                 checked={notifMarketing}
@@ -243,12 +212,7 @@ export default function Settings() {
                 <p className="text-sm font-medium">Version actuelle</p>
                 <p className="text-xs text-muted-foreground">v1.0.0 (Bêta)</p>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCheckUpdate}
-                disabled={updateLoading}
-              >
+              <Button variant="outline" size="sm" onClick={handleCheckUpdate} disabled={updateLoading}>
                 {updateLoading ? (
                   <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                 ) : (
