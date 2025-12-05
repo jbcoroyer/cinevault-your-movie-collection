@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import "./DVDBoxAnimation.css";
 
 interface DVDBoxAnimationProps {
@@ -8,14 +8,15 @@ interface DVDBoxAnimationProps {
   onAnimationComplete?: () => void;
 }
 
+type AnimationState = "idle" | "opening" | "disc-in" | "closing" | "flying" | "complete";
+
 export const DVDBoxAnimation: React.FC<DVDBoxAnimationProps> = ({
   isOpen,
   posterUrl,
   movieTitle,
   onAnimationComplete,
 }) => {
-  const [animationState, setAnimationState] = useState;
-  "idle" | "opening" | "disc-in" | "closing" | "flying" | ("complete" > "idle");
+  const [animationState, setAnimationState] = useState<AnimationState>("idle");
 
   useEffect(() => {
     if (isOpen && animationState === "idle") {
