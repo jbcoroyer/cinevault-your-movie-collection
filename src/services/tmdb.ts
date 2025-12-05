@@ -353,3 +353,24 @@ export const getYear = (dateString: string): string => {
   if (!dateString) return "";
   return new Date(dateString).getFullYear().toString();
 };
+export const getNowPlayingMovies = async (): Promise<Movie[]> => {
+  const data = await fetchTMDB<TMDBResponse<Movie>>("/movie/now_playing", {
+    region: "FR",
+  });
+  return data.results;
+};
+
+export const getStreamingMovies = async (): Promise<Movie[]> => {
+  const today = new Date();
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(today.getMonth() - 3);
+
+  const data = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", {
+    watch_region: "FR",
+    with_watch_monetization_types: "flatrate",
+    sort_by: "primary_release_date.desc",
+    "primary_release_date.lte": today.toISOString().split("T")[0],
+    "primary_release_date.gte": threeMonthsAgo.toISOString().split("T")[0],
+  });
+  return data.results;
+};
