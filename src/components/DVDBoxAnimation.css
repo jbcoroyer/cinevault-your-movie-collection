@@ -11,8 +11,12 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .dvd-scene {
@@ -32,7 +36,7 @@
 }
 
 .dvd-scene.flying .dvd-box {
-  animation: flyToShelf 0.8s ease-in forwards;
+  animation: flyToShelf 2s ease-in forwards;
 }
 
 @keyframes flyToShelf {
@@ -96,7 +100,7 @@
 }
 
 .disc-holder::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -113,18 +117,11 @@
   width: 90px;
   height: 90px;
   border-radius: 50%;
-  background: linear-gradient(
-    135deg,
-    #e8e8e8 0%,
-    #c0c0c0 25%,
-    #a0a0a0 50%,
-    #c0c0c0 75%,
-    #e8e8e8 100%
-  );
+  background: linear-gradient(135deg, #e8e8e8 0%, #c0c0c0 25%, #a0a0a0 50%, #c0c0c0 75%, #e8e8e8 100%);
   box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
   opacity: 0;
   transform: translateY(-200px) rotate(0deg);
-  transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 2s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
 }
 
@@ -163,20 +160,18 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    135deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 45%,
-    transparent 50%,
-    transparent 100%
-  );
+  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.4) 45%, transparent 50%, transparent 100%);
   border-radius: 50%;
-  animation: discShine 2s linear infinite;
+  animation: discShine 4s linear infinite;
 }
 
 @keyframes discShine {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* === COUVERCLE DE LA BOÎTE === */
@@ -188,7 +183,7 @@
   border-radius: 4px;
   transform-origin: left;
   transform: translateZ(0) rotateY(0deg);
-  transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 2s cubic-bezier(0.34, 1.56, 0.64, 1);
   box-shadow: 5px 5px 20px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   backface-visibility: hidden;
@@ -245,7 +240,7 @@
 
 /* === PARTICULES BRILLANTES (optionnel) === */
 .dvd-scene.flying::before {
-  content: '';
+  content: "";
   position: absolute;
   width: 200px;
   height: 200px;
@@ -271,17 +266,17 @@
     width: 120px;
     height: 168px;
   }
-  
+
   .dvd-disc {
     width: 70px;
     height: 70px;
   }
-  
+
   .disc-holder {
     width: 60px;
     height: 60px;
   }
-  
+
   .disc-center {
     width: 16px;
     height: 16px;
