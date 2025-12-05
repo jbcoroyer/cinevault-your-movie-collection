@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./DVDBoxAnimation.css";
 
 interface DVDBoxAnimationProps {
@@ -17,33 +17,45 @@ export const DVDBoxAnimation: React.FC<DVDBoxAnimationProps> = ({
   onAnimationComplete,
 }) => {
   const [animationState, setAnimationState] = useState<AnimationState>("idle");
+  const hasStartedRef = useRef(false);
+  const timersRef = useRef<NodeJS.Timeout[]>([]);
 
+  // Démarrer l'animation quand isOpen devient true
   useEffect(() => {
-    if (isOpen && animationState === "idle") {
+    if (isOpen && !hasStartedRef.current) {
+      hasStartedRef.current = true;
       setAnimationState("opening");
 
-      const timer1 = setTimeout(() => setAnimationState("disc-in"), 800);
-      const timer2 = setTimeout(() => setAnimationState("closing"), 1800);
-      const timer3 = setTimeout(() => setAnimationState("flying"), 2600);
-      const timer4 = setTimeout(() => {
-        setAnimationState("complete");
-        if (onAnimationComplete) {
-          onAnimationComplete();
-        }
-      }, 3400);
-
-      return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-        clearTimeout(timer3);
-        clearTimeout(timer4);
-      };
+      // Créer les timers pour la séquence
+      timersRef.current = [
+        setTimeout(() => setAnimationState("disc-in"), 800),
+        setTimeout(() => setAnimationState("closing"), 1800),
+        setTimeout(() => setAnimationState("flying"), 2600),
+        setTimeout(() => {
+          setAnimationState("complete");
+          if (onAnimationComplete) {
+            onAnimationComplete();
+          }
+        }, 3400),
+      ];
     }
-  }, [isOpen, animationState, onAnimationComplete]);
 
+    // Cleanup uniquement quand le composant est démonté
+    return () => {
+      if (!isOpen) {
+        timersRef.current.forEach(clearTimeout);
+        timersRef.current = [];
+      }
+    };
+  }, [isOpen, onAnimationComplete]);
+
+  // Reset quand isOpen devient false
   useEffect(() => {
     if (!isOpen) {
+      hasStartedRef.current = false;
       setAnimationState("idle");
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
     }
   }, [isOpen]);
 
