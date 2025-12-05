@@ -16,6 +16,24 @@ export default function Search() {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 300);
 
+  export default function Search() {
+    // ... tous les states et fonctions ...
+
+    return (
+      <>
+        <div className="min-h-screen bg-background pb-24">
+          <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border p-4">
+            {/* Tabs */}
+            {/* ... contenu ... */}
+          </div>
+
+          <main className="p-4">{/* ... contenu ... */}</main>
+        </div>
+
+        <BottomNav />
+      </>
+    );
+  }
   // Films state
   const [movieResults, setMovieResults] = useState<Movie[]>([]);
   const [genres, setGenres] = useState<Genre[]>([]);
