@@ -28,9 +28,9 @@ export const DVDBoxAnimation: React.FC<DVDBoxAnimationProps> = ({
 
       // Créer les timers pour la séquence
       timersRef.current = [
-        setTimeout(() => setAnimationState("disc-in"), 800),
-        setTimeout(() => setAnimationState("closing"), 1800),
-        setTimeout(() => setAnimationState("flying"), 2600),
+        setTimeout(() => setAnimationState("disc-in"), 5000),
+        setTimeout(() => setAnimationState("closing"), 3000),
+        setTimeout(() => setAnimationState("flying"), 5000),
         setTimeout(() => {
           setAnimationState("complete");
           if (onAnimationComplete) {
