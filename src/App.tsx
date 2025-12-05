@@ -15,6 +15,7 @@ import Profile from "./pages/Profile";
 import Lists from "./pages/Lists";
 import ListDetail from "./pages/ListDetail";
 import NotFound from "./pages/NotFound";
+import MovieList from "@/pages/MovieList";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
+  <Route path="/movies/:type" element={<MovieList />} />;
 
   if (!user) {
     return <Navigate to="/auth" replace />;
