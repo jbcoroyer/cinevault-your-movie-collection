@@ -34,7 +34,7 @@ interface GameBadge {
   icon: React.ElementType;
   color: string;
   condition: (movies: number[], favorites: number[]) => boolean;
-  progress?: (movies: number[]) => number;
+  progress?: (movies: number[], favorites: number[]) => number;
   maxProgress?: number;
 }
 
@@ -253,7 +253,7 @@ export default function Badges() {
                   key={badge.id} 
                   badge={badge} 
                   isUnlocked={unlockedBadges.has(badge.id)} 
-                  currentProgress={badge.progress ? badge.progress(watchedMovieIds) : 0}
+                  currentProgress={badge.progress ? badge.progress(watchedMovieIds, favoriteMovieIds) : 0}
                 />
               ))}
             </div>
@@ -284,7 +284,7 @@ export default function Badges() {
                   key={badge.id} 
                   badge={badge} 
                   isUnlocked={false} 
-                  currentProgress={badge.progress ? badge.progress(watchedMovieIds) : 0}
+                  currentProgress={badge.progress ? badge.progress(watchedMovieIds, favoriteMovieIds) : 0}
                 />
               ))}
             </div>
