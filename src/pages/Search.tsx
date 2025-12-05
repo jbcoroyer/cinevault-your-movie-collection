@@ -265,3 +265,21 @@ export default function Search() {
     </div>
   );
 }
+
+return (
+    <>
+      <div className="min-h-screen bg-background pb-24">
+        <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border p-4">
+          {/* Tabs */}
+          {/* ... contenu ... */}
+        </div>
+
+        <main className="p-4">
+          {/* ... contenu ... */}
+        </main>
+      </div>
+      
+      <BottomNav />
+    </>
+  );
+}
