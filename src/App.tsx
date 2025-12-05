@@ -16,6 +16,7 @@ import Lists from "./pages/Lists";
 import ListDetail from "./pages/ListDetail";
 import NotFound from "./pages/NotFound";
 import MovieList from "./pages/MovieList";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -135,6 +136,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         }
       />
