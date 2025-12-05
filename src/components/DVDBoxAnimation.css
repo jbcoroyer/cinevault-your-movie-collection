@@ -36,20 +36,20 @@
 }
 
 .dvd-scene.flying .dvd-box {
-  animation: flyToShelf 2s ease-in forwards;
+  animation: flyToShelf 2s ease-in-out forwards;
 }
 
 @keyframes flyToShelf {
   0% {
-    transform: scale(1) translateY(0) rotateY(0);
+    transform: scale(1) translateY(0) translateX(0);
     opacity: 1;
   }
-  50% {
-    transform: scale(0.6) translateY(-150px) rotateY(180deg);
+  30% {
+    transform: scale(0.9) translateY(20px) translateX(0);
     opacity: 1;
   }
   100% {
-    transform: scale(0.1) translateY(400px) rotateY(360deg);
+    transform: scale(0.15) translateY(500px) translateX(0);
     opacity: 0;
   }
 }
@@ -238,24 +238,28 @@
   }
 }
 
-/* === PARTICULES BRILLANTES === */
+/* === EFFET DE SUCCÈS === */
 .dvd-scene.flying::before {
   content: "";
   position: absolute;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(255, 215, 0, 0.4) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
   border-radius: 50%;
-  animation: sparkle 2s ease-out forwards;
+  animation: successGlow 2s ease-out forwards;
 }
 
-@keyframes sparkle {
+@keyframes successGlow {
   0% {
-    transform: scale(0);
-    opacity: 1;
+    transform: scale(0.5);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.5;
   }
   100% {
-    transform: scale(4);
+    transform: scale(1.5);
     opacity: 0;
   }
 }
