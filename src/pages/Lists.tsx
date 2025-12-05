@@ -1,23 +1,23 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Header } from "@/components/Header";
-import { BottomNav } from "@/components/BottomNav";
-import { MovieCard, MovieCardSkeleton } from "@/components/MovieCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Header } from "../components/Header";
+import { BottomNav } from "../components/BottomNav";
+import { MovieCard, MovieCardSkeleton } from "../components/MovieCard";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import { Switch } from "../components/ui/switch";
+import { Label } from "../components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useUserLists } from "@/hooks/useUserLists";
-import { useUserMovies } from "@/hooks/useUserMovies";
-import { getMovieDetails, getImageUrl, Movie } from "@/services/tmdb";
+} from "../components/ui/dropdown-menu";
+import { useUserLists } from "../hooks/useUserLists";
+import { useUserMovies } from "../hooks/useUserMovies";
+import { getMovieDetails, getImageUrl, Movie } from "../services/tmdb";
 import {
   Plus,
   ListVideo,
@@ -32,8 +32,8 @@ import {
   ArrowLeft,
   Film,
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { Skeleton } from "../components/ui/skeleton";
+import { cn } from "../lib/utils";
 
 type SpecialList = "watchlist" | "watched" | "favorites" | null;
 
@@ -205,8 +205,8 @@ export default function Lists() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">{category.title}</h1>
-              <p className="text-muted-foreground">{categoryMovies.length} films</p>
+              <h1 className="text-xl md:text-2xl font-bold">{category.title}</h1>
+              <p className="text-muted-foreground text-sm">{categoryMovies.length} films</p>
             </div>
           </div>
 
@@ -234,13 +234,13 @@ export default function Lists() {
 
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Mes Listes</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Mes Listes</h1>
 
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button onClick={resetForm} size="sm">
                 <Plus className="w-4 h-4 mr-2" />
-                Nouvelle liste
+                Nouvelle
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -285,7 +285,7 @@ export default function Lists() {
         </div>
 
         {/* Special Lists (Watchlist, Watched, Favorites) */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {specialLists.map((category) => {
               const backdrop = getCategoryBackdrop(category);
@@ -296,32 +296,32 @@ export default function Lists() {
                 <button
                   key={category.id}
                   onClick={() => setSelectedSpecial(category.id)}
-                  className="group relative h-28 md:h-32 rounded-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary w-full"
+                  className="group relative h-20 rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary w-full shadow-card hover:shadow-elevated transition-all"
                 >
                   {/* Background Image */}
                   {backdrop ? (
                     <img
                       src={getImageUrl(backdrop, "w500") || ""}
                       alt={category.title}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-60 group-hover:opacity-40"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-60 group-hover:opacity-50"
                     />
                   ) : (
                     <div className="absolute inset-0 bg-muted flex items-center justify-center">
-                      <Film className="w-16 h-16 text-muted-foreground/10" />
+                      <Film className="w-12 h-12 text-muted-foreground/10" />
                     </div>
                   )}
 
                   {/* Dark Overlay/Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-transparent group-hover:from-black/90 group-hover:via-black/70 transition-all duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-transparent group-hover:from-black/95 group-hover:via-black/80 transition-all duration-300" />
 
                   {/* Content */}
-                  <div className="absolute inset-0 flex flex-row items-center px-6 gap-4 text-white">
-                    <div className="p-3 rounded-full bg-white/10 backdrop-blur-sm group-hover:bg-primary/20 transition-colors">
-                      <Icon className="w-6 h-6" />
+                  <div className="absolute inset-0 flex flex-row items-center px-4 gap-3 text-white">
+                    <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm group-hover:bg-primary/20 transition-colors">
+                      <Icon className="w-5 h-5" />
                     </div>
                     <div className="text-left">
-                      <h2 className="text-lg font-bold">{category.title}</h2>
-                      <p className="text-white/70 text-sm font-medium">
+                      <h2 className="text-base font-bold">{category.title}</h2>
+                      <p className="text-white/70 text-xs font-medium">
                         {isLoading ? "..." : `${count} film${count !== 1 ? "s" : ""}`}
                       </p>
                     </div>
@@ -333,21 +333,19 @@ export default function Lists() {
         </div>
 
         {/* Custom Lists */}
-        <h2 className="text-xl font-semibold mb-4">Listes personnalisées</h2>
+        <h2 className="text-lg font-semibold mb-3">Listes personnalisées</h2>
 
         {listsLoading ? (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-lg" />
+              <Skeleton key={i} className="h-16 rounded-lg" />
             ))}
           </div>
         ) : lists.length === 0 ? (
           <div className="text-center py-8 border-2 border-dashed rounded-lg bg-muted/20">
-            <ListVideo className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
-            <h3 className="text-base font-medium mb-1">Aucune liste personnalisée</h3>
-            <p className="text-sm text-muted-foreground mb-4">Organisez vos films par thèmes</p>
-            <Button onClick={() => setIsCreateOpen(true)} variant="outline" size="sm">
-              <Plus className="w-4 h-4 mr-2" />
+            <ListVideo className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
+            <h3 className="text-sm font-medium mb-1">Aucune liste personnalisée</h3>
+            <Button onClick={() => setIsCreateOpen(true)} variant="link" size="sm" className="h-auto p-0">
               Créer une liste
             </Button>
           </div>
@@ -355,18 +353,18 @@ export default function Lists() {
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {lists.map((list) => (
               <Link key={list.id} to={`/lists/${list.id}`} className="block group">
-                <div className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors h-full flex flex-col justify-between">
+                <div className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors h-full flex flex-col justify-between shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold truncate group-hover:text-primary transition-colors text-base">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h3 className="font-semibold truncate group-hover:text-primary transition-colors text-sm">
                           {list.title}
                         </h3>
                         {list.is_public && <Globe className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
                         {!list.is_public && <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
                       </div>
                       {list.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-1 mb-2">{list.description}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{list.description}</p>
                       )}
                     </div>
 
@@ -375,9 +373,9 @@ export default function Lists() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 -mr-2 -mt-2 text-muted-foreground hover:text-foreground"
+                          className="h-7 w-7 -mr-2 -mt-1 text-muted-foreground hover:text-foreground"
                         >
-                          <MoreVertical className="w-4 h-4" />
+                          <MoreVertical className="w-3 h-3" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -403,7 +401,7 @@ export default function Lists() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-[10px] text-muted-foreground mt-2">
                     Modifié le {new Date(list.updated_at).toLocaleDateString("fr-FR")}
                   </p>
                 </div>
@@ -455,9 +453,9 @@ export default function Lists() {
 
 function MovieGrid({ movies = [], loading = false }: { movies?: Movie[]; loading?: boolean }) {
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+    <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">
       {loading
-        ? Array.from({ length: 12 }).map((_, i) => <MovieCardSkeleton key={i} size="sm" />)
+        ? Array.from({ length: 20 }).map((_, i) => <MovieCardSkeleton key={i} size="sm" />)
         : movies.map((movie) => <MovieCard key={movie.id} movie={movie} size="sm" />)}
     </div>
   );
