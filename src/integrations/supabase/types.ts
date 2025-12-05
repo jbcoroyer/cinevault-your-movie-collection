@@ -136,6 +136,42 @@ export type Database = {
         }
         Relationships: []
       }
+      physical_movies: {
+        Row: {
+          created_at: string | null
+          format: string
+          id: string
+          notes: string | null
+          price: number | null
+          purchase_date: string | null
+          tmdb_id: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          format: string
+          id?: string
+          notes?: string | null
+          price?: number | null
+          purchase_date?: string | null
+          tmdb_id: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          format?: string
+          id?: string
+          notes?: string | null
+          price?: number | null
+          purchase_date?: string | null
+          tmdb_id?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

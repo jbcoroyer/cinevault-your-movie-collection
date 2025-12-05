@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BottomNav } from "@/components/BottomNav";
+import { Header } from "@/components/Header";
 import { PhysicalMovieCard, PhysicalMovieCardSkeleton } from "@/components/PhysicalMovieCard";
 import { PhysicalMovieListItem, PhysicalMovieListItemSkeleton } from "@/components/PhysicalMovieListItem";
 import { PhysicalMoviePoster, PhysicalMoviePosterSkeleton } from "@/components/PhysicalMoviePoster";
@@ -132,20 +133,7 @@ export default function Collection() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Disc className="w-5 h-5 text-primary" />
-            <h1 className="text-xl font-bold">Ma Collection</h1>
-          </div>
-          {physicalMovies.length > 0 && (
-            <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-1" />
-              Ajouter
-            </Button>
-          )}
-        </div>
-      </header>
+      <Header />
 
       <main className="p-4">
         {loading ? (
