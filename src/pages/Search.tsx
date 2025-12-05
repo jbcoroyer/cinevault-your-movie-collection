@@ -121,164 +121,148 @@ export default function Search() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border p-4">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => {
-              setActiveTab("films");
-              clearSearch();
-            }}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all",
-              activeTab === "films"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground hover:bg-muted",
-            )}
-          >
-            <Film className="w-4 h-4" />
-            Films
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab("users");
-              clearSearch();
-            }}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all",
-              activeTab === "users"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground hover:bg-muted",
-            )}
-          >
-            <Users className="w-4 h-4" />
-            Utilisateurs
-          </button>
-        </div>
-
-        {/* Search input */}
-        <div className="relative mb-4">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder={activeTab === "films" ? "Rechercher un film..." : "Rechercher un utilisateur..."}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setSelectedGenre(null);
-            }}
-            className="pl-10 pr-10"
-          />
-          {(query || selectedGenre) && (
-            <button
-              onClick={clearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Genre filters (only for films) */}
-        {activeTab === "films" && (
-          <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-            {genres.map((genre) => (
-              <button
-                key={genre.id}
-                onClick={() => handleGenreSelect(genre.id)}
-                className={cn(
-                  "px-4 py-2 rounded-button text-sm whitespace-nowrap transition-all",
-                  selectedGenre === genre.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-muted-foreground hover:bg-muted",
-                )}
-              >
-                {genre.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <main className="p-4">
-        {activeTab === "films" ? (
-          // Films content
-          loadingMovies ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <MovieCardSkeleton key={i} size="lg" />
-              ))}
-            </div>
-          ) : movieResults.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {movieResults.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} size="lg" />
-              ))}
-            </div>
-          ) : searchedMovies ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Aucun film trouvé</p>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Film className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground">Recherchez un film ou sélectionnez un genre</p>
-            </div>
-          )
-        ) : // Users content
-        loadingUsers ? (
-          <div className="space-y-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <UserCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : query && userResults.length > 0 ? (
-          <div className="space-y-3">
-            {userResults.map((user) => (
-              <UserCard key={user.id} user={user} />
-            ))}
-          </div>
-        ) : query && searchedUsers ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Aucun utilisateur trouvé</p>
-          </div>
-        ) : (
-          // Show popular users when no search
-          <div>
-            <h2 className="text-lg font-semibold mb-4">🔥 Utilisateurs populaires</h2>
-            <div className="space-y-3">
-              {popularUsers.length > 0 ? (
-                popularUsers.map((user) => <UserCard key={user.id} user={user} />)
-              ) : (
-                <div className="text-center py-12">
-                  <Users className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-                  <p className="text-muted-foreground">Aucun utilisateur pour le moment</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </main>
-
-      <BottomNav />
-    </div>
-  );
-}
-
-return (
     <>
       <div className="min-h-screen bg-background pb-24">
         <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border p-4">
           {/* Tabs */}
-          {/* ... contenu ... */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => {
+                setActiveTab("films");
+                clearSearch();
+              }}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all",
+                activeTab === "films"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:bg-muted",
+              )}
+            >
+              <Film className="w-4 h-4" />
+              Films
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("users");
+                clearSearch();
+              }}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all",
+                activeTab === "users"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:bg-muted",
+              )}
+            >
+              <Users className="w-4 h-4" />
+              Utilisateurs
+            </button>
+          </div>
+
+          {/* Search input */}
+          <div className="relative mb-4">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={activeTab === "films" ? "Rechercher un film..." : "Rechercher un utilisateur..."}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSelectedGenre(null);
+              }}
+              className="pl-10 pr-10"
+            />
+            {(query || selectedGenre) && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Genre filters (only for films) */}
+          {activeTab === "films" && (
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+              {genres.map((genre) => (
+                <button
+                  key={genre.id}
+                  onClick={() => handleGenreSelect(genre.id)}
+                  className={cn(
+                    "px-4 py-2 rounded-button text-sm whitespace-nowrap transition-all",
+                    selectedGenre === genre.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  {genre.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <main className="p-4">
-          {/* ... contenu ... */}
+          {activeTab === "films" ? (
+            // Films content
+            loadingMovies ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <MovieCardSkeleton key={i} size="lg" />
+                ))}
+              </div>
+            ) : movieResults.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {movieResults.map((movie) => (
+                  <MovieCard key={movie.id} movie={movie} size="lg" />
+                ))}
+              </div>
+            ) : searchedMovies ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Aucun film trouvé</p>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Film className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+                <p className="text-muted-foreground">Recherchez un film ou sélectionnez un genre</p>
+              </div>
+            )
+          ) : // Users content
+          loadingUsers ? (
+            <div className="space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <UserCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : query && userResults.length > 0 ? (
+            <div className="space-y-3">
+              {userResults.map((user) => (
+                <UserCard key={user.id} user={user} />
+              ))}
+            </div>
+          ) : query && searchedUsers ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Aucun utilisateur trouvé</p>
+            </div>
+          ) : (
+            // Show popular users when no search
+            <div>
+              <h2 className="text-lg font-semibold mb-4">🔥 Utilisateurs populaires</h2>
+              <div className="space-y-3">
+                {popularUsers.length > 0 ? (
+                  popularUsers.map((user) => <UserCard key={user.id} user={user} />)
+                ) : (
+                  <div className="text-center py-12">
+                    <Users className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+                    <p className="text-muted-foreground">Aucun utilisateur pour le moment</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </main>
       </div>
-      
+
       <BottomNav />
     </>
   );
