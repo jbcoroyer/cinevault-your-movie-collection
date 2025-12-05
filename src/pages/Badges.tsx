@@ -1,18 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { useUserMovies } from "../hooks/useUserMovies";
-import { getMovieDetails, Movie } from "../services/tmdb";
-import { Header } from "../components/Header";
-import { BottomNav } from "../components/BottomNav";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
-import { Progress } from "../components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
-import { ScrollArea } from "../components/ui/scroll-area";
-import { BadgeUnlockDialog } from "../components/BadgeUnlockDialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserMovies } from "@/hooks/useUserMovies";
+import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { BadgeUnlockDialog } from "@/components/BadgeUnlockDialog";
 import { Trophy, Medal, Star, Film, Video, Clapperboard, Crown, Zap, Lock, CheckCircle2 } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn } from "@/lib/utils";
 
 // --- TYPES & DATA ---
 
@@ -166,7 +165,7 @@ const BADGES_CONFIG: GameBadge[] = [
     xp: 500,
     icon: Medal,
     color: "text-pink-500",
-    condition: () => false, // Placeholder
+    condition: () => false,
     progress: () => 3,
     maxProgress: 10,
   },
