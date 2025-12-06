@@ -23,7 +23,7 @@ const listConfig: Record<ListType, { title: string; fetchFn: (page: number) => P
 };
 
 export default function MovieList() {
-  const { type } = useParams<{ type: string }>();
+  const { category } = useParams<{ category: string }>();
   const navigate = useNavigate();
   const [movies, setMovies] = useState<Movie[]>([]);
   const [page, setPage] = useState(1);
@@ -33,7 +33,7 @@ export default function MovieList() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const config = listConfig[type as ListType];
+  const config = listConfig[category as ListType];
 
   const fetchMovies = useCallback(async (pageNum: number, append: boolean = false) => {
     if (!config) return;
@@ -69,7 +69,7 @@ export default function MovieList() {
     setMovies([]);
     setPage(1);
     fetchMovies(1, false);
-  }, [type, fetchMovies]);
+  }, [category, fetchMovies]);
 
   // Infinite scroll observer
   useEffect(() => {
