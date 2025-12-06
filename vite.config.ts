@@ -8,6 +8,14 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    headers: {
+      "X-Frame-Options": "ALLOWALL",
+    },
+  },
+  preview: {
+    headers: {
+      "X-Frame-Options": "ALLOWALL",
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
