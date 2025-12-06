@@ -1,285 +1,27 @@
-import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUserMovies } from "@/hooks/useUserMovies";
+import { useBadges, BADGES_CONFIG, CULT_MOVIES } from "@/contexts/BadgeContext";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BadgeUnlockDialog } from "@/components/BadgeUnlockDialog";
-import { Trophy, Medal, Star, Film, Video, Clapperboard, Crown, Zap, Lock, CheckCircle2 } from "lucide-react";
+import { Trophy, Lock, CheckCircle2, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// --- TYPES & DATA ---
-
-interface GameBadge {
-  id: string;
-  title: string;
-  description: string;
-  xp: number;
-  icon: React.ElementType;
-  color: string;
-  condition: (movies: number[], favorites: number[]) => boolean;
-  progress?: (movies: number[], favorites: number[]) => number;
-  maxProgress?: number;
-}
-
-// Liste des 50 films cultes à voir (IDs TMDB)
-const CULT_MOVIES = [
-  238,
-  278,
-  155,
-  680,
-  13,
-  1891,
-  157336,
-  27205,
-  129,
-  497, // Top 10 classics
-  111,
-  122,
-  105,
-  274,
-  16869,
-  399566,
-  637,
-  335983,
-  19404,
-  389, // Classics & Modern
-  550,
-  603,
-  299536,
-  120,
-  121,
-  272,
-  185,
-  807,
-  101,
-  11, // Action, Sci-Fi
-  280,
-  539,
-  19995,
-  24428,
-  271110,
-  284054,
-  98,
-  920,
-  24,
-  601, // Adventure, Comic, Scifi
-  128,
-  10681,
-  152601,
-  77338,
-  11324,
-  313369,
-  399055,
-  299534,
-  131631,
-  354912, // Others
-];
-
-// --- LOGIQUE DE JEU ---
-
-const LEVELS = [0, 100, 300, 600, 1000, 1500, 2200, 3000, 4000, 5000];
-
-// Définition des badges
-const BADGES_CONFIG: GameBadge[] = [
-  // --- NIVEAU 1 : DÉBUTANT ---
-  {
-    id: "starter_1",
-    title: "Premier Pas",
-    description: "Marquer votre premier film comme vu",
-    xp: 50,
-    icon: Film,
-    color: "text-blue-500",
-    condition: (ids) => ids.length >= 1,
-    progress: (ids) => Math.min(ids.length, 1),
-    maxProgress: 1,
-  },
-  {
-    id: "collector_1",
-    title: "Coup de Cœur",
-    description: "Ajouter 5 films à vos favoris",
-    xp: 100,
-    icon: Star,
-    color: "text-yellow-500",
-    condition: (_, favs) => favs.length >= 5,
-    progress: (_, favs) => Math.min(favs ? favs.length : 0, 5),
-    maxProgress: 5,
-  },
-  {
-    id: "watcher_5",
-    title: "Cinéphile en herbe",
-    description: "Voir 5 films",
-    xp: 100,
-    icon: Video,
-    color: "text-green-500",
-    condition: (ids) => ids.length >= 5,
-    progress: (ids) => Math.min(ids.length, 5),
-    maxProgress: 5,
-  },
-
-  // --- NIVEAU 2 : INTERMÉDIAIRE ---
-  {
-    id: "gangster_10",
-    title: "Affranchi",
-    description: "Voir 10 films (Challenge Gangster)",
-    xp: 250,
-    icon: Clapperboard,
-    color: "text-red-600",
-    condition: (ids) => ids.length >= 10,
-    progress: (ids) => Math.min(ids.length, 10),
-    maxProgress: 10,
-  },
-  {
-    id: "watcher_20",
-    title: "Binge Watcher",
-    description: "Voir 20 films",
-    xp: 300,
-    icon: Zap,
-    color: "text-purple-500",
-    condition: (ids) => ids.length >= 20,
-    progress: (ids) => Math.min(ids.length, 20),
-    maxProgress: 20,
-  },
-
-  // --- NIVEAU 3 : EXPERT ---
-  {
-    id: "cult_50",
-    title: "Légende du Cinéma",
-    description: "Voir 50 films",
-    xp: 1000,
-    icon: Crown,
-    color: "text-amber-500",
-    condition: (ids) => ids.length >= 50,
-    progress: (ids) => Math.min(ids.length, 50),
-    maxProgress: 50,
-  },
-  {
-    id: "critic_10",
-    title: "Critique d'art",
-    description: "Laisser 10 avis",
-    xp: 500,
-    icon: Medal,
-    color: "text-pink-500",
-    condition: () => false,
-    progress: () => 3,
-    maxProgress: 10,
-  },
-];
+import type { GameBadge } from "@/contexts/BadgeContext";
 
 export default function Badges() {
   const { user, profile } = useAuth();
-  const { userMovies } = useUserMovies();
-
-  // États pour le pop-up
-  const [unlockedBadgeQueue, setUnlockedBadgeQueue] = useState<GameBadge[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  // États dérivés
-  const watchedMovieIds = useMemo(
-    () => userMovies?.filter((m) => m.status === "watched").map((m) => m.tmdb_id) || [],
-    [userMovies],
-  );
-
-  const favoriteMovieIds = useMemo(
-    () => userMovies?.filter((m) => m.is_favorite).map((m) => m.tmdb_id) || [],
-    [userMovies],
-  );
-
-  // Calculs XP et Niveau
-  const { currentXp, currentLevel, nextLevelXp, progressPercent, unlockedBadges } = useMemo(() => {
-    let xp = 0;
-    const unlocked = new Set<string>();
-
-    for (const badge of BADGES_CONFIG) {
-      if (badge.condition(watchedMovieIds, favoriteMovieIds)) {
-        xp += badge.xp;
-        unlocked.add(badge.id);
-      }
-    }
-
-    // Trouver le niveau actuel
-    let level = 1;
-    for (let i = 0; i < LEVELS.length; i++) {
-      if (xp >= LEVELS[i]) {
-        level = i + 1;
-      } else {
-        break;
-      }
-    }
-
-    const currentLevelBaseXp = LEVELS[level - 1];
-    const nextLevelTargetXp = LEVELS[level] || LEVELS[level - 1] * 1.5;
-    const xpInLevel = xp - currentLevelBaseXp;
-    const xpNeededForNext = nextLevelTargetXp - currentLevelBaseXp;
-    const percent = Math.min(100, Math.max(0, (xpInLevel / xpNeededForNext) * 100));
-
-    return {
-      currentXp: xp,
-      currentLevel: level,
-      nextLevelXp: nextLevelTargetXp,
-      progressPercent: percent,
-      unlockedBadges: unlocked,
-    };
-  }, [watchedMovieIds, favoriteMovieIds]);
-
-  // Effet pour détecter les nouveaux badges débloqués
-  useEffect(() => {
-    if (!user) return;
-
-    const seenBadgesKey = `seen_badges_${user.id}`;
-    const storedSeenBadges = localStorage.getItem(seenBadgesKey);
-    const seenBadges = storedSeenBadges ? JSON.parse(storedSeenBadges) : [];
-
-    const newUnlocks: GameBadge[] = [];
-
-    unlockedBadges.forEach((badgeId) => {
-      if (!seenBadges.includes(badgeId)) {
-        const badgeConfig = BADGES_CONFIG.find((b) => b.id === badgeId);
-        if (badgeConfig) {
-          newUnlocks.push(badgeConfig);
-        }
-      }
-    });
-
-    if (newUnlocks.length > 0) {
-      setUnlockedBadgeQueue((prev) => [...prev, ...newUnlocks]);
-    }
-  }, [unlockedBadges, user]);
-
-  // Gestion de l'affichage séquentiel des pop-ups
-  useEffect(() => {
-    if (unlockedBadgeQueue.length > 0 && !isDialogOpen) {
-      setIsDialogOpen(true);
-    }
-  }, [unlockedBadgeQueue, isDialogOpen]);
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-
-    // Retirer le badge affiché de la file et le marquer comme vu
-    if (unlockedBadgeQueue.length > 0 && user) {
-      const badgeToMark = unlockedBadgeQueue[0];
-
-      const seenBadgesKey = `seen_badges_${user.id}`;
-      const storedSeenBadges = localStorage.getItem(seenBadgesKey);
-      const seenBadges = storedSeenBadges ? JSON.parse(storedSeenBadges) : [];
-
-      if (!seenBadges.includes(badgeToMark.id)) {
-        const updatedSeen = [...seenBadges, badgeToMark.id];
-        localStorage.setItem(seenBadgesKey, JSON.stringify(updatedSeen));
-      }
-
-      // Attendre un peu pour l'animation de fermeture avant de retirer de la queue
-      setTimeout(() => {
-        setUnlockedBadgeQueue((prev) => prev.slice(1));
-      }, 300);
-    }
-  };
+  const {
+    unlockedBadges,
+    currentXp,
+    currentLevel,
+    nextLevelXp,
+    progressPercent,
+    watchedMovieIds,
+    favoriteMovieIds,
+  } = useBadges();
 
   const getInitials = () => {
     if (profile?.username) return profile.username.slice(0, 2).toUpperCase();
@@ -295,7 +37,6 @@ export default function Badges() {
         {/* --- HEADER JOUEUR --- */}
         <div className="flex flex-col items-center mb-8 animate-fade-in">
           <div className="relative mb-4">
-            {/* Avatar avec cercle de niveau */}
             <div className="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-primary via-purple-500 to-blue-500">
               <div className="w-full h-full rounded-full border-4 border-background overflow-hidden bg-card flex items-center justify-center">
                 {profile?.avatar_url ? (
@@ -402,14 +143,14 @@ export default function Badges() {
                       key={id}
                       className={cn(
                         "flex items-center justify-between p-3 rounded-lg transition-colors",
-                        isWatched ? "bg-amber-50 dark:bg-amber-900/20" : "hover:bg-muted/50",
+                        isWatched ? "bg-amber-50 dark:bg-amber-900/20" : "hover:bg-muted/50"
                       )}
                     >
                       <div className="flex items-center gap-3">
                         <span
                           className={cn(
                             "w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold",
-                            isWatched ? "bg-amber-500 text-white" : "bg-muted text-muted-foreground",
+                            isWatched ? "bg-amber-500 text-white" : "bg-muted text-muted-foreground"
                           )}
                         >
                           {index + 1}
@@ -438,14 +179,6 @@ export default function Badges() {
       </main>
 
       <BottomNav />
-
-      {/* Pop-Up de déblocage */}
-      <BadgeUnlockDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        badge={unlockedBadgeQueue[0] || null}
-        onClose={handleCloseDialog}
-      />
     </div>
   );
 }
@@ -470,7 +203,7 @@ function BadgeCard({
         "relative overflow-hidden transition-all duration-300 border-2",
         isUnlocked
           ? "border-primary/20 bg-primary/5 dark:bg-primary/10 shadow-sm"
-          : "border-muted bg-card opacity-90 grayscale hover:grayscale-0",
+          : "border-muted bg-card opacity-90 grayscale hover:grayscale-0"
       )}
     >
       <CardContent className="p-4 flex items-start gap-4">
@@ -478,7 +211,7 @@ function BadgeCard({
         <div
           className={cn(
             "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm",
-            isUnlocked ? "bg-white dark:bg-card" : "bg-muted",
+            isUnlocked ? "bg-white dark:bg-card" : "bg-muted"
           )}
         >
           <Icon className={cn("w-7 h-7", isUnlocked ? badge.color : "text-muted-foreground")} />
@@ -499,25 +232,23 @@ function BadgeCard({
               </Badge>
             )}
           </div>
+          <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{badge.description}</p>
 
-          <p className="text-xs text-muted-foreground mb-3 leading-snug">{badge.description}</p>
-
-          {/* Progression */}
+          {/* Barre de progression */}
           {!isUnlocked && badge.maxProgress && (
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-[10px] font-medium text-muted-foreground">
-                <span>Progression</span>
-                <span>
-                  {currentProgress} / {badge.maxProgress}
-                </span>
-              </div>
+            <div className="space-y-1">
               <Progress value={progressPercent} className="h-1.5" />
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>
+                  {currentProgress}/{badge.maxProgress}
+                </span>
+                <span>+{badge.xp} XP</span>
+              </div>
             </div>
           )}
-
           {isUnlocked && (
-            <div className="text-xs font-bold text-primary flex items-center gap-1">
-              <Zap className="w-3 h-3" /> +{badge.xp} XP
+            <div className="flex items-center gap-1 text-xs text-primary font-medium">
+              <span>+{badge.xp} XP gagnés</span>
             </div>
           )}
         </div>
