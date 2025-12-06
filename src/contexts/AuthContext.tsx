@@ -16,12 +16,25 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Return a default context instead of throwing to prevent crashes during initialization
+    return {
+      user: null,
+      session: null,
+      profile: null,
+      loading: true,
+      signIn: async () => ({ error: new Error('Auth not initialized') }),
+      signUp: async () => ({ error: new Error('Auth not initialized') }),
+      signInWithGoogle: async () => ({ error: new Error('Auth not initialized') }),
+      signOut: async () => {},
+      resetPassword: async () => ({ error: new Error('Auth not initialized') }),
+      updateProfile: async () => ({ error: new Error('Auth not initialized') }),
+      refreshProfile: async () => {},
+    };
   }
   return context;
 };
