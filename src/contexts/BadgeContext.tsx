@@ -125,12 +125,22 @@ export const BADGES_CONFIG: GameBadge[] = [
 
 const BadgeContext = createContext<BadgeContextType | undefined>(undefined);
 
+const defaultValue: BadgeContextType = {
+  unlockedBadges: new Set<string>(),
+  currentXp: 0,
+  currentLevel: 1,
+  nextLevelXp: 100,
+  progressPercent: 0,
+  watchedMovieIds: [],
+  favoriteMovieIds: [],
+  badges: BADGES_CONFIG,
+  cultMovies: CULT_MOVIES,
+};
+
 export function useBadges() {
   const context = useContext(BadgeContext);
-  if (context === undefined) {
-    throw new Error("useBadges must be used within a BadgeProvider");
-  }
-  return context;
+  // Return default value instead of throwing to prevent crashes
+  return context ?? defaultValue;
 }
 
 interface BadgeProviderProps {

@@ -9,12 +9,13 @@ interface BadgeNotificationContextType {
 
 const BadgeNotificationContext = createContext<BadgeNotificationContextType | undefined>(undefined);
 
+const defaultNotificationValue: BadgeNotificationContextType = {
+  checkForNewBadges: () => {},
+};
+
 export function useBadgeNotifications() {
   const context = useContext(BadgeNotificationContext);
-  if (context === undefined) {
-    throw new Error("useBadgeNotifications must be used within a BadgeNotificationProvider");
-  }
-  return context;
+  return context ?? defaultNotificationValue;
 }
 
 interface BadgeNotificationProviderProps {
