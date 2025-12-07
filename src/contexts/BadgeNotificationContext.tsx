@@ -117,6 +117,7 @@ interface BadgeNotificationContextType {
   unlockedBadges: Set<string>;
   watchedMovieIds: number[];
   favoriteMovieIds: number[];
+  triggerTestBadge: () => void;
 }
 
 const BadgeNotificationContext = createContext<BadgeNotificationContextType | null>(null);
@@ -133,6 +134,7 @@ export function useBadgeNotification() {
       unlockedBadges: new Set<string>(),
       watchedMovieIds: [],
       favoriteMovieIds: [],
+      triggerTestBadge: () => {},
     };
   }
   return context;
@@ -246,6 +248,12 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
     }
   };
 
+  const triggerTestBadge = () => {
+    // Pick a random badge for testing
+    const testBadge = BADGES_CONFIG[Math.floor(Math.random() * BADGES_CONFIG.length)];
+    setUnlockedBadgeQueue((prev) => [...prev, testBadge]);
+  };
+
   const value = {
     currentXp,
     currentLevel,
@@ -254,6 +262,7 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
     unlockedBadges,
     watchedMovieIds,
     favoriteMovieIds,
+    triggerTestBadge,
   };
 
   return (
