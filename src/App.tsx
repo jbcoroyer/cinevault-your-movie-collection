@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { BadgeNotificationProvider } from "@/contexts/BadgeNotificationContext";
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
 import ForgotPassword from "@/pages/ForgotPassword";
@@ -30,7 +31,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
+            <BadgeNotificationProvider>
+              <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -45,8 +47,9 @@ const App = () => (
               <Route path="/list/:id" element={<ListDetail />} />
               <Route path="/badges" element={<Badges />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BadgeNotificationProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
