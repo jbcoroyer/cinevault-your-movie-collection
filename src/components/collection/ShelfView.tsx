@@ -11,19 +11,35 @@ interface ShelfViewProps {
   onMovieClick: (physicalMovie: PhysicalMovie, movieDetails: MovieDetails | null) => void;
 }
 
-// Configuration visuelle des tranches selon le format
-const SPINE_STYLES: Record<PhysicalFormat, string> = {
-  dvd: "bg-zinc-800 border-l border-zinc-700 text-zinc-300",
-  bluray: "bg-blue-600/90 border-l border-blue-400/50 text-white shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]",
-  "4k": "bg-black border-l border-zinc-800 text-zinc-100 shadow-[inset_0_0_5px_rgba(255,255,255,0.1)]",
-  steelbook: "bg-slate-500 border-l border-slate-400 text-white bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:10px_10px]",
-  collector: "bg-red-700 border-l border-red-500 text-white shadow-lg z-10 w-12", // Plus large
+// Styles de base pour la forme et les bordures (sans les couleurs de fond fixes)
+const SPINE_BASE_STYLES: Record<PhysicalFormat, string> = {
+  dvd: "border-l border-white/10",
+  bluray: "border-l border-white/10", // Le bleu viendra du logo
+  "4k": "border-l border-white/10",
+  steelbook: "border-l border-white/20",
+  collector: "border-l border-white/20 w-12 sm:w-14",
 };
 
-// Logos simplifiés pour le haut de la tranche
+// Logos de format adaptés pour être visibles sur n'importe quel fond
 const FormatLogo = ({ format }: { format: PhysicalFormat }) => {
-  if (format === "bluray") return <div className="h-3 w-8 bg-gradient-to-b from-transparent via-white/20 to-transparent rounded-t-sm mx-auto mb-2" />;
-  if (format === "4k") return <div className="text-[8px] font-black text-center leading-none mb-1 tracking-tighter opacity-80">ULTRA HD</div>;
+  if (format === "bluray")
+    return (
+      <div className="h-3 w-7 bg-blue-600/90 rounded-t-[2px] mx-auto mb-2 shadow-sm border-t border-white/20 flex items-center justify-center">
+        <div className="w-4 h-[1px] bg-white/60"></div>
+      </div>
+    );
+  if (format === "4k")
+    return (
+      <div className="bg-black/80 px-1 py-0.5 rounded-sm border border-white/10 mb-2">
+        <div className="text-[6px] font-black text-center leading-none text-white tracking-tighter">4K</div>
+      </div>
+    );
+  if (format === "dvd")
+    return (
+      <div className="mb-2 opacity-80">
+        <div className="w-6 h-[2px] bg-white/20 mx-auto"></div>
+      </div>
+    );
   return <div className="h-1 w-full bg-white/10 mb-2" />;
 };
 
@@ -31,22 +47,22 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
   if (movies.length === 0) return null;
 
   return (
-    <div className="w-full bg-[#1a1a1a] border-8 border-[#2a2a2a] rounded-lg shadow-2xl overflow-hidden relative">
-      {/* Texture bois/fond de l'étagère */}
-      <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] pointer-events-none" />
-      
-      {/* Lumière d'ambiance */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent pointer-events-none z-20" />
+    <div className="w-full bg-[#121212] border-8 border-[#1f1f1f] rounded-lg shadow-2xl overflow-hidden relative">
+      {/* Texture bois sombre */}
+      <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] pointer-events-none mix-blend-overlay" />
+
+      {/* Ombre interne de l'étagère */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/60 pointer-events-none z-20" />
 
       <div className="relative z-10 flex flex-wrap items-end content-start p-4 sm:p-8 gap-[2px] min-h-[400px]">
-        {movies.map((pm, index) => {
+        {movies.map((pm) => {
           const details = movieDetailsMap[pm.tmdb_id];
           const title = details?.title || "Titre inconnu";
-          const poster = details?.poster_path ? getImageUrl(details.poster_path, "w200") : null;
-          
-          // Variation aléatoire légère de la hauteur et de l'inclinaison pour le réalisme
-          const randomHeight = Math.floor(Math.random() * 4); 
-          const randomTilt = Math.random() > 0.8 ? (Math.random() > 0.5 ? 1 : -1) : 0;
+          const poster = details?.poster_path ? getImageUrl(details.poster_path, "w500") : null;
+
+          // Variation subtile pour le réalisme
+          const randomHeight = Math.floor((pm.tmdb_id % 5) * 1.5);
+          const randomTilt = (pm.tmdb_id % 2 === 0 ? 1 : -1) * ((pm.tmdb_id % 3) * 0.2);
 
           return (
             <Tooltip key={pm.id} delayDuration={0}>
@@ -55,71 +71,108 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                   onClick={() => onMovieClick(pm, details || null)}
                   className={cn(
                     "relative group cursor-pointer transition-all duration-300 ease-out transform origin-bottom hover:z-50 hover:scale-110 hover:-translate-y-4",
-                    pm.format === "collector" ? "w-10 sm:w-12" : "w-7 sm:w-9",
-                    "h-48 sm:h-64 rounded-sm flex flex-col items-center justify-between py-2 overflow-hidden",
-                    SPINE_STYLES[pm.format],
-                    // Effet de tranche 3D
-                    "before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-r before:from-white/10 before:via-transparent before:to-black/30 before:pointer-events-none"
+                    pm.format === "collector" ? "w-10 sm:w-12" : "w-8 sm:w-10",
+                    "h-48 sm:h-64 rounded-[2px] overflow-hidden shadow-lg",
+                    SPINE_BASE_STYLES[pm.format],
                   )}
                   style={{
-                    height: `${16 + (pm.format === 'dvd' ? 1 : 0) * 0.5}rem`, // DVD légèrement plus grands
+                    height: `${16 + (pm.format === "dvd" ? 0.5 : 0)}rem`,
                     transform: `rotate(${randomTilt}deg)`,
-                    marginTop: `${randomHeight}px`
+                    marginTop: `${randomHeight}px`,
                   }}
                 >
-                  {/* Top of spine */}
-                  <div className="w-full px-1 opacity-70">
-                    <FormatLogo format={pm.format} />
-                  </div>
+                  {/* --- FOND DYNAMIQUE (Image de l'affiche) --- */}
+                  <div
+                    className="absolute inset-0 z-0 bg-cover bg-center opacity-80 blur-[0.5px] group-hover:blur-0 transition-all duration-300"
+                    style={{
+                      backgroundImage: poster ? `url(${poster})` : undefined,
+                      backgroundColor: "#333", // Fallback
+                    }}
+                  />
 
-                  {/* Title (Vertical Text) */}
-                  <div className="flex-1 flex items-center justify-center w-full overflow-hidden py-2">
-                    <h3 
-                      className="whitespace-nowrap text-xs sm:text-sm font-bold tracking-wide uppercase text-center w-full"
-                      style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
-                    >
-                      {title.length > 25 ? title.substring(0, 25) + "..." : title}
-                    </h3>
-                  </div>
+                  {/* --- OVERLAYS POUR L'EFFET DE TRANCHE --- */}
+                  {/* Assombrissement global pour lisibilité */}
+                  <div className="absolute inset-0 z-0 bg-black/40" />
 
-                  {/* Bottom logos / details */}
-                  <div className="w-full flex flex-col items-center gap-1 opacity-60 pb-1">
-                    {pm.condition === "mint" && <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
-                    <div className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[8px]">
-                      {pm.tmdb_id % 10} {/* Faux numéro de studio/catalogue */}
+                  {/* Effet plastique/lumière sur la tranche (Cylindrique) */}
+                  <div className="absolute inset-0 z-0 bg-gradient-to-r from-white/10 via-transparent to-black/60 pointer-events-none" />
+
+                  {/* --- CONTENU DE LA TRANCHE --- */}
+                  <div className="relative z-10 w-full h-full flex flex-col justify-between py-3">
+                    {/* Haut : Logo Format */}
+                    <div className="flex-shrink-0 flex justify-center w-full px-1">
+                      <FormatLogo format={pm.format} />
+                    </div>
+
+                    {/* Centre : Titre du film */}
+                    {/* Utilisation de flex-grow pour prendre tout l'espace disponible et centrer verticalement */}
+                    <div className="flex-grow flex items-center justify-center w-full overflow-hidden px-1">
+                      <h3
+                        className="font-sans font-bold text-white text-xs sm:text-[13px] uppercase tracking-wider text-center w-full drop-shadow-md"
+                        style={{
+                          writingMode: "vertical-rl",
+                          textOrientation: "mixed",
+                          maxHeight: "100%",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {title}
+                      </h3>
+                    </div>
+
+                    {/* Bas : Infos condition / studio */}
+                    <div className="flex-shrink-0 w-full flex flex-col items-center gap-1.5 pt-2 opacity-80">
+                      {/* Petit carré de couleur pour l'état si Mint */}
+                      {pm.condition === "mint" && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.8)]" />
+                      )}
+                      {/* Faux logo studio en bas */}
+                      <div className="w-5 h-5 border border-white/30 rounded-sm flex items-center justify-center">
+                        <span className="text-[6px] font-serif text-white/70">TM</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </TooltipTrigger>
-              
-              {/* Preview au survol (Poster) */}
-              <TooltipContent side="right" className="p-0 border-none bg-transparent shadow-xl" sideOffset={20}>
-                <div className="relative w-40 rounded-lg overflow-hidden border-2 border-white/20 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+
+              {/* Preview Poster au survol */}
+              <TooltipContent side="right" className="p-0 border-none bg-transparent shadow-none" sideOffset={20}>
+                <div className="relative w-48 rounded-lg overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 animate-in fade-in slide-in-from-left-4 duration-200">
                   {poster ? (
                     <img src={poster} alt={title} className="w-full h-auto object-cover" />
                   ) : (
-                    <div className="w-40 h-60 bg-zinc-800 flex items-center justify-center text-zinc-500">
-                      <Disc className="w-10 h-10" />
+                    <div className="w-48 h-72 bg-zinc-900 flex items-center justify-center text-zinc-500">
+                      <Disc className="w-12 h-12" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-3">
-                    <p className="text-white font-bold text-sm leading-tight">{title}</p>
-                    <p className="text-white/70 text-xs mt-1">{formatLabels[pm.format]}</p>
+
+                  {/* Badge de format sur le poster */}
+                  <div className="absolute top-2 right-2 px-2 py-1 bg-black/80 backdrop-blur-md rounded text-[10px] font-bold text-white border border-white/10">
+                    {formatLabels[pm.format]}
+                  </div>
+
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-4 pt-12">
+                    <p className="text-white font-serif font-bold text-lg leading-tight">{title}</p>
+                    {pm.price && <p className="text-primary font-medium text-sm mt-1">{pm.price} €</p>}
                   </div>
                 </div>
               </TooltipContent>
             </Tooltip>
           );
         })}
-        
-        {/* Fillers pour combler l'étagère si vide */}
-        {Array.from({ length: Math.max(0, 10 - movies.length) }).map((_, i) => (
-          <div key={`filler-${i}`} className="w-2 h-64 bg-white/5 mx-1 rounded-sm opacity-20" />
+
+        {/* Espaces vides de l'étagère */}
+        {Array.from({ length: Math.max(0, 8 - movies.length) }).map((_, i) => (
+          <div key={`filler-${i}`} className="w-1.5 h-64 bg-white/5 mx-0.5 rounded-sm opacity-10" />
         ))}
       </div>
-      
-      {/* Base de l'étagère */}
-      <div className="h-6 w-full bg-[#151515] border-t border-white/10 shadow-[0_-5px_10px_rgba(0,0,0,0.5)] relative z-20"></div>
+
+      {/* Planche de support de l'étagère */}
+      <div className="h-8 w-full bg-[#181818] border-t border-white/5 relative z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.8)]">
+        <div className="w-full h-full opacity-30 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]"></div>
+      </div>
     </div>
   );
 };
