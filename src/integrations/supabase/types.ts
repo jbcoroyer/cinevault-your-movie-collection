@@ -199,6 +199,48 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          contains_spoilers: boolean | null
+          content: string
+          created_at: string
+          id: string
+          movie_poster_path: string | null
+          movie_release_year: number | null
+          movie_title: string
+          rating: number | null
+          tmdb_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contains_spoilers?: boolean | null
+          content: string
+          created_at?: string
+          id?: string
+          movie_poster_path?: string | null
+          movie_release_year?: number | null
+          movie_title: string
+          rating?: number | null
+          tmdb_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contains_spoilers?: boolean | null
+          content?: string
+          created_at?: string
+          id?: string
+          movie_poster_path?: string | null
+          movie_release_year?: number | null
+          movie_title?: string
+          rating?: number | null
+          tmdb_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_movies: {
         Row: {
           created_at: string | null
