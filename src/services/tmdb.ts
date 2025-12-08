@@ -5,7 +5,7 @@ const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const BASE_URL = "https://api.themoviedb.org/3";
 export const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
-export const getImageUrl = (path: string | null, size: "w92" | "w200" | "w300" | "w500" | "original" = "w500") => {
+export const getImageUrl = (path: string | null, size: "w92" | "w200" | "w300" | "w500" | "w780" | "w1280" | "original" = "w500") => {
   if (!path) return null;
   return `${IMAGE_BASE_URL}/${size}${path}`;
 };

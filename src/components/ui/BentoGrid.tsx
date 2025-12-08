@@ -95,6 +95,11 @@ const bentoItemVariants = cva(
           "text-primary-foreground",
           "shadow-glow-sm",
         ],
+        gold: [
+          "bg-gradient-to-br from-amber-500/20 via-yellow-500/15 to-orange-500/10",
+          "border border-amber-500/30",
+          "shadow-[0_4px_20px_rgba(245,158,11,0.15)]",
+        ],
         image: "bg-cover bg-center",
         outline: "bg-transparent border-2 border-dashed border-border/50",
       },

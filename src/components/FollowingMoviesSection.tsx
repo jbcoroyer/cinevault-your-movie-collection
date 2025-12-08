@@ -198,7 +198,7 @@ export const FollowingMoviesSection: React.FC = () => {
                   {item.movie.title}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(item.watchedAt), {
+                  {item.watchedBy[0]?.watchedAt && formatDistanceToNow(new Date(item.watchedBy[0].watchedAt), {
                     addSuffix: true,
                     locale: fr,
                   })}
