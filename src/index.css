@@ -2,8 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import des polices - On garde Inter et Playfair mais on ajuste le rendu */
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap");
+/* ============================================
+   CINEVAULT — LUXURY CINEMA DESIGN SYSTEM
+   Glassmorphism + Bento Grid Edition
+   ============================================ */
+
+/* Import des polices - Playfair Display + Inter + Accent Font */
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 html,
 body,
@@ -14,76 +19,112 @@ body,
   scroll-behavior: smooth;
 }
 
+/* ============================================
+   LAYER BASE — VARIABLES & TOKENS
+   ============================================ */
 @layer base {
   :root {
-    /* --- Light Mode : Clean & Swiss --- */
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    /* --- Light Mode : Warm Cream & Gold --- */
+    --background: 40 20% 98%;
+    --foreground: 240 10% 8%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card: 40 15% 96%;
+    --card-foreground: 240 10% 8%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover: 40 15% 98%;
+    --popover-foreground: 240 10% 8%;
 
-    /* Primary: Un noir profond teinté de bleu pour l'autorité (Slate-950 like) */
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
+    /* Primary: Ambre/Or chaud - Luxe cinématographique */
+    --primary: 38 92% 50%;
+    --primary-foreground: 240 10% 4%;
 
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    --secondary: 40 10% 92%;
+    --secondary-foreground: 240 10% 20%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 40 10% 90%;
+    --muted-foreground: 240 5% 45%;
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --accent: 38 80% 55%;
+    --accent-foreground: 240 10% 4%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
+    --border: 40 15% 88%;
+    --input: 40 15% 88%;
+    --ring: 38 92% 50%;
 
-    --radius: 0.75rem; /* 12px pour un look moderne */
+    --radius: 1rem;
+    --radius-lg: 1.5rem;
+    --radius-xl: 2rem;
 
-    /* Couleurs sémantiques CineVault */
-    --gold: 38 60% 50%;
+    /* Glassmorphism tokens */
+    --glass-bg: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.3;
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+
+    /* Semantic colors */
+    --gold: 38 92% 50%;
+    --gold-light: 38 90% 65%;
+    --gold-dark: 38 95% 40%;
+
+    /* Gradients */
+    --gradient-gold: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(28 90% 55%) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.6) 100%);
+    --gradient-mesh:
+      radial-gradient(at 40% 20%, hsla(38, 100%, 74%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(28, 90%, 60%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(340, 80%, 70%, 0.08) 0px, transparent 50%);
   }
 
   .dark {
-    /* --- Dark Mode : Rich Black (Pas #000000) --- */
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    /* --- Dark Mode : Deep Noir & Gold Accents --- */
+    --background: 240 15% 6%;
+    --foreground: 40 20% 96%;
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 240 12% 10%;
+    --card-foreground: 40 20% 96%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 240 12% 8%;
+    --popover-foreground: 40 20% 96%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    /* Primary: Or chaud sur fond sombre */
+    --primary: 38 92% 55%;
+    --primary-foreground: 240 15% 6%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 240 10% 16%;
+    --secondary-foreground: 40 20% 90%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 240 10% 18%;
+    --muted-foreground: 40 10% 55%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 38 85% 50%;
+    --accent-foreground: 240 15% 6%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 38 92% 55%;
+
+    /* Glassmorphism tokens - Dark */
+    --glass-bg: 240 15% 12% / 0.8;
+    --glass-border: 0 0% 100% / 0.08;
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+    /* Gradients - Dark */
+    --gradient-glass: linear-gradient(135deg, rgba(30, 30, 40, 0.9) 0%, rgba(20, 20, 30, 0.7) 100%);
+    --gradient-mesh:
+      radial-gradient(at 40% 20%, hsla(38, 100%, 50%, 0.12) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(280, 80%, 60%, 0.08) 0px, transparent 50%),
+      radial-gradient(at 0% 80%, hsla(200, 90%, 50%, 0.06) 0px, transparent 50%);
   }
 }
 
+/* ============================================
+   LAYER BASE — GLOBAL STYLES
+   ============================================ */
 @layer base {
   * {
     @apply border-border;
@@ -92,53 +133,230 @@ body,
   body {
     @apply bg-background text-foreground antialiased;
     font-family: "Inter", system-ui, sans-serif;
-    /* Amélioration du rendu de la police pour les chiffres et la lisibilité */
     font-feature-settings:
       "rlig" 1,
       "calt" 1,
       "tnum" 1;
   }
 
-  /* Titres éditoriaux */
-  h1,
-  h2,
-  h3 {
-    font-family: "Playfair Display", Georgia, serif;
-    @apply font-medium tracking-tight;
+  /* Scrollbar personnalisée */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
 
-  h4,
-  h5,
-  h6 {
-    font-family: "Inter", system-ui, sans-serif;
-    @apply font-semibold tracking-tight;
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-primary/30 text-foreground;
   }
 }
 
-@layer utilities {
-  /* Utilitaires de défilement */
+/* ============================================
+   LAYER COMPONENTS — GLASSMORPHISM SYSTEM
+   ============================================ */
+@layer components {
+  /* --- Glass Card Base --- */
+  .glass {
+    @apply relative overflow-hidden;
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-subtle {
+    @apply relative overflow-hidden;
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--glass-border));
+  }
+
+  .glass-strong {
+    @apply relative overflow-hidden;
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow:
+      var(--glass-shadow),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  }
+
+  /* --- Glass avec bordure lumineuse --- */
+  .glass-glow {
+    @apply glass;
+    border: 1px solid transparent;
+    background:
+      linear-gradient(hsl(var(--glass-bg)), hsl(var(--glass-bg))) padding-box,
+      linear-gradient(135deg, hsl(var(--primary) / 0.5), transparent 50%, hsl(var(--primary) / 0.2)) border-box;
+  }
+
+  /* --- Mesh Gradient Background --- */
+  .mesh-gradient {
+    background-image: var(--gradient-mesh);
+  }
+
+  /* --- Grain Overlay Premium --- */
+  .grain-overlay {
+    @apply pointer-events-none fixed inset-0 z-[100];
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.025;
+  }
+
+  .dark .grain-overlay {
+    opacity: 0.04;
+  }
+
+  /* --- Bento Grid System --- */
+  .bento-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: minmax(100px, auto);
+  }
+
+  @media (min-width: 768px) {
+    .bento-grid {
+      grid-template-columns: repeat(6, 1fr);
+      grid-auto-rows: minmax(120px, auto);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .bento-grid {
+      grid-template-columns: repeat(12, 1fr);
+      grid-auto-rows: minmax(100px, auto);
+    }
+  }
+
+  /* --- Bento Card Sizes --- */
+  .bento-sm {
+    @apply col-span-2 row-span-1;
+  }
+  .bento-md {
+    @apply col-span-2 row-span-2;
+  }
+  .bento-lg {
+    @apply col-span-4 row-span-2;
+  }
+  .bento-xl {
+    @apply col-span-4 row-span-3;
+  }
+  .bento-featured {
+    @apply col-span-4 row-span-4 md:col-span-6 lg:col-span-8;
+  }
+
+  /* --- Section Labels --- */
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-[0.2em] text-primary;
+    font-family: "Space Grotesk", sans-serif;
+  }
+
+  /* --- Gold Gradient Text --- */
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-gold);
+  }
+
+  /* --- Glow Effects --- */
+  .shadow-glow {
+    box-shadow:
+      0 0 20px hsl(var(--primary) / 0.3),
+      0 0 40px hsl(var(--primary) / 0.1);
+  }
+
+  .shadow-glow-sm {
+    box-shadow: 0 0 15px hsl(var(--primary) / 0.25);
+  }
+
+  .shadow-glow-lg {
+    box-shadow:
+      0 0 30px hsl(var(--primary) / 0.4),
+      0 0 60px hsl(var(--primary) / 0.15);
+  }
+
+  /* --- Button Variants --- */
+  .btn-glass {
+    @apply glass px-4 py-2 rounded-xl font-medium transition-all duration-300;
+    @apply hover:bg-white/20 dark:hover:bg-white/10;
+    @apply active:scale-[0.98];
+  }
+
+  .btn-gold {
+    @apply px-4 py-2 rounded-xl font-semibold transition-all duration-300;
+    @apply bg-gradient-to-r from-primary to-accent text-primary-foreground;
+    @apply hover:shadow-glow hover:scale-[1.02];
+    @apply active:scale-[0.98];
+  }
+
+  /* --- Card Hover Effects --- */
+  .card-hover-lift {
+    @apply transition-all duration-500 ease-out;
+  }
+
+  .card-hover-lift:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow:
+      0 20px 40px rgba(0, 0, 0, 0.15),
+      0 0 0 1px hsl(var(--primary) / 0.1);
+  }
+
+  .dark .card-hover-lift:hover {
+    box-shadow:
+      0 20px 40px rgba(0, 0, 0, 0.4),
+      0 0 0 1px hsl(var(--primary) / 0.2);
+  }
+
+  /* --- Aurora Hover Effect --- */
+  .aurora-hover {
+    @apply relative overflow-hidden;
+  }
+
+  .aurora-hover::before {
+    content: "";
+    @apply absolute inset-0 opacity-0 transition-opacity duration-500;
+    background:
+      radial-gradient(circle at 20% 50%, hsl(var(--primary) / 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 50%, hsl(280 80% 60% / 0.1) 0%, transparent 50%);
+  }
+
+  .aurora-hover:hover::before {
+    @apply opacity-100;
+  }
+
+  /* --- Hide Scrollbar --- */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+}
 
-  /* Text balance pour les titres */
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  /* Animations de base */
-  .animate-fade-in {
-    animation: fade-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  }
-
-  @keyframes fade-in {
+/* ============================================
+   LAYER UTILITIES — ANIMATIONS
+   ============================================ */
+@layer utilities {
+  /* --- Fade In Up --- */
+  @keyframes fadeInUp {
     from {
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(20px);
     }
     to {
       opacity: 1;
@@ -146,18 +364,177 @@ body,
     }
   }
 
-  /* Glassmorphism Utility */
-  .glass {
-    @apply bg-background/80 backdrop-blur-md border border-white/10 shadow-lg;
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
   }
 
-  /* Ombres colorées riches */
-  .shadow-glow-sm {
-    box-shadow: 0 0 10px -2px var(--shadow-color, rgba(0, 0, 0, 0.1));
+  /* --- Fade In Scale --- */
+  @keyframes fadeInScale {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
-  /* Container responsive pour le mobile */
-  .min-h-dvh {
-    min-height: 100dvh;
+  .animate-fade-in-scale {
+    animation: fadeInScale 0.5s ease-out forwards;
   }
+
+  /* --- Shimmer Loading --- */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* --- Float Animation --- */
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+
+  /* --- Pulse Glow --- */
+  @keyframes pulseGlow {
+    0%,
+    100% {
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+    }
+    50% {
+      box-shadow: 0 0 30px hsl(var(--primary) / 0.5);
+    }
+  }
+
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  /* --- Slide In From Right --- */
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.5s ease-out forwards;
+  }
+
+  /* --- Stagger Animation Helper --- */
+  .stagger-1 {
+    animation-delay: 50ms;
+  }
+  .stagger-2 {
+    animation-delay: 100ms;
+  }
+  .stagger-3 {
+    animation-delay: 150ms;
+  }
+  .stagger-4 {
+    animation-delay: 200ms;
+  }
+  .stagger-5 {
+    animation-delay: 250ms;
+  }
+  .stagger-6 {
+    animation-delay: 300ms;
+  }
+  .stagger-7 {
+    animation-delay: 350ms;
+  }
+  .stagger-8 {
+    animation-delay: 400ms;
+  }
+
+  /* --- Text Shadow for Hero --- */
+  .text-shadow-hero {
+    text-shadow:
+      0 2px 10px rgba(0, 0, 0, 0.5),
+      0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  /* --- Background Blur Layers --- */
+  .backdrop-blur-xs {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  /* --- Safe Area Bottom --- */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* --- Aspect Ratios --- */
+  .aspect-poster {
+    aspect-ratio: 2 / 3;
+  }
+
+  .aspect-backdrop {
+    aspect-ratio: 16 / 9;
+  }
+
+  /* --- Line Clamp Extensions --- */
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ============================================
+   TYPOGRAPHY REFINEMENTS
+   ============================================ */
+.font-display {
+  font-family: "Playfair Display", Georgia, serif;
+}
+
+.font-accent {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+/* Heading styles */
+h1,
+h2,
+h3 {
+  font-family: "Playfair Display", Georgia, serif;
+  @apply font-medium tracking-tight;
+}
+
+/* Numbers in stats */
+.font-stats {
+  font-family: "Space Grotesk", sans-serif;
+  font-feature-settings: "tnum" 1;
+  @apply font-semibold;
 }
