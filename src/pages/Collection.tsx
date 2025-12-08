@@ -45,7 +45,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/Header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-// ScrollArea n'est plus nécessaire ici pour garantir le scroll natif
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Suppression de 'cards' du type
 type ViewMode = "list" | "posters";
@@ -269,21 +269,23 @@ export default function Collection() {
                   <span className="text-xs sm:text-sm font-medium text-center">Statistiques</span>
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+              <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden">
                 <DialogHeader className="p-6 pb-4 border-b bg-background z-10 shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-primary" />
                     Statistiques de la collection
                   </DialogTitle>
                 </DialogHeader>
-                <div className="flex-1 overflow-y-auto p-6">
-                  <CollectionStats
-                    stats={physicalStats}
-                    genreStats={genreStats}
-                    decadeStats={decadeStats}
-                    timelineStats={timelineStats}
-                  />
-                </div>
+                <ScrollArea className="h-[70vh] w-full">
+                  <div className="p-6">
+                    <CollectionStats
+                      stats={physicalStats}
+                      genreStats={genreStats}
+                      decadeStats={decadeStats}
+                      timelineStats={timelineStats}
+                    />
+                  </div>
+                </ScrollArea>
               </DialogContent>
             </Dialog>
 
@@ -297,24 +299,24 @@ export default function Collection() {
                   <span className="text-xs sm:text-sm font-medium text-center">Favoris</span>
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+              <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden">
                 <DialogHeader className="p-6 pb-4 border-b bg-background z-10 shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <Star className="w-5 h-5 text-yellow-500" />
                     Réalisateurs & Acteurs favoris
                   </DialogTitle>
                 </DialogHeader>
-                <div className="flex-1 overflow-y-auto p-6">
-                  <CollectionTopCreators
-                    directorStats={directorStats}
-                    actorStats={actorStats}
-                    onDirectorClick={(director) => {
-                      // Il faudrait fermer la modale idéalement, mais le hook est dans le parent
-                      // On peut juste appliquer le filtre, l'utilisateur fermera la modale pour voir
-                      handleDirectorClick(director);
-                    }}
-                  />
-                </div>
+                <ScrollArea className="h-[70vh] w-full">
+                  <div className="p-6">
+                    <CollectionTopCreators
+                      directorStats={directorStats}
+                      actorStats={actorStats}
+                      onDirectorClick={(director) => {
+                        handleDirectorClick(director);
+                      }}
+                    />
+                  </div>
+                </ScrollArea>
               </DialogContent>
             </Dialog>
 
@@ -328,20 +330,22 @@ export default function Collection() {
                   <span className="text-xs sm:text-sm font-medium text-center">Timeline</span>
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+              <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
                 <DialogHeader className="p-6 pb-4 border-b bg-background z-10 shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-blue-500" />
                     Historique des achats
                   </DialogTitle>
                 </DialogHeader>
-                <div className="flex-1 overflow-y-auto p-6">
-                  <CollectionTimeline
-                    timelineStats={timelineStats}
-                    movieDetailsMap={physicalMovieDetails}
-                    onMovieClick={handleEdit}
-                  />
-                </div>
+                <ScrollArea className="h-[70vh] w-full">
+                  <div className="p-6">
+                    <CollectionTimeline
+                      timelineStats={timelineStats}
+                      movieDetailsMap={physicalMovieDetails}
+                      onMovieClick={handleEdit}
+                    />
+                  </div>
+                </ScrollArea>
               </DialogContent>
             </Dialog>
           </div>
