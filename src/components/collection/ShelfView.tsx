@@ -11,9 +11,7 @@ interface ShelfViewProps {
   onMovieClick: (physicalMovie: PhysicalMovie, movieDetails: MovieDetails | null) => void;
 }
 
-// --- CONFIGURATION DES MATÉRIAUX ---
-
-// Styles de base de la forme (largeur selon format)
+// Configuration des dimensions
 const SPINE_WIDTHS: Record<PhysicalFormat, string> = {
   dvd: "w-9 sm:w-11",
   bluray: "w-8 sm:w-9",
@@ -22,13 +20,13 @@ const SPINE_WIDTHS: Record<PhysicalFormat, string> = {
   collector: "w-12 sm:w-16",
 };
 
-// Logos de format "gravés"
+// Logos de format "gravés" avec effet de profondeur
 const FormatLogo = ({ format }: { format: PhysicalFormat }) => {
   const engravedStyle = "opacity-90 drop-shadow-[0_1px_1px_rgba(255,255,255,0.1)] text-white/90";
 
   if (format === "bluray")
     return (
-      <div className="h-3 w-8 mx-auto mb-3 relative flex items-center justify-center overflow-hidden rounded-t-sm">
+      <div className="h-3 w-8 mx-auto mb-3 relative flex items-center justify-center overflow-hidden rounded-t-sm group-hover:brightness-125 transition-all">
         <div className="absolute inset-0 bg-blue-600/80 mix-blend-overlay z-0"></div>
         <div className="absolute top-0 inset-x-0 h-[1px] bg-blue-400/50 z-10"></div>
         <div className="h-[2px] w-5 bg-white/80 rounded-full relative z-20 shadow-[0_0_5px_rgba(59,130,246,0.5)]"></div>
@@ -78,11 +76,11 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Fond texturé bois très sombre + vignette pour la profondeur */}
+      {/* Fond texturé bois très sombre */}
       <div className="absolute inset-0 opacity-15 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] pointer-events-none mix-blend-overlay" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none z-0" />
 
-      {/* Ombre portée "physique" en haut de l'étagère */}
+      {/* Ombre portée du haut de l'étagère */}
       <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-black to-transparent z-20 pointer-events-none opacity-80"></div>
 
       <div className="relative z-10 flex flex-wrap items-end content-start p-6 sm:p-10 gap-[1px] sm:gap-[2px] min-h-[450px]">
@@ -91,8 +89,7 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
           const title = details?.title || "Titre inconnu";
           const poster = details?.poster_path ? getImageUrl(details.poster_path, "w500") : null;
 
-          // MODIFICATION : Plus de rotation aléatoire (randomTilt = 0)
-          // On garde juste une très légère variation de hauteur pour éviter l'effet "bloc monolithique"
+          // Variation subtile de hauteur pour casser la monotonie
           const randomHeight = (index % 3) * 1.5;
 
           const isActive = activeId === pm.id;
@@ -109,30 +106,40 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                   className={cn(
                     // Base de la tranche
                     "relative group cursor-pointer transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] origin-bottom",
-                    // Largeur selon format
                     SPINE_WIDTHS[pm.format],
-                    "h-48 sm:h-64 rounded-[3px] overflow-hidden",
-                    // Ombres portées entre les DVD
-                    "shadow-[-1px_0_4px_rgba(0,0,0,0.6)] z-0",
-                    // État actif
+                    "h-48 sm:h-64 rounded-[2px] overflow-hidden",
+                    // Bordures subtiles pour définir l'objet
+                    "border-l border-white/5 border-r border-black/50",
+                    // Effet de profondeur au repos (ombre légère)
+                    "shadow-[inset_2px_0_5px_rgba(255,255,255,0.05),inset_-2px_0_10px_rgba(0,0,0,0.8)]",
+
+                    // --- ÉTAT ACTIF (HOVER) : LE VOLUME APPARAÎT ---
                     isActive
-                      ? "z-50 scale-110 -translate-y-4 shadow-[0_20px_40px_rgba(0,0,0,0.8)] brightness-110"
-                      : "hover:z-50 hover:scale-110 hover:-translate-y-4 hover:shadow-[0_20px_40px_rgba(0,0,0,0.8)] hover:brightness-110",
+                      ? [
+                          "z-50 scale-110 -translate-y-4 brightness-110",
+                          // L'astuce du volume : Une ombre portée dure (#000) décalée à droite (4px) simule l'épaisseur (le côté du boîtier)
+                          // + une grande ombre diffuse pour la lévitation
+                          "shadow-[4px_0_0_#080808,8px_20px_30px_rgba(0,0,0,0.8)]",
+                        ]
+                      : [
+                          "hover:z-50 hover:scale-110 hover:-translate-y-4 hover:brightness-110",
+                          "hover:shadow-[4px_0_0_#080808,8px_20px_30px_rgba(0,0,0,0.8)]",
+                        ],
                   )}
                   style={{
                     height: `${16 + (pm.format === "dvd" ? 0.8 : 0)}rem`,
-                    // MODIFICATION : Suppression de rotate(), maintien des DVD parfaitement droits
                     transform: `translateY(${randomHeight}px) ${isActive ? "scale(1.1) translateY(-24px)" : ""}`,
                     marginBottom: isActive ? "12px" : "0px",
                   }}
                 >
-                  {/* === COUCHE 1 : FOND VISUEL (Affiche floutée) === */}
+                  {/* === COUCHE 1 : FOND VISUEL (Affiche) === */}
                   <div
                     className={cn(
                       "absolute inset-0 z-0 bg-cover bg-center transition-all duration-500 saturate-[0.8]",
+                      // On réduit le flou au survol pour révéler le détail de la "texture"
                       isActive
-                        ? "blur-[1px] opacity-40"
-                        : "blur-[3px] opacity-30 group-hover:blur-[1px] group-hover:opacity-40",
+                        ? "blur-[0.5px] opacity-50"
+                        : "blur-[2px] opacity-30 group-hover:blur-[0.5px] group-hover:opacity-50",
                     )}
                     style={{
                       backgroundImage: poster ? `url(${poster})` : undefined,
@@ -140,52 +147,59 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                     }}
                   />
 
-                  {/* === COUCHE 2 : MATÉRIAU & LUMIÈRE === */}
+                  {/* === COUCHE 2 : VOLUME & LUMIÈRE (Le Relief 2D) === */}
+                  {/* Reflet spéculaire (plastique) */}
                   <div
                     className={cn(
                       "absolute inset-0 z-10 pointer-events-none bg-gradient-to-r",
                       isSteelbook
-                        ? "from-transparent via-white/20 to-transparent bg-[length:200%_100%] bg-left group-hover:bg-right transition-all duration-700 ease-in-out opacity-50 mix-blend-overlay"
-                        : "from-white/25 via-white/5 to-black/60",
+                        ? // Métal : Reflet large qui bouge
+                          "from-transparent via-white/30 to-transparent bg-[length:200%_100%] bg-left group-hover:bg-right transition-[background-position] duration-700 ease-in-out mix-blend-overlay opacity-70"
+                        : // Plastique : Reflet cylindrique (lumière sur les bords, ombre au centre)
+                          "from-white/20 via-transparent to-black/60 opacity-80",
                     )}
                   />
 
-                  {!isSteelbook && (
-                    <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-white/40 z-20 pointer-events-none mix-blend-overlay"></div>
-                  )}
+                  {/* Arête brillante gauche (Rim Light) */}
+                  <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-white/30 z-20 pointer-events-none mix-blend-overlay"></div>
+
+                  {/* Ombre interne pour l'effet "jaquette sous plastique" */}
+                  <div className="absolute inset-0 z-10 shadow-[inset_0_2px_5px_rgba(255,255,255,0.1),inset_0_-2px_5px_rgba(0,0,0,0.5)] pointer-events-none"></div>
 
                   {/* === COUCHE 3 : CONTENU TEXTUEL === */}
                   <div className="relative z-30 w-full h-full flex flex-col py-4 pointer-events-none">
-                    {/* Haut */}
-                    <div className="flex-shrink-0 flex flex-col items-center justify-center w-full px-1">
+                    {/* Haut : Logo */}
+                    <div className="flex-shrink-0 flex flex-col items-center justify-center w-full px-1 drop-shadow-md">
                       <FormatLogo format={pm.format} />
                     </div>
 
                     {/* Centre : Titre parfaitement centré */}
                     <div className="flex-grow relative w-full overflow-hidden">
                       <h3
-                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-sans font-bold text-[#e0e0e0] text-xs sm:text-[13px] uppercase tracking-[0.1em] text-center whitespace-nowrap drop-shadow-md"
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-sans font-bold text-[#e8e8e8] text-xs sm:text-[13px] uppercase tracking-[0.1em] text-center whitespace-nowrap"
                         style={{
                           writingMode: "vertical-rl",
                           textOrientation: "mixed",
                           maxWidth: "85%",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
+                          // Ombre portée sous le texte pour le détacher du fond (effet embossé)
+                          textShadow: "0 2px 4px rgba(0,0,0,0.8)",
                         }}
                       >
                         {title}
                       </h3>
                     </div>
 
-                    {/* Bas */}
-                    <div className="flex-shrink-0 w-full flex flex-col items-center justify-end gap-2 opacity-70 pb-1">
+                    {/* Bas : Indicateurs */}
+                    <div className="flex-shrink-0 w-full flex flex-col items-center justify-end gap-2 opacity-80 pb-1">
                       {pm.condition === "mint" && (
                         <div
-                          className="w-2 h-2 rounded-full bg-gradient-to-tr from-yellow-400 to-yellow-200 shadow-[0_0_8px_rgba(250,204,21,1)]"
+                          className="w-1.5 h-1.5 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,1)]"
                           title="État Neuf"
                         />
                       )}
-                      <div className="w-6 h-4 border-[1.5px] border-white/20 rounded-[2px] flex items-center justify-center bg-black/30">
+                      <div className="w-6 h-4 border-[1.5px] border-white/20 rounded-[2px] flex items-center justify-center bg-black/40 shadow-sm">
                         <div className="w-3 h-[1.5px] bg-white/40"></div>
                       </div>
                     </div>
@@ -199,9 +213,10 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                 sideOffset={30}
                 className="p-0 border-none bg-transparent shadow-none pointer-events-none overflow-visible"
               >
-                <div className="absolute inset-0 bg-black/80 blur-[30px] scale-110 z-[-1] rounded-[20px]"></div>
+                {/* Lueur d'ambiance derrière le poster */}
+                <div className="absolute inset-0 bg-black/60 blur-[40px] scale-110 z-[-1] rounded-full"></div>
 
-                <div className="relative w-56 sm:w-64 rounded-[12px] overflow-hidden shadow-[0_30px_70px_-10px_rgba(0,0,0,0.9)] border border-white/10 animate-in fade-in slide-in-from-left-6 duration-300 ease-out">
+                <div className="relative w-56 sm:w-64 rounded-[8px] overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.9)] border border-white/10 animate-in fade-in slide-in-from-left-4 duration-300 ease-out">
                   {poster ? (
                     <img src={poster} alt={title} className="w-full h-auto object-cover aspect-[2/3]" />
                   ) : (
@@ -212,23 +227,23 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
 
                   <div
                     className={cn(
-                      "absolute top-3 right-3 px-2.5 py-1.5 backdrop-blur-md rounded-md text-[10px] font-black uppercase tracking-wider text-white border shadow-lg",
-                      isSteelbook ? "bg-slate-700/60 border-slate-400/30" : "bg-black/60 border-white/10",
+                      "absolute top-3 right-3 px-2.5 py-1 backdrop-blur-md rounded text-[10px] font-bold uppercase tracking-wider text-white border shadow-lg",
+                      isSteelbook ? "bg-slate-800/70 border-slate-400/30" : "bg-black/70 border-white/10",
                     )}
                   >
                     {formatLabels[pm.format]}
                   </div>
 
-                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/80 to-transparent p-5 pt-16 text-left">
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/90 to-transparent p-5 pt-20 text-left">
                     <h4 className="text-white font-sans font-bold text-xl leading-tight line-clamp-2 drop-shadow-sm">
                       {title}
                     </h4>
                     <div className="flex items-center gap-3 mt-2">
-                      <span className="text-white/60 text-xs">
+                      <span className="text-white/60 text-xs font-medium">
                         {new Date(details?.release_date || "").getFullYear() || "N/A"}
                       </span>
                       {pm.price && (
-                        <span className="text-primary font-bold text-sm bg-primary/10 px-2 py-0.5 rounded-full">
+                        <span className="text-primary font-bold text-sm bg-primary/10 px-2 py-0.5 rounded-sm">
                           {pm.price} €
                         </span>
                       )}
@@ -250,7 +265,7 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
       </div>
 
       {/* Base de l'étagère */}
-      <div className="h-12 w-full bg-[#0f0f0f] border-t-[3px] border-[#1a1a1a] relative z-30 shadow-[0_-15px_30px_rgba(0,0,0,1)]">
+      <div className="h-12 w-full bg-[#111] border-t-[4px] border-[#1a1a1a] relative z-30 shadow-[0_-15px_40px_rgba(0,0,0,1)]">
         <div className="w-full h-full opacity-20 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] mix-blend-overlay"></div>
         <div className="absolute top-0 inset-x-0 h-[1px] bg-white/10"></div>
       </div>
