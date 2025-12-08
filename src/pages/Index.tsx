@@ -3,31 +3,25 @@ import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { MovieSection } from "@/components/MovieSection";
-import { MovieCard } from "@/components/MovieCard";
-import { getPopularMovies, getNowAvailableMovies, getTopRatedMovies, Movie } from "@/services/tmdb";
+import { FollowingMoviesSection } from "@/components/FollowingMoviesSection";
+import { getPopularMovies, getNowAvailableMovies, Movie } from "@/services/tmdb";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
-import { ArrowRight, Film, Trophy, Star } from "lucide-react";
+import { ArrowRight, Film, Trophy, Star, Users } from "lucide-react";
 
 export default function Index() {
   const { user } = useAuth();
   const { currentLevel, currentXp, unlockedBadges } = useBadgeNotification();
   const [nowAvailable, setNowAvailable] = useState<Movie[]>([]);
   const [popular, setPopular] = useState<Movie[]>([]);
-  const [topRated, setTopRated] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        const [nowAvailableData, popularData, topRatedData] = await Promise.all([
-          getNowAvailableMovies(),
-          getPopularMovies(),
-          getTopRatedMovies(),
-        ]);
+        const [nowAvailableData, popularData] = await Promise.all([getNowAvailableMovies(), getPopularMovies()]);
         setNowAvailable(nowAvailableData);
         setPopular(popularData);
-        setTopRated(topRatedData);
       } catch (error) {
         console.error("Error fetching movies:", error);
       } finally {
@@ -38,24 +32,20 @@ export default function Index() {
     fetchMovies();
   }, []);
 
-  // Featured movie (first popular movie)
   const featuredMovie = popular[0];
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8 overflow-x-hidden">
-      {/* Grain overlay */}
       <div className="grain-overlay" />
-
       <Header />
 
       <main className="w-full max-w-full overflow-hidden">
-        {/* Hero Section */}
+        {/* Hero Bento Section */}
         {featuredMovie && !loading && (
           <section className="relative px-4 sm:px-6 py-6 sm:py-10 mb-6 sm:mb-10">
             <div className="max-w-7xl mx-auto">
-              {/* Bento Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                {/* Featured Movie - Large Card */}
+                {/* Featured Movie */}
                 <Link
                   to={`/movie/${featuredMovie.id}`}
                   className="col-span-2 row-span-2 relative rounded-xl overflow-hidden group aspect-[4/3] md:aspect-auto"
@@ -75,35 +65,34 @@ export default function Index() {
                   </div>
                 </Link>
 
-                {/* Stats Card - Gold */}
+                {/* Stats Cards - Logged in */}
                 {user && (
-                  <Link to="/badges" className="bento-card bento-gold flex flex-col justify-between">
-                    <div>
-                      <Trophy className="w-5 h-5 mb-2 opacity-70" />
-                      <p className="text-xs uppercase tracking-wider opacity-70">Niveau</p>
-                    </div>
-                    <div>
-                      <p className="font-serif text-4xl sm:text-5xl font-medium">{currentLevel}</p>
-                      <p className="text-sm opacity-70">{currentXp} XP</p>
-                    </div>
-                  </Link>
+                  <>
+                    <Link to="/badges" className="bento-card bento-gold flex flex-col justify-between">
+                      <div>
+                        <Trophy className="w-5 h-5 mb-2 opacity-70" />
+                        <p className="text-xs uppercase tracking-wider opacity-70">Niveau</p>
+                      </div>
+                      <div>
+                        <p className="font-serif text-4xl sm:text-5xl font-medium">{currentLevel}</p>
+                        <p className="text-sm opacity-70">{currentXp} XP</p>
+                      </div>
+                    </Link>
+
+                    <Link to="/badges" className="bento-card bento-cream flex flex-col justify-between">
+                      <div>
+                        <Star className="w-5 h-5 mb-2 opacity-70" />
+                        <p className="text-xs uppercase tracking-wider opacity-70">Badges</p>
+                      </div>
+                      <div>
+                        <p className="font-serif text-4xl sm:text-5xl font-medium">{unlockedBadges.size}</p>
+                        <p className="text-sm opacity-70">débloqués</p>
+                      </div>
+                    </Link>
+                  </>
                 )}
 
-                {/* Badges Card - Cream */}
-                {user && (
-                  <Link to="/badges" className="bento-card bento-cream flex flex-col justify-between">
-                    <div>
-                      <Star className="w-5 h-5 mb-2 opacity-70" />
-                      <p className="text-xs uppercase tracking-wider opacity-70">Badges</p>
-                    </div>
-                    <div>
-                      <p className="font-serif text-4xl sm:text-5xl font-medium">{unlockedBadges.size}</p>
-                      <p className="text-sm opacity-70">débloqués</p>
-                    </div>
-                  </Link>
-                )}
-
-                {/* Quick access cards when not logged in */}
+                {/* Cards - Not logged in */}
                 {!user && (
                   <>
                     <div className="bento-card bento-gold flex flex-col justify-between">
@@ -123,7 +112,7 @@ export default function Index() {
                   </>
                 )}
 
-                {/* Second Featured Movie */}
+                {/* Second Featured */}
                 {popular[1] && (
                   <Link
                     to={`/movie/${popular[1].id}`}
@@ -146,6 +135,9 @@ export default function Index() {
           </section>
         )}
 
+        {/* Following Movies Section - Personalized */}
+        {user && <FollowingMoviesSection />}
+
         {/* Movie Sections */}
         <MovieSection title="À l'affiche" movies={nowAvailable} loading={loading} seeMoreLink="/movies/now-available" />
 
@@ -155,8 +147,6 @@ export default function Index() {
           loading={loading}
           seeMoreLink="/movies/popular"
         />
-
-        <MovieSection title="Les mieux notés" movies={topRated} loading={loading} seeMoreLink="/movies/top-rated" />
       </main>
 
       <BottomNav />
