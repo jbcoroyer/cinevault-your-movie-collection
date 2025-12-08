@@ -31,6 +31,8 @@ export default function Profile() {
   const targetUserId = userId || user?.id;
 
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  // Stats pour les profils visités
+  const [profileStats, setProfileStats] = useState({ watched: 0, watchlist: 0, favorites: 0 });
   const [loadingProfile, setLoadingProfile] = useState(!isOwnProfile);
 
   const { userMovies } = useUserMovies();
@@ -43,10 +45,14 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(myProfile?.avatar_url || null);
 
-  // Stats
-  const watchedCount = userMovies.filter((m) => m.status === "watched").length;
-  const watchlistCount = userMovies.filter((m) => m.status === "watchlist").length;
-  const favoritesCount = userMovies.filter((m) => m.is_favorite).length;
+  // Stats : Si c'est mon profil, j'utilise mes données locales, sinon j'utilise celles fetchées
+  const watchedCount = isOwnProfile ? userMovies.filter((m) => m.status === "watched").length : profileStats.watched;
+
+  const watchlistCount = isOwnProfile
+    ? userMovies.filter((m) => m.status === "watchlist").length
+    : profileStats.watchlist;
+
+  const favoritesCount = isOwnProfile ? userMovies.filter((m) => m.is_favorite).length : profileStats.favorites;
 
   useEffect(() => {
     if (myProfile) {
@@ -62,9 +68,35 @@ export default function Profile() {
 
       setLoadingProfile(true);
       try {
+        // Fetch Profile Info
         const { data, error } = await supabase.from("profiles").select("*").eq("id", targetUserId).single();
         if (error) throw error;
         setProfileData(data);
+
+        // Fetch Stats for visited profile
+        const { count: watched } = await supabase
+          .from("user_movies")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", targetUserId)
+          .eq("status", "watched");
+
+        const { count: watchlist } = await supabase
+          .from("user_movies")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", targetUserId)
+          .eq("status", "watchlist");
+
+        const { count: favorites } = await supabase
+          .from("user_movies")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", targetUserId)
+          .eq("is_favorite", true);
+
+        setProfileStats({
+          watched: watched || 0,
+          watchlist: watchlist || 0,
+          favorites: favorites || 0,
+        });
       } catch (error) {
         console.error("Error fetching profile:", error);
         toast({ title: "Erreur", description: "Profil introuvable", variant: "destructive" });
@@ -219,14 +251,12 @@ export default function Profile() {
           )}
         </section>
 
-        {/* Stats - only for own profile */}
-        {isOwnProfile && (
-          <section className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
-            <StatCard icon={Film} value={watchedCount} label="Vus" />
-            <StatCard icon={Clock} value={watchlistCount} label="Watchlist" />
-            <StatCard icon={Heart} value={favoritesCount} label="Favoris" />
-          </section>
-        )}
+        {/* Stats - Affiché pour tout le monde maintenant */}
+        <section className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
+          <StatCard icon={Film} value={watchedCount} label="Vus" />
+          <StatCard icon={Clock} value={watchlistCount} label="Watchlist" />
+          <StatCard icon={Heart} value={favoritesCount} label="Favoris" />
+        </section>
 
         {/* Top 5 */}
         <Top5Section
