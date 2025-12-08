@@ -1,92 +1,33 @@
-import { Home, Search, Library, Trophy, Sparkles } from "lucide-react";
-import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
+import { Home, Search, Library, Trophy, ListVideo, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ProfileMenu } from "./ProfileMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { ProfileMenu } from "./ProfileMenu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
- * Header — Navigation desktop avec effet glassmorphism
+ * Header - Navigation principale avec effet glass
+ *
+ * Features:
+ * - Glassmorphism avec blur
+ * - Navigation centrée avec indicateur actif
+ * - Badge de collection animé
+ * - Logo avec gradient
  */
 
 const navItems = [
   { to: "/", icon: Home, label: "Accueil" },
   { to: "/search", icon: Search, label: "Recherche" },
-  { to: "/collection", icon: Library, label: "Collection" },
+  { to: "/collection", icon: Library, label: "Collection", highlight: true, showBadge: true },
+  { to: "/lists", icon: ListVideo, label: "Listes" },
   { to: "/badges", icon: Trophy, label: "Badges" },
 ];
 
 export const Header: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const location = useLocation();
-
-  return (
-    <header
-      className={cn(
-        "hidden md:flex",
-        "fixed top-4 left-4 right-4 z-50",
-        "h-16 px-6",
-        "items-center justify-between",
-        // Glass effect
-        "bg-card/80 backdrop-blur-2xl",
-        "border border-white/15 dark:border-white/10",
-        "rounded-2xl",
-        "shadow-[0_8px_40px_rgba(0,0,0,0.12)]",
-        "dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)]",
-      )}
-    >
-      {/* Logo */}
-      <RouterNavLink to="/" className="flex items-center gap-2">
-        <div className={cn(
-          "w-9 h-9 rounded-xl",
-          "bg-gradient-to-br from-primary to-primary/80",
-          "flex items-center justify-center",
-          "shadow-glow-sm"
-        )}>
-          <Sparkles className="w-5 h-5 text-primary-foreground" />
-        </div>
-        <span className="font-display text-lg font-semibold">CinéTrack</span>
-      </RouterNavLink>
-
-      {/* Navigation */}
-      <nav className="flex items-center gap-1">
-        {navItems.map(({ to, icon: Icon, label }) => {
-          const isActive = location.pathname === to;
-
-          return (
-            <RouterNavLink
-              key={to}
-              to={to}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl",
-                "text-sm font-medium",
-                "transition-all duration-300",
-                isActive
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </RouterNavLink>
-          );
-        })}
-      </nav>
-
-      {/* Profile */}
-      <ProfileMenu />
-    </header>
-  );
-};
-
-/**
- * BottomNav — Navigation mobile glassmorphism premium
- */
-
-export const BottomNav: React.FC = () => {
-  const { user } = useAuth();
-  const location = useLocation();
   const [collectionCount, setCollectionCount] = useState(0);
 
   useEffect(() => {
@@ -110,7 +51,7 @@ export const BottomNav: React.FC = () => {
 
     // Subscribe to changes
     const channel = supabase
-      .channel("collection-count-bottom")
+      .channel("collection-count-header")
       .on(
         "postgres_changes",
         {
@@ -130,113 +71,80 @@ export const BottomNav: React.FC = () => {
     };
   }, [user]);
 
-  // Get active index for indicator position
-  const activeIndex = navItems.findIndex((item) => item.to === location.pathname);
-
   return (
-    <nav
-      className={cn(
-        "fixed bottom-4 left-4 right-4 z-50",
-        "md:hidden",
-        // Glass container
-        "bg-card/80 backdrop-blur-2xl",
-        "border border-white/15 dark:border-white/10",
-        "rounded-2xl",
-        "shadow-[0_8px_40px_rgba(0,0,0,0.12)]",
-        "dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)]",
-        // Safe area
-        "safe-area-bottom",
-      )}
-    >
-      {/* Inner container */}
-      <div className="relative flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
-        {/* Animated Background Indicator */}
-        {activeIndex >= 0 && (
-          <div
-            className={cn(
-              "absolute top-2 bottom-2 rounded-xl",
-              "bg-primary/15 dark:bg-primary/20",
-              "transition-all duration-500 ease-out",
-            )}
-            style={{
-              width: `${100 / navItems.length - 4}%`,
-              left: `${(activeIndex * 100) / navItems.length + 2}%`,
-            }}
-          />
-        )}
+    <header className="sticky top-0 z-50 nav-glass border-b border-border/50">
+      <div className="flex items-center justify-between px-4 sm:px-6 h-16 container mx-auto relative">
+        {/* Logo */}
+        <button onClick={() => navigate("/")} className="flex items-center gap-2 group" aria-label="Accueil CineVault">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-shadow">
+            <Sparkles className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <span className="font-display text-xl font-bold">
+            Cine<span className="text-gradient">Vault</span>
+          </span>
+        </button>
 
-        {/* Nav Items */}
-        {navItems.map(({ to, icon: Icon, label }) => {
-          const isActive = location.pathname === to;
-          const showBadge = to === "/collection";
+        {/* Desktop Navigation - Centered */}
+        <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+          {navItems.map(({ to, icon: Icon, label, highlight, showBadge }) => (
+            <Tooltip key={to}>
+              <TooltipTrigger asChild>
+                <NavLink
+                  to={to}
+                  className={({ isActive }) =>
+                    cn(
+                      "relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300",
+                      isActive
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon
+                        className={cn("w-4 h-4 transition-transform duration-300", isActive && "scale-110")}
+                        strokeWidth={isActive ? 2.5 : 2}
+                      />
+                      <span>{label}</span>
 
-          return (
-            <RouterNavLink
-              key={to}
-              to={to}
-              className={cn(
-                "relative flex flex-col items-center justify-center",
-                "flex-1 py-2 z-10",
-                "transition-all duration-300",
-                isActive ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              {/* Icon Container */}
-              <div className={cn("relative", "transition-transform duration-300", isActive && "scale-110")}>
-                <Icon className={cn("w-5 h-5", "transition-all duration-300")} strokeWidth={isActive ? 2.5 : 2} />
+                      {/* Badge de collection */}
+                      {showBadge && collectionCount > 0 && (
+                        <span
+                          className={cn(
+                            "absolute -top-1 -right-1 min-w-[18px] h-[18px]",
+                            "flex items-center justify-center px-1",
+                            "text-[10px] font-bold rounded-full",
+                            "bg-primary text-primary-foreground",
+                            "animate-pulse-glow",
+                          )}
+                        >
+                          {collectionCount > 99 ? "99+" : collectionCount}
+                        </span>
+                      )}
 
-                {/* Badge */}
-                {showBadge && collectionCount > 0 && (
-                  <span
-                    className={cn(
-                      "absolute -top-1 -right-2",
-                      "min-w-[16px] h-4 px-1",
-                      "flex items-center justify-center",
-                      "text-[10px] font-bold",
-                      "bg-primary text-primary-foreground",
-                      "rounded-full",
-                      "shadow-glow-sm",
-                    )}
-                  >
-                    {collectionCount > 99 ? "99+" : collectionCount}
-                  </span>
-                )}
-
-                {/* Active Glow Effect */}
-                {isActive && (
-                  <div
-                    className={cn(
-                      "absolute inset-0 -z-10",
-                      "blur-lg opacity-50",
-                      "bg-primary",
-                      "scale-150",
-                      "animate-pulse-glow",
-                    )}
-                  />
-                )}
-              </div>
-
-              {/* Label */}
-              <span
-                className={cn(
-                  "text-[10px] mt-1 font-medium",
-                  "transition-all duration-300",
-                  isActive ? "opacity-100" : "opacity-70",
-                )}
-              >
+                      {/* Active indicator bar */}
+                      {isActive && (
+                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-primary rounded-full" />
+                      )}
+                    </>
+                  )}
+                </NavLink>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="md:hidden">
                 {label}
-              </span>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </nav>
 
-              {/* Active Dot */}
-              {isActive && (
-                <span
-                  className={cn("absolute -bottom-0.5", "w-1 h-1 rounded-full", "bg-primary", "animate-fade-in-scale")}
-                />
-              )}
-            </RouterNavLink>
-          );
-        })}
+        {/* Profile Menu */}
+        <div className="flex items-center gap-3">
+          <ProfileMenu />
+        </div>
       </div>
-    </nav>
+    </header>
   );
 };
+
+export default Header;
