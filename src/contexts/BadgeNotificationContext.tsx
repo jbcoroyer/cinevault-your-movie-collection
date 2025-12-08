@@ -4,6 +4,7 @@ import { useUserMovies } from "@/hooks/useUserMovies";
 import { getPhysicalMovies } from "@/services/physicalMovies";
 import { BadgeUnlockDialog } from "@/components/BadgeUnlockDialog";
 import { BADGES_DATA, LEVEL_MILESTONES, GameBadge, BadgeTier } from "@/data/gameData";
+import { supabase } from "@/integrations/supabase/client";
 
 // --- HELPERS ---
 const getSeenBadgesKey = (userId: string) => `cinevault_seen_badges_v2_${userId}`;
@@ -53,6 +54,7 @@ interface BadgeNotificationContextType {
   unlockedBadges: UnlockedBadgeInfo[]; // Liste enrichie des badges débloqués
   userStats: UserGameStats;
   triggerTestBadge: () => void;
+  refreshStats: () => void;
 }
 
 const BadgeNotificationContext = createContext<BadgeNotificationContextType | null>(null);
@@ -69,8 +71,9 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
   const { user } = useAuth();
   const { userMovies, loading: moviesLoading } = useUserMovies();
   
-  // État local pour le nombre de films physiques (pas dans userMovies)
+  // État local pour le nombre de films physiques et d'avis
   const [physicalCount, setPhysicalCount] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
 
   const [unlockedBadgeQueue, setUnlockedBadgeQueue] = useState<{ badge: GameBadge; tier: BadgeTier }[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -82,26 +85,38 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
   // Track if initial load is complete
   const isInitialized = useRef(false);
 
-  // Récupérer les films physiques
-  useEffect(() => {
-    const fetchPhysical = async () => {
-      if (!user) return;
-      const data = await getPhysicalMovies(user.id);
-      setPhysicalCount(data.length);
-    };
-    fetchPhysical();
+  // Fonction pour récupérer les stats
+  const fetchUserStats = useCallback(async () => {
+    if (!user) return;
+    
+    // Récupérer les films physiques
+    const physicalData = await getPhysicalMovies(user.id);
+    setPhysicalCount(physicalData.length);
+    
+    // Récupérer le nombre d'avis depuis la table reviews
+    const { count, error } = await supabase
+      .from("reviews")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    
+    if (!error && count !== null) {
+      setReviewCount(count);
+    }
   }, [user]);
+
+  // Récupérer les stats au chargement et quand l'utilisateur change
+  useEffect(() => {
+    fetchUserStats();
+  }, [fetchUserStats]);
 
   // Calculer les stats de jeu
   const userStats: UserGameStats = useMemo(() => {
     const watched = new Set<number>();
     const favorites = new Set<number>();
-    let reviews = 0;
 
     userMovies.forEach(m => {
       if (m.status === 'watched') {
         watched.add(m.tmdb_id);
-        if (m.review && m.review.length > 5) reviews++;
       }
       if (m.is_favorite) favorites.add(m.tmdb_id);
     });
@@ -109,10 +124,10 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
     return {
       watchedIds: watched,
       favoriteIds: favorites,
-      reviewCount: reviews,
+      reviewCount: reviewCount,
       physicalCount: physicalCount
     };
-  }, [userMovies, physicalCount]);
+  }, [userMovies, physicalCount, reviewCount]);
 
   // Cœur du système : Calculer l'XP et les badges débloqués
   const { currentXp, currentLevel, nextLevelXp, currentLevelXp, progressPercent, unlockedBadges, newlyUnlocked } = useMemo(() => {
@@ -261,7 +276,8 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
     progressPercent,
     unlockedBadges,
     userStats,
-    triggerTestBadge
+    triggerTestBadge,
+    refreshStats: fetchUserStats
   };
 
   return (

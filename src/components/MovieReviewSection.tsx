@@ -5,6 +5,7 @@ import { ReviewCard } from "@/components/ReviewCard";
 import { EditReviewDialog } from "@/components/EditReviewDialog";
 import { useReviews, Review } from "@/hooks/useReviews";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 import { MessageSquare, PenLine, Loader2, ChevronRight } from "lucide-react";
 import { getYear } from "@/services/tmdb";
 
@@ -24,6 +25,7 @@ export function MovieReviewSection({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { getMyReview, fetchMovieReviews, createReview, updateReview, deleteReview } = useReviews();
+  const { refreshStats } = useBadgeNotification();
 
   const [myReview, setMyReview] = useState<Review | null>(null);
   const [otherReviews, setOtherReviews] = useState<Review[]>([]);
@@ -106,6 +108,8 @@ export function MovieReviewSection({
 
       if (newReview) {
         setMyReview(newReview);
+        // Rafraîchir les stats pour débloquer les badges
+        refreshStats();
         return true;
       }
       return false;
