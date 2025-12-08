@@ -19,7 +19,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { BottomNav } from "@/components/BottomNav";
 import { MovieCard, MovieCardSkeleton } from "@/components/MovieCard";
 import { UserCard, UserCardSkeleton } from "@/components/UserCard";
-import { searchMovies, getGenres, getPopularMovies, Movie, Genre } from "@/services/tmdb";
+import { searchMovies, getGenres, getPopularMovies, discoverMovies, Movie, Genre } from "@/services/tmdb";
 import { searchUsers, getPopularUsers, UserProfile } from "@/services/users";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -142,11 +142,7 @@ export default function Search() {
             params["with_runtime.lte"] = filters.runtimeMax.toString();
           }
 
-          const response = await fetch(
-            `https://api.themoviedb.org/3/discover/movie?api_key=c0cfa8d140fb26ff2a4b624502be9a95&language=fr-FR&${new URLSearchParams(params)}`,
-          );
-          const data = await response.json();
-          results = data.results || [];
+          results = await discoverMovies(params);
           setSearchedMovies(true);
         } else {
           // Show popular by default
