@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, Disc, MoreVertical } from "lucide-react";
+import { Trash2, Disc, MoreVertical, Copy } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,15 +16,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Movie, getImageUrl } from "@/services/tmdb";
-import { PhysicalMovie, formatLabels, deletePhysicalMovie } from "@/services/physicalMovies";
+import { PhysicalMovie, formatLabels, conditionLabels, deletePhysicalMovie } from "@/services/physicalMovies";
 import { toast } from "@/hooks/use-toast";
+import { ConditionDot } from "./collection/ConditionBadge";
 
 interface PhysicalMoviePosterProps {
   physicalMovie: PhysicalMovie;
   movieDetails: Movie | null;
   onDeleted: () => void;
   onEdit: (physicalMovie: PhysicalMovie, movieDetails: Movie | null) => void;
+  editionCount?: number;
 }
 
 export const PhysicalMoviePoster: React.FC<PhysicalMoviePosterProps> = ({
@@ -32,6 +35,7 @@ export const PhysicalMoviePoster: React.FC<PhysicalMoviePosterProps> = ({
   movieDetails,
   onDeleted,
   onEdit,
+  editionCount = 1,
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -49,7 +53,7 @@ export const PhysicalMoviePoster: React.FC<PhysicalMoviePosterProps> = ({
     setDeleteDialogOpen(false);
   };
 
-  const handlePosterClick = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("[data-menu-trigger]")) {
       return;
     }
@@ -58,49 +62,76 @@ export const PhysicalMoviePoster: React.FC<PhysicalMoviePosterProps> = ({
 
   const posterUrl = movieDetails?.poster_path ? getImageUrl(movieDetails.poster_path, "w300") : null;
 
+  const condition = physicalMovie.condition || "good";
+  const tooltipContent = `${movieDetails?.title || "Film"} • ${formatLabels[physicalMovie.format]} • ${conditionLabels[condition]}`;
+
   return (
     <>
-      <div className="relative group cursor-pointer" onClick={handlePosterClick}>
-        <div className="overflow-hidden rounded-lg hover:ring-2 hover:ring-primary/50 transition-all">
-          {posterUrl ? (
-            <img src={posterUrl} alt={movieDetails?.title || "Film"} className="w-full aspect-[2/3] object-cover" />
-          ) : (
-            <div className="w-full aspect-[2/3] bg-muted flex items-center justify-center">
-              <Disc className="w-12 h-12 text-muted-foreground" />
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="relative aspect-[2/3] rounded overflow-hidden cursor-pointer group" onClick={handleClick}>
+            {posterUrl ? (
+              <img
+                src={posterUrl}
+                alt={movieDetails?.title || "Film"}
+                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+              />
+            ) : (
+              <div className="w-full h-full bg-muted flex items-center justify-center">
+                <Disc className="w-8 h-8 text-muted-foreground" />
+              </div>
+            )}
+
+            {/* Overlay on hover */}
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="text-white text-xs font-medium px-2 text-center line-clamp-2">
+                {movieDetails?.title}
+              </span>
             </div>
-          )}
-        </div>
 
-        {/* Format badge */}
-        <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-primary text-primary-foreground text-[10px] font-medium rounded">
-          {formatLabels[physicalMovie.format]}
-        </div>
+            {/* Condition indicator */}
+            <div className="absolute top-1 left-1">
+              <ConditionDot condition={condition} className="w-2 h-2" />
+            </div>
 
-        {/* Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              data-menu-trigger
-              className="absolute top-2 right-2 w-7 h-7 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                setDeleteDialogOpen(true);
-              }}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Retirer (vendu)
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+            {/* Multi-edition badge */}
+            {editionCount > 1 && (
+              <div className="absolute top-1 right-1 px-1 py-0.5 bg-background/90 text-foreground text-[9px] font-medium rounded flex items-center gap-0.5">
+                <Copy className="w-2.5 h-2.5" />
+                {editionCount}
+              </div>
+            )}
+
+            {/* Menu (visible on hover) */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  data-menu-trigger
+                  className="absolute bottom-1 right-1 w-6 h-6 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="w-3 h-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteDialogOpen(true);
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Retirer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-sm">{tooltipContent}</p>
+        </TooltipContent>
+      </Tooltip>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -129,5 +160,5 @@ export const PhysicalMoviePoster: React.FC<PhysicalMoviePosterProps> = ({
 };
 
 export const PhysicalMoviePosterSkeleton: React.FC = () => {
-  return <div className="w-full aspect-[2/3] bg-muted rounded-lg animate-pulse" />;
+  return <div className="aspect-[2/3] rounded bg-muted animate-pulse" />;
 };
