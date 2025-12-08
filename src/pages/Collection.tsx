@@ -11,6 +11,7 @@ import { CollectionFiltersDrawer, ActiveFiltersBar } from "@/components/collecti
 import { CollectionStats } from "@/components/collection/CollectionStats";
 import { CollectionTimeline } from "@/components/collection/CollectionTimeline";
 import { CollectionTopCreators } from "@/components/collection/CollectionTopCreators";
+import { ShelfView } from "@/components/collection/ShelfView"; // Nouveau composant
 import { useAuth } from "@/contexts/AuthContext";
 import { getMovieDetails, Movie, MovieDetails } from "@/services/tmdb";
 import {
@@ -37,18 +38,17 @@ import {
   X,
   BarChart3,
   Calendar,
-  ChevronDown,
-  ChevronUp,
   Star,
   Trophy,
+  Library, // Nouvelle icône
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/Header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Suppression de 'cards' du type
-type ViewMode = "list" | "posters";
+// Types mis à jour
+type ViewMode = "list" | "posters" | "shelf";
 type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition";
 type SortOrder = "asc" | "desc";
 
@@ -80,7 +80,7 @@ export default function Collection() {
   const [editingMovie, setEditingMovie] = useState<PhysicalMovie | null>(null);
   const [editingMovieDetails, setEditingMovieDetails] = useState<Movie | null>(null);
 
-  // View & Sort state - "posters" par défaut
+  // View & Sort state - "shelf" par défaut pour l'expérience immersive, ou "posters" si vous préférez
   const [viewMode, setViewMode] = useState<ViewMode>("posters");
   const [sortBy, setSortBy] = useState<SortBy>("added");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -256,7 +256,7 @@ export default function Collection() {
           </Button>
         </div>
 
-        {/* Dashboard Widgets Row - Les 3 boutons/fenêtres */}
+        {/* Dashboard Widgets Row */}
         {physicalMovies.length > 0 && (
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {/* 1. Statistiques */}
@@ -448,6 +448,18 @@ export default function Collection() {
                   >
                     <List className="w-4 h-4" />
                   </button>
+                  <button
+                    onClick={() => setViewMode("shelf")}
+                    className={cn(
+                      "p-2 rounded transition-colors",
+                      viewMode === "shelf"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    title="Vue étagère"
+                  >
+                    <Library className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
@@ -512,6 +524,15 @@ export default function Collection() {
                         editionCount={getEditionCount(pm.tmdb_id)}
                       />
                     ))}
+                  </div>
+                )}
+
+                {viewMode === "shelf" && (
+                  <div className="animate-fade-in">
+                    <ShelfView movies={sortedMovies} movieDetailsMap={physicalMovieDetails} onMovieClick={handleEdit} />
+                    <p className="text-center text-xs text-muted-foreground mt-4 italic">
+                      Survolez les tranches pour voir les détails. Cliquez pour éditer.
+                    </p>
                   </div>
                 )}
               </>
