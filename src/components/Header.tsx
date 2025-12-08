@@ -1,23 +1,88 @@
 import { Home, Search, Library, Trophy, Sparkles } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { ProfileMenu } from "./ProfileMenu";
 
 /**
- * BottomNav — Navigation mobile glassmorphism premium
- *
- * @description Barre de navigation flottante avec effet verre,
- * indicateur animé et micro-interactions.
+ * Header — Navigation desktop avec effet glassmorphism
  */
 
 const navItems = [
   { to: "/", icon: Home, label: "Accueil" },
   { to: "/search", icon: Search, label: "Recherche" },
-  { to: "/collection", icon: Library, label: "Collection", showBadge: true },
+  { to: "/collection", icon: Library, label: "Collection" },
   { to: "/badges", icon: Trophy, label: "Badges" },
 ];
+
+export const Header: React.FC = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  return (
+    <header
+      className={cn(
+        "hidden md:flex",
+        "fixed top-4 left-4 right-4 z-50",
+        "h-16 px-6",
+        "items-center justify-between",
+        // Glass effect
+        "bg-card/80 backdrop-blur-2xl",
+        "border border-white/15 dark:border-white/10",
+        "rounded-2xl",
+        "shadow-[0_8px_40px_rgba(0,0,0,0.12)]",
+        "dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)]",
+      )}
+    >
+      {/* Logo */}
+      <RouterNavLink to="/" className="flex items-center gap-2">
+        <div className={cn(
+          "w-9 h-9 rounded-xl",
+          "bg-gradient-to-br from-primary to-primary/80",
+          "flex items-center justify-center",
+          "shadow-glow-sm"
+        )}>
+          <Sparkles className="w-5 h-5 text-primary-foreground" />
+        </div>
+        <span className="font-display text-lg font-semibold">CinéTrack</span>
+      </RouterNavLink>
+
+      {/* Navigation */}
+      <nav className="flex items-center gap-1">
+        {navItems.map(({ to, icon: Icon, label }) => {
+          const isActive = location.pathname === to;
+
+          return (
+            <RouterNavLink
+              key={to}
+              to={to}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl",
+                "text-sm font-medium",
+                "transition-all duration-300",
+                isActive
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </RouterNavLink>
+          );
+        })}
+      </nav>
+
+      {/* Profile */}
+      <ProfileMenu />
+    </header>
+  );
+};
+
+/**
+ * BottomNav — Navigation mobile glassmorphism premium
+ */
 
 export const BottomNav: React.FC = () => {
   const { user } = useAuth();
@@ -101,11 +166,12 @@ export const BottomNav: React.FC = () => {
         )}
 
         {/* Nav Items */}
-        {navItems.map(({ to, icon: Icon, label, showBadge }) => {
+        {navItems.map(({ to, icon: Icon, label }) => {
           const isActive = location.pathname === to;
+          const showBadge = to === "/collection";
 
           return (
-            <NavLink
+            <RouterNavLink
               key={to}
               to={to}
               className={cn(
@@ -167,7 +233,7 @@ export const BottomNav: React.FC = () => {
                   className={cn("absolute -bottom-0.5", "w-1 h-1 rounded-full", "bg-primary", "animate-fade-in-scale")}
                 />
               )}
-            </NavLink>
+            </RouterNavLink>
           );
         })}
       </div>
