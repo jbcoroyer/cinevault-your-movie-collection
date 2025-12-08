@@ -51,24 +51,26 @@ export default function Index() {
                 alt={featuredMovie.title}
                 className="w-full h-full object-cover"
               />
-              {/* CORRECTION CONTRASTE : Utilisation de couleurs sombres fixes au lieu de 'background' qui change selon le thème */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/80 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#09090b]/90 via-[#09090b]/50 to-transparent" />
+              {/* CONTRASTE RENFORCÉ : Dégradés noirs plus opaques et étendus */}
+              <div className="absolute inset-0 bg-black/30" /> {/* Voile sombre global */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-transparent" />
             </div>
 
             {/* Content */}
             <div className="relative z-10 container mx-auto px-4 sm:px-6">
-              <div className="max-w-2xl space-y-6 animate-fade-in-up">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-primary text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-sm">
-                  <Zap className="w-3 h-3" /> La Référence Cinéma
+              <div className="max-w-3xl space-y-6 animate-fade-in-up">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-lg">
+                  <Zap className="w-3 h-3 text-yellow-400" />
+                  <span className="drop-shadow-md">La Référence Cinéma</span>
                 </div>
 
-                <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl font-bold leading-[1.1] text-white drop-shadow-lg">
-                  Votre collection de films, <span className="text-primary">réinventée.</span>
+                <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl font-bold leading-[1.1] text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">
+                  Votre collection de films,{" "}
+                  <span className="text-primary drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">réinventée.</span>
                 </h1>
 
-                {/* Texte plus clair pour meilleur contraste */}
-                <p className="text-lg sm:text-xl text-gray-100 leading-relaxed max-w-lg drop-shadow-md font-medium">
+                <p className="text-lg sm:text-xl text-white/90 leading-relaxed max-w-xl font-medium drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
                   Organisez votre vidéothèque physique, suivez ce que vous regardez, gagnez des badges et découvrez vos
                   prochains coups de cœur.
                 </p>
@@ -77,7 +79,7 @@ export default function Index() {
                   <Button
                     asChild
                     size="lg"
-                    className="h-12 px-8 text-base font-semibold shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+                    className="h-14 px-8 text-base font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform bg-primary hover:bg-primary/90 text-primary-foreground border-2 border-transparent"
                   >
                     <Link to="/auth?mode=signup">
                       Commencer l'aventure
@@ -88,7 +90,7 @@ export default function Index() {
                     asChild
                     variant="outline"
                     size="lg"
-                    className="h-12 px-8 text-base bg-white/10 border-white/30 hover:bg-white/20 text-white backdrop-blur-sm"
+                    className="h-14 px-8 text-base font-bold bg-black/40 border-white/30 hover:bg-white/10 text-white backdrop-blur-md transition-all hover:scale-105"
                   >
                     <Link to="/search">
                       <PlayCircle className="w-5 h-5 mr-2" />
@@ -97,17 +99,17 @@ export default function Index() {
                   </Button>
                 </div>
 
-                {/* Icônes de fonctionnalités plus contrastées */}
-                <div className="flex flex-wrap items-center gap-6 pt-6 text-sm text-gray-200 font-semibold">
-                  <div className="flex items-center gap-2 drop-shadow-sm">
+                {/* Icônes de fonctionnalités avec contraste maximal */}
+                <div className="flex flex-wrap items-center gap-6 pt-8 text-sm text-white font-semibold tracking-wide">
+                  <div className="flex items-center gap-2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
                     <MonitorPlay className="w-5 h-5 text-primary" />
                     <span>Gestion de collection</span>
                   </div>
-                  <div className="flex items-center gap-2 drop-shadow-sm">
+                  <div className="flex items-center gap-2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
                     <Trophy className="w-5 h-5 text-primary" />
                     <span>Gamification</span>
                   </div>
-                  <div className="flex items-center gap-2 drop-shadow-sm">
+                  <div className="flex items-center gap-2 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
                     <Film className="w-5 h-5 text-primary" />
                     <span>Infos complètes</span>
                   </div>
