@@ -269,15 +269,15 @@ export default function Collection() {
                   <span className="text-xs sm:text-sm font-medium text-center">Statistiques</span>
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
-                <DialogHeader>
+              <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 gap-0">
+                <DialogHeader className="p-6 pb-2 border-b">
                   <DialogTitle className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-primary" />
                     Statistiques de la collection
                   </DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="flex-1 pr-4 -mr-4">
-                  <div className="p-1">
+                <ScrollArea className="flex-1 w-full">
+                  <div className="p-6">
                     <CollectionStats
                       stats={physicalStats}
                       genreStats={genreStats}
@@ -299,15 +299,15 @@ export default function Collection() {
                   <span className="text-xs sm:text-sm font-medium text-center">Favoris</span>
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-                <DialogHeader>
+              <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+                <DialogHeader className="p-6 pb-2 border-b">
                   <DialogTitle className="flex items-center gap-2">
                     <Star className="w-5 h-5 text-yellow-500" />
                     Réalisateurs & Acteurs favoris
                   </DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="flex-1 pr-4 -mr-4">
-                  <div className="p-1">
+                <ScrollArea className="flex-1 w-full">
+                  <div className="p-6">
                     <CollectionTopCreators
                       directorStats={directorStats}
                       actorStats={actorStats}
@@ -332,15 +332,15 @@ export default function Collection() {
                   <span className="text-xs sm:text-sm font-medium text-center">Timeline</span>
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col">
-                <DialogHeader>
+              <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0 gap-0">
+                <DialogHeader className="p-6 pb-2 border-b">
                   <DialogTitle className="flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-blue-500" />
                     Historique des achats
                   </DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="flex-1 pr-4 -mr-4">
-                  <div className="p-1">
+                <ScrollArea className="flex-1 w-full">
+                  <div className="p-6">
                     <CollectionTimeline
                       timelineStats={timelineStats}
                       movieDetailsMap={physicalMovieDetails}
