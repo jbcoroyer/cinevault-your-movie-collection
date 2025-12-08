@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import { PhysicalMovie, PhysicalFormat, formatLabels } from "@/services/physicalMovies";
 import { MovieDetails, getImageUrl } from "@/services/tmdb";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Disc, Zap } from "lucide-react";
+import { Disc } from "lucide-react";
 
 interface ShelfViewProps {
   movies: PhysicalMovie[];
@@ -11,10 +11,10 @@ interface ShelfViewProps {
   onMovieClick: (physicalMovie: PhysicalMovie, movieDetails: MovieDetails | null) => void;
 }
 
-// Styles de base pour la forme et les bordures (sans les couleurs de fond fixes)
+// Styles de base pour la forme et les bordures
 const SPINE_BASE_STYLES: Record<PhysicalFormat, string> = {
   dvd: "border-l border-white/10",
-  bluray: "border-l border-white/10", // Le bleu viendra du logo
+  bluray: "border-l border-white/10",
   "4k": "border-l border-white/10",
   steelbook: "border-l border-white/20",
   collector: "border-l border-white/20 w-12 sm:w-14",
@@ -44,10 +44,49 @@ const FormatLogo = ({ format }: { format: PhysicalFormat }) => {
 };
 
 export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, onMovieClick }) => {
+  // État pour gérer quel film est "actif" (survolé ou touché)
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Gestion du tactile pour simuler le hover sur mobile
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // Récupérer le premier point de contact
+    const touch = e.touches[0];
+
+    // Identifier l'élément sous le doigt
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+    // Chercher l'élément parent qui possède l'attribut data-movie-id
+    const spine = target?.closest("[data-movie-id]");
+
+    if (spine) {
+      const id = spine.getAttribute("data-movie-id");
+      if (id !== activeId) {
+        setActiveId(id);
+      }
+    } else {
+      // Si on sort des tranches, on désactive
+      setActiveId(null);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    // Optionnel : on peut laisser le dernier élément affiché ou le masquer
+    // Pour l'instant, on le masque quand on lève le doigt pour imiter le comportement "hover"
+    setActiveId(null);
+  };
+
   if (movies.length === 0) return null;
 
   return (
-    <div className="w-full bg-[#121212] border-8 border-[#1f1f1f] rounded-lg shadow-2xl overflow-hidden relative">
+    <div
+      ref={containerRef}
+      className="w-full bg-[#121212] border-8 border-[#1f1f1f] rounded-lg shadow-2xl overflow-hidden relative touch-none"
+      // Ajout des gestionnaires d'événements tactiles sur le conteneur principal
+      onTouchStart={handleTouchMove}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Texture bois sombre */}
       <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] pointer-events-none mix-blend-overlay" />
 
@@ -64,13 +103,22 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
           const randomHeight = Math.floor((pm.tmdb_id % 5) * 1.5);
           const randomTilt = (pm.tmdb_id % 2 === 0 ? 1 : -1) * ((pm.tmdb_id % 3) * 0.2);
 
+          const isActive = activeId === pm.id;
+
           return (
-            <Tooltip key={pm.id} delayDuration={0}>
+            <Tooltip key={pm.id} open={isActive} delayDuration={0}>
               <TooltipTrigger asChild>
                 <div
+                  // L'identifiant pour le tracking tactile
+                  data-movie-id={pm.id}
+                  // Gestion de la souris pour desktop
+                  onMouseEnter={() => setActiveId(pm.id)}
+                  onMouseLeave={() => setActiveId(null)}
                   onClick={() => onMovieClick(pm, details || null)}
                   className={cn(
-                    "relative group cursor-pointer transition-all duration-300 ease-out transform origin-bottom hover:z-50 hover:scale-110 hover:-translate-y-4",
+                    "relative group cursor-pointer transition-all duration-200 ease-out transform origin-bottom hover:z-50 hover:scale-110 hover:-translate-y-4",
+                    // Si actif via tactile, on applique les mêmes effets que le hover
+                    isActive && "z-50 scale-110 -translate-y-4",
                     pm.format === "collector" ? "w-10 sm:w-12" : "w-8 sm:w-10",
                     "h-48 sm:h-64 rounded-[2px] overflow-hidden shadow-lg",
                     SPINE_BASE_STYLES[pm.format],
@@ -83,7 +131,10 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                 >
                   {/* --- FOND DYNAMIQUE (Image de l'affiche) --- */}
                   <div
-                    className="absolute inset-0 z-0 bg-cover bg-center opacity-80 blur-[0.5px] group-hover:blur-0 transition-all duration-300"
+                    className={cn(
+                      "absolute inset-0 z-0 bg-cover bg-center opacity-80 blur-[0.5px] transition-all duration-300",
+                      isActive ? "blur-0" : "group-hover:blur-0",
+                    )}
                     style={{
                       backgroundImage: poster ? `url(${poster})` : undefined,
                       backgroundColor: "#333", // Fallback
@@ -91,21 +142,17 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                   />
 
                   {/* --- OVERLAYS POUR L'EFFET DE TRANCHE --- */}
-                  {/* Assombrissement global pour lisibilité */}
                   <div className="absolute inset-0 z-0 bg-black/40" />
-
-                  {/* Effet plastique/lumière sur la tranche (Cylindrique) */}
                   <div className="absolute inset-0 z-0 bg-gradient-to-r from-white/10 via-transparent to-black/60 pointer-events-none" />
 
                   {/* --- CONTENU DE LA TRANCHE --- */}
-                  <div className="relative z-10 w-full h-full flex flex-col justify-between py-3">
+                  <div className="relative z-10 w-full h-full flex flex-col justify-between py-3 pointer-events-none">
                     {/* Haut : Logo Format */}
                     <div className="flex-shrink-0 flex justify-center w-full px-1">
                       <FormatLogo format={pm.format} />
                     </div>
 
                     {/* Centre : Titre du film */}
-                    {/* Utilisation de flex-grow pour prendre tout l'espace disponible et centrer verticalement */}
                     <div className="flex-grow flex items-center justify-center w-full overflow-hidden px-1">
                       <h3
                         className="font-sans font-bold text-white text-xs sm:text-[13px] uppercase tracking-wider text-center w-full drop-shadow-md"
@@ -124,11 +171,9 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
 
                     {/* Bas : Infos condition / studio */}
                     <div className="flex-shrink-0 w-full flex flex-col items-center gap-1.5 pt-2 opacity-80">
-                      {/* Petit carré de couleur pour l'état si Mint */}
                       {pm.condition === "mint" && (
                         <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.8)]" />
                       )}
-                      {/* Faux logo studio en bas */}
                       <div className="w-5 h-5 border border-white/30 rounded-sm flex items-center justify-center">
                         <span className="text-[6px] font-serif text-white/70">TM</span>
                       </div>
@@ -137,9 +182,13 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                 </div>
               </TooltipTrigger>
 
-              {/* Preview Poster au survol */}
-              <TooltipContent side="right" className="p-0 border-none bg-transparent shadow-none" sideOffset={20}>
-                <div className="relative w-48 rounded-lg overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 animate-in fade-in slide-in-from-left-4 duration-200">
+              {/* Preview Poster au survol/toucher */}
+              <TooltipContent
+                side="top"
+                className="p-0 border-none bg-transparent shadow-none pointer-events-none"
+                sideOffset={20}
+              >
+                <div className="relative w-48 rounded-lg overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] border border-white/20 animate-in fade-in zoom-in-95 duration-200">
                   {poster ? (
                     <img src={poster} alt={title} className="w-full h-auto object-cover" />
                   ) : (
@@ -154,7 +203,7 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                   </div>
 
                   <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-4 pt-12">
-                    <p className="text-white font-serif font-bold text-lg leading-tight">{title}</p>
+                    <p className="text-white font-sans font-bold text-lg leading-tight">{title}</p>
                     {pm.price && <p className="text-primary font-medium text-sm mt-1">{pm.price} €</p>}
                   </div>
                 </div>
