@@ -13,8 +13,8 @@ export interface UserProfile {
 
 export const searchUsers = async (query: string): Promise<UserProfile[]> => {
   if (!query.trim()) return [];
-  
-  const { data, error } = await supabase
+
+  const { data: profiles, error } = await supabase
     .from("profiles")
     .select("*")
     .ilike("username", `%${query}%`)
@@ -25,15 +25,37 @@ export const searchUsers = async (query: string): Promise<UserProfile[]> => {
     return [];
   }
 
-  return data || [];
+  if (!profiles) return [];
+
+  // Récupérer les stats pour chaque utilisateur trouvé
+  const usersWithStats = await Promise.all(
+    profiles.map(async (profile) => {
+      const { count: watchedCount } = await supabase
+        .from("user_movies")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", profile.id)
+        .eq("status", "watched");
+
+      const { count: favoritesCount } = await supabase
+        .from("user_movies")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", profile.id)
+        .eq("is_favorite", true);
+
+      return {
+        ...profile,
+        movies_watched: watchedCount || 0,
+        favorites_count: favoritesCount || 0,
+      };
+    }),
+  );
+
+  return usersWithStats;
 };
 
 export const getPopularUsers = async (): Promise<UserProfile[]> => {
   // Récupérer les utilisateurs avec leurs stats
-  const { data: profiles, error: profilesError } = await supabase
-    .from("profiles")
-    .select("*")
-    .limit(50);
+  const { data: profiles, error: profilesError } = await supabase.from("profiles").select("*").limit(50);
 
   if (profilesError || !profiles) {
     console.error("Error fetching profiles:", profilesError);
@@ -60,7 +82,7 @@ export const getPopularUsers = async (): Promise<UserProfile[]> => {
         movies_watched: watchedCount || 0,
         favorites_count: favoritesCount || 0,
       };
-    })
+    }),
   );
 
   // Trier par nombre de films vus (les plus actifs en premier)
