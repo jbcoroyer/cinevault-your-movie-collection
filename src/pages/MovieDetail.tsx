@@ -1,3 +1,4 @@
+import { MovieReviewSection } from "@/components/MovieReviewSection";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
