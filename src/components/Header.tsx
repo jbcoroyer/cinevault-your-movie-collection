@@ -1,11 +1,18 @@
 import { useNavigate, NavLink } from "react-router-dom";
-import { Home, Search, Library, Trophy, ListVideo } from "lucide-react";
-import { cn } from "../lib/utils";
+import { Home, Search, Library, Trophy, ListVideo, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ProfileMenu } from "./ProfileMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+/**
+ * Header — Navigation principale glassmorphism
+ *
+ * @description Header flottant avec effet verre dépoli,
+ * navigation centrée et indicateurs animés.
+ */
 
 const navItems = [
   { to: "/", icon: Home, label: "Accueil" },
@@ -19,7 +26,18 @@ export const Header: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [collectionCount, setCollectionCount] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
 
+  // Détection du scroll pour effet condensé
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Fetch collection count
   useEffect(() => {
     const fetchCollectionCount = async () => {
       if (!user) {
@@ -62,14 +80,59 @@ export const Header: React.FC = () => {
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-      <div className="flex items-center justify-between px-4 h-14 container mx-auto relative">
-        <h1 className="text-xl font-bold text-foreground cursor-pointer" onClick={() => navigate("/")}>
-          Cine<span className="text-primary">Vault</span>
-        </h1>
+    <header
+      className={cn(
+        "sticky top-0 z-50",
+        "transition-all duration-500 ease-out",
+        // Glass effect
+        scrolled
+          ? "bg-background/70 backdrop-blur-xl border-b border-white/10 dark:border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.1)]"
+          : "bg-transparent",
+      )}
+    >
+      <div
+        className={cn(
+          "flex items-center justify-between container mx-auto",
+          "transition-all duration-300",
+          scrolled ? "h-14 px-4" : "h-16 px-4 sm:px-6",
+        )}
+      >
+        {/* Logo */}
+        <button
+          onClick={() => navigate("/")}
+          className={cn("flex items-center gap-2 group", "transition-transform duration-300 hover:scale-105")}
+        >
+          {/* Logo Icon */}
+          <div
+            className={cn(
+              "relative w-8 h-8 rounded-lg overflow-hidden",
+              "bg-gradient-to-br from-primary to-primary/70",
+              "flex items-center justify-center",
+              "shadow-glow-sm",
+              "transition-all duration-300 group-hover:shadow-glow",
+            )}
+          >
+            <Sparkles className="w-4 h-4 text-primary-foreground" />
+          </div>
+
+          {/* Logo Text */}
+          <span className={cn("text-xl font-display font-bold tracking-tight", "transition-all duration-300")}>
+            Cine<span className="text-gradient-gold">Vault</span>
+          </span>
+        </button>
 
         {/* Desktop Navigation - Centered */}
-        <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+        <nav
+          className={cn(
+            "hidden md:flex items-center gap-1",
+            "absolute left-1/2 -translate-x-1/2",
+            // Glass pill container
+            "px-2 py-1.5 rounded-2xl",
+            "bg-card/50 backdrop-blur-lg",
+            "border border-white/10 dark:border-white/5",
+            "shadow-[0_2px_20px_rgba(0,0,0,0.06)]",
+          )}
+        >
           {navItems.map(({ to, icon: Icon, label, highlight, showBadge }) => (
             <Tooltip key={to}>
               <TooltipTrigger asChild>
@@ -77,42 +140,68 @@ export const Header: React.FC = () => {
                   to={to}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-button text-sm font-medium transition-all duration-200",
+                      "relative flex items-center gap-2 px-4 py-2 rounded-xl",
+                      "text-sm font-medium",
+                      "transition-all duration-300",
                       isActive
                         ? "text-primary bg-primary/10"
-                        : highlight
-                          ? "text-foreground hover:text-primary hover:bg-primary/5 border border-transparent hover:border-primary/20"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                     )
                   }
                 >
                   {({ isActive }) => (
                     <>
                       <div className="relative">
-                        <Icon className={cn("w-4 h-4", highlight && !isActive && "text-primary")} />
+                        <Icon
+                          className={cn("w-4 h-4", "transition-all duration-300", isActive && "scale-110")}
+                          strokeWidth={isActive ? 2.5 : 2}
+                        />
+
+                        {/* Badge count */}
                         {showBadge && collectionCount > 0 && (
-                          <span className="absolute -top-1 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[14px] h-3.5 flex items-center justify-center px-0.5">
+                          <span
+                            className={cn(
+                              "absolute -top-1.5 -right-1.5",
+                              "min-w-[16px] h-4 px-1",
+                              "flex items-center justify-center",
+                              "text-[10px] font-bold",
+                              "bg-primary text-primary-foreground",
+                              "rounded-full",
+                              "animate-fade-in-scale",
+                            )}
+                          >
                             {collectionCount > 99 ? "99+" : collectionCount}
                           </span>
                         )}
                       </div>
-                      <span>{label}</span>
+
+                      <span className="hidden lg:inline">{label}</span>
+
+                      {/* Active indicator dot */}
+                      {isActive && (
+                        <span
+                          className={cn(
+                            "absolute bottom-1 left-1/2 -translate-x-1/2",
+                            "w-1 h-1 rounded-full bg-primary",
+                            "animate-fade-in-scale",
+                          )}
+                        />
+                      )}
                     </>
                   )}
                 </NavLink>
               </TooltipTrigger>
-              {showBadge && collectionCount > 0 && (
-                <TooltipContent>
-                  <p>
-                    {collectionCount} film{collectionCount > 1 ? "s" : ""} dans votre collection
-                  </p>
-                </TooltipContent>
-              )}
+              <TooltipContent side="bottom" className="lg:hidden">
+                {label}
+              </TooltipContent>
             </Tooltip>
           ))}
         </nav>
 
-        <ProfileMenu />
+        {/* Right Side - Profile */}
+        <div className="flex items-center gap-3">
+          <ProfileMenu />
+        </div>
       </div>
     </header>
   );
