@@ -1,80 +1,77 @@
-import { Movie, getImageUrl, getYear } from "@/services/tmdb";
-import { Star } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { Movie, getImageUrl } from "@/services/tmdb";
+import { cn } from "@/lib/utils";
 
 interface MovieCardProps {
   movie: Movie;
   size?: "sm" | "md" | "lg";
+  showInfo?: boolean;
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({ movie, size = "md" }) => {
-  const navigate = useNavigate();
-  const posterUrl = getImageUrl(movie.poster_path, size === "sm" ? "w200" : "w500");
+export const MovieCard: React.FC<MovieCardProps> = ({ movie, size = "md", showInfo = false }) => {
+  const posterUrl = getImageUrl(movie.poster_path, "w300");
+  const year = movie.release_date?.split("-")[0];
 
-  // MODIFICATION ICI : Nouvelles tailles responsive (plus petit sur mobile)
   const sizeClasses = {
-    sm: "w-20 min-w-[5rem] md:w-28 md:min-w-[7rem]",
-    md: "w-24 min-w-[6rem] md:w-36 md:min-w-[9rem]",
-    lg: "w-32 min-w-[8rem] md:w-44 md:min-w-[11rem]",
+    sm: "w-[100px] sm:w-[110px]",
+    md: "w-[130px] sm:w-[150px]",
+    lg: "w-[160px] sm:w-[180px]",
+  };
+
+  const aspectClasses = {
+    sm: "aspect-[2/3]",
+    md: "aspect-[2/3]",
+    lg: "aspect-[2/3]",
   };
 
   return (
-    <div
-      className={`${sizeClasses[size]} cursor-pointer group animate-fade-in`}
-      onClick={() => navigate(`/movie/${movie.id}`)}
-    >
-      <div className="relative overflow-hidden rounded-card aspect-[2/3] bg-muted mb-3 mx-0 border-primary border-solid border-2">
+    <Link to={`/movie/${movie.id}`} className={cn("group flex-shrink-0", sizeClasses[size])}>
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-lg bg-muted transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-lg",
+          aspectClasses[size],
+        )}
+      >
         {posterUrl ? (
-          <img
-            src={posterUrl}
-            alt={movie.title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
+          <img src={posterUrl} alt={movie.title} className="w-full h-full object-cover" loading="lazy" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-card">
-            <span className="text-muted-foreground text-sm">No Image</span>
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <span className="text-muted-foreground text-xs text-center px-2">{movie.title}</span>
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      </div>
 
-      {/* MODIFICATION ICI : text-xs sur mobile, text-sm sur desktop */}
-      <h3 className="font-medium text-xs md:text-sm text-foreground line-clamp-2 mb-1 group-hover:text-primary transition-colors">
-        {movie.title}
-      </h3>
+        {/* Subtle gradient overlay on hover */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span>{getYear(movie.release_date)}</span>
+        {/* Rating badge */}
         {movie.vote_average > 0 && (
-          <>
-            <span>•</span>
-            <div className="flex items-center gap-1">
-              <Star className="w-3 h-3 fill-primary text-primary" />
-              <span>{movie.vote_average.toFixed(1)}</span>
-            </div>
-          </>
+          <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-medium px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            {movie.vote_average.toFixed(1)}
+          </div>
         )}
       </div>
-    </div>
+
+      {/* Title & Year */}
+      {showInfo && (
+        <div className="mt-2 space-y-0.5">
+          <h3 className="text-sm font-medium line-clamp-1 group-hover:text-primary transition-colors">{movie.title}</h3>
+          {year && <p className="text-xs text-muted-foreground">{year}</p>}
+        </div>
+      )}
+    </Link>
   );
 };
 
-export const MovieCardSkeleton: React.FC<{
-  size?: "sm" | "md" | "lg";
-}> = ({ size = "md" }) => {
-  // MODIFICATION ICI : Mêmes tailles pour le squelette de chargement
+export const MovieCardSkeleton: React.FC<{ size?: "sm" | "md" | "lg" }> = ({ size = "md" }) => {
   const sizeClasses = {
-    sm: "w-20 min-w-[5rem] md:w-28 md:min-w-[7rem]",
-    md: "w-24 min-w-[6rem] md:w-36 md:min-w-[9rem]",
-    lg: "w-32 min-w-[8rem] md:w-44 md:min-w-[11rem]",
+    sm: "w-[100px] sm:w-[110px]",
+    md: "w-[130px] sm:w-[150px]",
+    lg: "w-[160px] sm:w-[180px]",
   };
 
   return (
-    <div className={sizeClasses[size]}>
-      <div className="skeleton-shimmer aspect-[2/3] mb-3" />
-      <div className="skeleton-shimmer h-4 w-full mb-2" />
-      <div className="skeleton-shimmer h-3 w-2/3" />
+    <div className={cn("flex-shrink-0", sizeClasses[size])}>
+      <div className="aspect-[2/3] rounded-lg bg-muted animate-pulse" />
     </div>
   );
 };
