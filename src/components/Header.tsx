@@ -1,43 +1,29 @@
-import { useNavigate, NavLink } from "react-router-dom";
-import { Home, Search, Library, Trophy, ListVideo, Sparkles } from "lucide-react";
+import { Home, Search, Library, Trophy, Sparkles } from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { ProfileMenu } from "./ProfileMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
- * Header — Navigation principale glassmorphism
+ * BottomNav — Navigation mobile glassmorphism premium
  *
- * @description Header flottant avec effet verre dépoli,
- * navigation centrée et indicateurs animés.
+ * @description Barre de navigation flottante avec effet verre,
+ * indicateur animé et micro-interactions.
  */
 
 const navItems = [
   { to: "/", icon: Home, label: "Accueil" },
   { to: "/search", icon: Search, label: "Recherche" },
-  { to: "/collection", icon: Library, label: "Collection", highlight: true, showBadge: true },
-  { to: "/lists", icon: ListVideo, label: "Listes" },
+  { to: "/collection", icon: Library, label: "Collection", showBadge: true },
   { to: "/badges", icon: Trophy, label: "Badges" },
 ];
 
-export const Header: React.FC = () => {
-  const navigate = useNavigate();
+export const BottomNav: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [collectionCount, setCollectionCount] = useState(0);
-  const [scrolled, setScrolled] = useState(false);
 
-  // Détection du scroll pour effet condensé
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Fetch collection count
   useEffect(() => {
     const fetchCollectionCount = async () => {
       if (!user) {
@@ -59,7 +45,7 @@ export const Header: React.FC = () => {
 
     // Subscribe to changes
     const channel = supabase
-      .channel("collection-count-header")
+      .channel("collection-count-bottom")
       .on(
         "postgres_changes",
         {
@@ -79,130 +65,112 @@ export const Header: React.FC = () => {
     };
   }, [user]);
 
+  // Get active index for indicator position
+  const activeIndex = navItems.findIndex((item) => item.to === location.pathname);
+
   return (
-    <header
+    <nav
       className={cn(
-        "sticky top-0 z-50",
-        "transition-all duration-500 ease-out",
-        // Glass effect
-        scrolled
-          ? "bg-background/70 backdrop-blur-xl border-b border-white/10 dark:border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.1)]"
-          : "bg-transparent",
+        "fixed bottom-4 left-4 right-4 z-50",
+        "md:hidden",
+        // Glass container
+        "bg-card/80 backdrop-blur-2xl",
+        "border border-white/15 dark:border-white/10",
+        "rounded-2xl",
+        "shadow-[0_8px_40px_rgba(0,0,0,0.12)]",
+        "dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)]",
+        // Safe area
+        "safe-area-bottom",
       )}
     >
-      <div
-        className={cn(
-          "flex items-center justify-between container mx-auto",
-          "transition-all duration-300",
-          scrolled ? "h-14 px-4" : "h-16 px-4 sm:px-6",
-        )}
-      >
-        {/* Logo */}
-        <button
-          onClick={() => navigate("/")}
-          className={cn("flex items-center gap-2 group", "transition-transform duration-300 hover:scale-105")}
-        >
-          {/* Logo Icon */}
+      {/* Inner container */}
+      <div className="relative flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
+        {/* Animated Background Indicator */}
+        {activeIndex >= 0 && (
           <div
             className={cn(
-              "relative w-8 h-8 rounded-lg overflow-hidden",
-              "bg-gradient-to-br from-primary to-primary/70",
-              "flex items-center justify-center",
-              "shadow-glow-sm",
-              "transition-all duration-300 group-hover:shadow-glow",
+              "absolute top-2 bottom-2 rounded-xl",
+              "bg-primary/15 dark:bg-primary/20",
+              "transition-all duration-500 ease-out",
             )}
-          >
-            <Sparkles className="w-4 h-4 text-primary-foreground" />
-          </div>
+            style={{
+              width: `${100 / navItems.length - 4}%`,
+              left: `${(activeIndex * 100) / navItems.length + 2}%`,
+            }}
+          />
+        )}
 
-          {/* Logo Text */}
-          <span className={cn("text-xl font-display font-bold tracking-tight", "transition-all duration-300")}>
-            Cine<span className="text-gradient-gold">Vault</span>
-          </span>
-        </button>
+        {/* Nav Items */}
+        {navItems.map(({ to, icon: Icon, label, showBadge }) => {
+          const isActive = location.pathname === to;
 
-        {/* Desktop Navigation - Centered */}
-        <nav
-          className={cn(
-            "hidden md:flex items-center gap-1",
-            "absolute left-1/2 -translate-x-1/2",
-            // Glass pill container
-            "px-2 py-1.5 rounded-2xl",
-            "bg-card/50 backdrop-blur-lg",
-            "border border-white/10 dark:border-white/5",
-            "shadow-[0_2px_20px_rgba(0,0,0,0.06)]",
-          )}
-        >
-          {navItems.map(({ to, icon: Icon, label, highlight, showBadge }) => (
-            <Tooltip key={to}>
-              <TooltipTrigger asChild>
-                <NavLink
-                  to={to}
-                  className={({ isActive }) =>
-                    cn(
-                      "relative flex items-center gap-2 px-4 py-2 rounded-xl",
-                      "text-sm font-medium",
-                      "transition-all duration-300",
-                      isActive
-                        ? "text-primary bg-primary/10"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <div className="relative">
-                        <Icon
-                          className={cn("w-4 h-4", "transition-all duration-300", isActive && "scale-110")}
-                          strokeWidth={isActive ? 2.5 : 2}
-                        />
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              className={cn(
+                "relative flex flex-col items-center justify-center",
+                "flex-1 py-2 z-10",
+                "transition-all duration-300",
+                isActive ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              {/* Icon Container */}
+              <div className={cn("relative", "transition-transform duration-300", isActive && "scale-110")}>
+                <Icon className={cn("w-5 h-5", "transition-all duration-300")} strokeWidth={isActive ? 2.5 : 2} />
 
-                        {/* Badge count */}
-                        {showBadge && collectionCount > 0 && (
-                          <span
-                            className={cn(
-                              "absolute -top-1.5 -right-1.5",
-                              "min-w-[16px] h-4 px-1",
-                              "flex items-center justify-center",
-                              "text-[10px] font-bold",
-                              "bg-primary text-primary-foreground",
-                              "rounded-full",
-                              "animate-fade-in-scale",
-                            )}
-                          >
-                            {collectionCount > 99 ? "99+" : collectionCount}
-                          </span>
-                        )}
-                      </div>
+                {/* Badge */}
+                {showBadge && collectionCount > 0 && (
+                  <span
+                    className={cn(
+                      "absolute -top-1 -right-2",
+                      "min-w-[16px] h-4 px-1",
+                      "flex items-center justify-center",
+                      "text-[10px] font-bold",
+                      "bg-primary text-primary-foreground",
+                      "rounded-full",
+                      "shadow-glow-sm",
+                    )}
+                  >
+                    {collectionCount > 99 ? "99+" : collectionCount}
+                  </span>
+                )}
 
-                      <span className="hidden lg:inline">{label}</span>
+                {/* Active Glow Effect */}
+                {isActive && (
+                  <div
+                    className={cn(
+                      "absolute inset-0 -z-10",
+                      "blur-lg opacity-50",
+                      "bg-primary",
+                      "scale-150",
+                      "animate-pulse-glow",
+                    )}
+                  />
+                )}
+              </div>
 
-                      {/* Active indicator dot */}
-                      {isActive && (
-                        <span
-                          className={cn(
-                            "absolute bottom-1 left-1/2 -translate-x-1/2",
-                            "w-1 h-1 rounded-full bg-primary",
-                            "animate-fade-in-scale",
-                          )}
-                        />
-                      )}
-                    </>
-                  )}
-                </NavLink>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="lg:hidden">
+              {/* Label */}
+              <span
+                className={cn(
+                  "text-[10px] mt-1 font-medium",
+                  "transition-all duration-300",
+                  isActive ? "opacity-100" : "opacity-70",
+                )}
+              >
                 {label}
-              </TooltipContent>
-            </Tooltip>
-          ))}
-        </nav>
+              </span>
 
-        {/* Right Side - Profile */}
-        <div className="flex items-center gap-3">
-          <ProfileMenu />
-        </div>
+              {/* Active Dot */}
+              {isActive && (
+                <span
+                  className={cn("absolute -bottom-0.5", "w-1 h-1 rounded-full", "bg-primary", "animate-fade-in-scale")}
+                />
+              )}
+            </NavLink>
+          );
+        })}
       </div>
-    </header>
+    </nav>
   );
 };
