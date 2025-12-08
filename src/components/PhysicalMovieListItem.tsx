@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, Disc, MoreVertical, Calendar, Euro, User, Film } from "lucide-react";
+import { Trash2, Disc, MoreVertical, Copy } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,8 +17,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Movie, getImageUrl } from "@/services/tmdb";
-import { PhysicalMovie, formatLabels, deletePhysicalMovie } from "@/services/physicalMovies";
+import { PhysicalMovie, formatLabels, formatColors, deletePhysicalMovie } from "@/services/physicalMovies";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { ConditionBadge } from "./collection/ConditionBadge";
 
 interface PhysicalMovieListItemProps {
   physicalMovie: PhysicalMovie;
@@ -26,6 +28,7 @@ interface PhysicalMovieListItemProps {
   director?: string;
   onDeleted: () => void;
   onEdit: (physicalMovie: PhysicalMovie, movieDetails: Movie | null) => void;
+  editionCount?: number;
 }
 
 export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
@@ -34,6 +37,7 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
   director,
   onDeleted,
   onEdit,
+  editionCount = 1,
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -51,7 +55,7 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
     setDeleteDialogOpen(false);
   };
 
-  const handleItemClick = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("[data-menu-trigger]")) {
       return;
     }
@@ -60,77 +64,73 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
 
   const posterUrl = movieDetails?.poster_path ? getImageUrl(movieDetails.poster_path, "w200") : null;
 
+  const condition = physicalMovie.condition || "good";
   const year = movieDetails?.release_date?.split("-")[0];
-  const genres = movieDetails?.genres
-    ?.slice(0, 2)
-    .map((g) => g.name)
-    .join(", ");
 
   return (
     <>
       <div
-        className="flex items-center gap-4 p-3 bg-card rounded-lg group cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
-        onClick={handleItemClick}
+        className="flex items-center gap-3 p-3 bg-card rounded-lg cursor-pointer hover:bg-muted/50 transition-colors group"
+        onClick={handleClick}
       >
         {/* Poster */}
-        <div className="flex-shrink-0">
-          {posterUrl ? (
-            <img src={posterUrl} alt={movieDetails?.title || "Film"} className="w-16 h-24 object-cover rounded" />
-          ) : (
-            <div className="w-16 h-24 bg-muted rounded flex items-center justify-center">
-              <Disc className="w-8 h-8 text-muted-foreground" />
-            </div>
-          )}
-        </div>
+        {posterUrl ? (
+          <img
+            src={posterUrl}
+            alt={movieDetails?.title || "Film"}
+            className="w-12 h-18 object-cover rounded flex-shrink-0"
+          />
+        ) : (
+          <div className="w-12 h-18 bg-muted rounded flex items-center justify-center flex-shrink-0">
+            <Disc className="w-6 h-6 text-muted-foreground" />
+          </div>
+        )}
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold truncate">{movieDetails?.title || "Chargement..."}</h3>
-
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
-            {year && (
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {year}
-              </span>
-            )}
-            {director && (
-              <span className="flex items-center gap-1">
-                <User className="w-3 h-3" />
-                {director}
-              </span>
-            )}
-            {genres && (
-              <span className="flex items-center gap-1">
-                <Film className="w-3 h-3" />
-                {genres}
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium truncate">{movieDetails?.title || "Chargement..."}</h3>
+            {editionCount > 1 && (
+              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                <Copy className="w-3 h-3" />
+                {editionCount}
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-3 mt-2">
-            <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs font-medium rounded">
+          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+            {year && <span>{year}</span>}
+            {director && (
+              <>
+                <span>•</span>
+                <span className="truncate">{director}</span>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 mt-2">
+            <span
+              className={cn("px-2 py-0.5 text-xs font-medium text-white rounded", formatColors[physicalMovie.format])}
+            >
               {formatLabels[physicalMovie.format]}
             </span>
-            {physicalMovie.price && (
-              <span className="flex items-center gap-1 text-sm font-medium">
-                <Euro className="w-3 h-3" />
-                {physicalMovie.price.toFixed(2)}
-              </span>
-            )}
+            <ConditionBadge condition={condition} size="sm" />
           </div>
-
-          {physicalMovie.notes && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{physicalMovie.notes}</p>
-          )}
         </div>
+
+        {/* Price */}
+        {physicalMovie.price && (
+          <div className="text-right flex-shrink-0">
+            <span className="font-medium text-primary">{physicalMovie.price.toFixed(2)} €</span>
+          </div>
+        )}
 
         {/* Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               data-menu-trigger
-              className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              className="w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
               onClick={(e) => e.stopPropagation()}
             >
               <MoreVertical className="w-4 h-4" />
@@ -179,12 +179,12 @@ export const PhysicalMovieListItem: React.FC<PhysicalMovieListItemProps> = ({
 
 export const PhysicalMovieListItemSkeleton: React.FC = () => {
   return (
-    <div className="flex items-center gap-4 p-3 bg-card rounded-lg">
-      <div className="w-16 h-24 bg-muted rounded animate-pulse" />
+    <div className="flex items-center gap-3 p-3 bg-card rounded-lg">
+      <div className="w-12 h-18 bg-muted rounded animate-pulse flex-shrink-0" />
       <div className="flex-1 space-y-2">
-        <div className="h-5 bg-muted rounded animate-pulse w-1/2" />
-        <div className="h-4 bg-muted rounded animate-pulse w-1/3" />
-        <div className="h-4 bg-muted rounded animate-pulse w-1/4" />
+        <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+        <div className="h-3 bg-muted rounded animate-pulse w-1/2" />
+        <div className="h-5 bg-muted rounded animate-pulse w-1/4" />
       </div>
     </div>
   );
