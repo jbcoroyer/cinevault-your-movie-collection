@@ -270,7 +270,14 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
       <BadgeUnlockDialog
         open={isDialogOpen}
         onOpenChange={(open) => !open && handleCloseDialog()}
-        badge={unlockedBadgeQueue[0]?.badge || null} // Le composant BadgeUnlockDialog attend l'ancien format, on adapte
+        badge={unlockedBadgeQueue[0] ? {
+          id: unlockedBadgeQueue[0].badge.id,
+          title: unlockedBadgeQueue[0].tier.title,
+          description: unlockedBadgeQueue[0].badge.description,
+          xp: unlockedBadgeQueue[0].tier.xp,
+          icon: unlockedBadgeQueue[0].badge.icon,
+          color: unlockedBadgeQueue[0].badge.color
+        } : null}
         onClose={handleCloseDialog}
       />
     </BadgeNotificationContext.Provider>

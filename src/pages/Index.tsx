@@ -85,7 +85,7 @@ export default function Index() {
                         <p className="text-xs uppercase tracking-wider opacity-70">Badges</p>
                       </div>
                       <div>
-                        <p className="font-serif text-4xl sm:text-5xl font-medium">{unlockedBadges.size}</p>
+                        <p className="font-serif text-4xl sm:text-5xl font-medium">{unlockedBadges.length}</p>
                         <p className="text-sm opacity-70">débloqués</p>
                       </div>
                     </Link>
