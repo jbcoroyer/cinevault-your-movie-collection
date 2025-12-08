@@ -4,24 +4,12 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 /**
  * BentoGrid — Système de grille asymétrique inspiré des widgets Apple
- * 
- * @description Crée des layouts visuellement riches avec des cartes de tailles variées.
- * Parfait pour dashboards, landing pages et sections d'accueil.
- * 
- * @example
- * <BentoGrid>
- *   <BentoItem size="featured">Hero content</BentoItem>
- *   <BentoItem size="md">Widget 1</BentoItem>
- *   <BentoItem size="sm">Widget 2</BentoItem>
- * </BentoGrid>
  */
 
 /* --- Grid Container --- */
 
 interface BentoGridProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Nombre de colonnes de base (4, 6 ou 12) */
   cols?: 4 | 6 | 12;
-  /** Espacement entre les items */
   gap?: "sm" | "md" | "lg";
 }
 
@@ -95,8 +83,24 @@ const bentoItemVariants = cva(
           "text-primary-foreground",
           "shadow-glow-sm",
         ],
+        gold: [
+          "backdrop-blur-xl",
+          "border border-primary/20",
+          "bg-gradient-to-br from-primary/10 via-card/80 to-card/90",
+          "shadow-[0_8px_32px_rgba(0,0,0,0.1),0_0_0_1px_hsl(var(--primary)/0.1)]",
+        ],
         image: "bg-cover bg-center",
         outline: "bg-transparent border-2 border-dashed border-border/50",
+        stat: [
+          "bg-card/60 backdrop-blur-xl",
+          "border border-white/10",
+        ],
+        interactive: [
+          "bg-card/80 backdrop-blur-xl",
+          "border border-white/10",
+          "cursor-pointer",
+          "hover:bg-card/90 hover:border-primary/20",
+        ],
       },
       interactive: {
         true: [
@@ -119,11 +123,8 @@ const bentoItemVariants = cva(
 export interface BentoItemProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof bentoItemVariants> {
-  /** URL d'image de fond (pour variant="image") */
   backgroundImage?: string;
-  /** Overlay gradient sur l'image */
   overlay?: boolean;
-  /** Animation d'entrée avec délai (en ms) */
   animationDelay?: number;
 }
 
@@ -160,12 +161,9 @@ const BentoItem = React.forwardRef<HTMLDivElement, BentoItemProps>(
         style={combinedStyle}
         {...props}
       >
-        {/* Overlay gradient pour les images */}
         {variant === "image" && overlay && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         )}
-        
-        {/* Contenu */}
         <div className={cn("relative z-10 h-full", variant === "image" && "flex flex-col justify-end")}>
           {children}
         </div>
@@ -284,6 +282,83 @@ const BentoDescription = React.forwardRef<
 ));
 BentoDescription.displayName = "BentoDescription";
 
+/* --- Legacy Aliases (for HeroBento compatibility) --- */
+
+interface BentoCardProps extends BentoItemProps {
+  delay?: number;
+}
+
+const BentoCard = React.forwardRef<HTMLDivElement, BentoCardProps>(
+  ({ delay, ...props }, ref) => (
+    <BentoItem ref={ref} animationDelay={delay} {...props} />
+  )
+);
+BentoCard.displayName = "BentoCard";
+
+interface BentoCardImageProps extends React.HTMLAttributes<HTMLDivElement> {
+  src: string;
+  alt: string;
+  size?: "sm" | "md" | "lg";
+  colSpan?: number;
+  rowSpan?: number;
+  delay?: number;
+  gradientDirection?: "bottom" | "top";
+}
+
+const BentoCardImage = React.forwardRef<HTMLDivElement, BentoCardImageProps>(
+  ({ src, alt, size = "md", colSpan, rowSpan, delay, gradientDirection = "bottom", className, children, ...props }, ref) => {
+    const spanStyles: React.CSSProperties = {
+      gridColumn: colSpan ? `span ${colSpan}` : undefined,
+      gridRow: rowSpan ? `span ${rowSpan}` : undefined,
+    };
+
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "relative overflow-hidden rounded-2xl group",
+          delay !== undefined && "opacity-0 animate-fade-in-up",
+          className
+        )}
+        style={{
+          ...spanStyles,
+          animationDelay: delay !== undefined ? `${delay}ms` : undefined,
+        }}
+        {...props}
+      >
+        <img
+          src={src}
+          alt={alt}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+        />
+        <div className={cn(
+          "absolute inset-0",
+          gradientDirection === "bottom" 
+            ? "bg-gradient-to-t from-black/90 via-black/40 to-transparent"
+            : "bg-gradient-to-b from-black/90 via-black/40 to-transparent"
+        )} />
+        <div className="relative z-10 h-full flex flex-col justify-end p-4 sm:p-6">
+          {children}
+        </div>
+      </div>
+    );
+  }
+);
+BentoCardImage.displayName = "BentoCardImage";
+
+const BentoCardSkeleton = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { size?: "sm" | "md" | "lg" }
+>(({ className, size = "md", ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("animate-shimmer rounded-2xl", className)}
+    style={{ minHeight: size === "sm" ? "100px" : size === "md" ? "150px" : "200px" }}
+    {...props}
+  />
+));
+BentoCardSkeleton.displayName = "BentoCardSkeleton";
+
 export {
   BentoGrid,
   BentoItem,
@@ -293,4 +368,8 @@ export {
   BentoTitle,
   BentoValue,
   BentoDescription,
+  // Legacy aliases
+  BentoCard,
+  BentoCardImage,
+  BentoCardSkeleton,
 };
