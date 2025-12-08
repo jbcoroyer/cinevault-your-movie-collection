@@ -1,5 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// MODIFICATION ICI : On utilise la variable d'environnement
+const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
+const BASE_URL = "https://api.themoviedb.org/3";
+export const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
+
+// ... reste du fichier inchangé ...
+
 const API_KEY = "c0cfa8d140fb26ff2a4b624502be9a95";
 const BASE_URL = "https://api.themoviedb.org/3";
 export const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
