@@ -1,7 +1,9 @@
 import { useNavigate, NavLink } from "react-router-dom";
-import { Home, Search, Library, Trophy, ListVideo } from "lucide-react";
+import { Home, Search, Library, Trophy, ListVideo, LogIn } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ProfileMenu } from "./ProfileMenu";
+import { useAuth } from "../contexts/AuthContext";
+import { Button } from "../components/ui/button";
 
 const navItems = [
   { to: "/", label: "Accueil" },
@@ -13,11 +15,11 @@ const navItems = [
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border/50">
       <div className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 max-w-7xl mx-auto">
-        {/* Logo */}
         <h1
           className="font-serif text-xl sm:text-2xl font-medium text-foreground cursor-pointer tracking-tight"
           onClick={() => navigate("/")}
@@ -25,7 +27,6 @@ export const Header: React.FC = () => {
           Ciné<span className="text-primary">Vault</span>
         </h1>
 
-        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
           {navItems.map(({ to, label }) => (
             <NavLink
@@ -43,8 +44,18 @@ export const Header: React.FC = () => {
           ))}
         </nav>
 
-        {/* Profile */}
-        <ProfileMenu />
+        {user ? (
+          <ProfileMenu />
+        ) : (
+          <Button 
+            size="sm" 
+            onClick={() => navigate("/auth")}
+            className="font-semibold shadow-md hover:shadow-lg transition-all"
+          >
+            <LogIn className="w-4 h-4 mr-2" />
+            Connexion
+          </Button>
+        )}
       </div>
     </header>
   );
