@@ -29,10 +29,10 @@ export default function Index() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
+    <div className="min-h-screen bg-background pb-24 md:pb-8 overflow-x-hidden">
       <Header />
 
-      <main className="py-4 sm:py-6">
+      <main className="py-4 sm:py-6 w-full max-w-full overflow-hidden">
         <MovieSection
           title="🎬 Actuellement à visionner"
           movies={nowAvailable}
@@ -40,7 +40,11 @@ export default function Index() {
           seeMoreLink="/movies/now-available"
         />
         <MovieSection title="🔥 Films populaires" movies={popular} loading={loading} seeMoreLink="/movies/popular" />
-        {user && <WatchedTimeline />}
+        {user && (
+          <div className="overflow-hidden">
+            <WatchedTimeline />
+          </div>
+        )}
       </main>
 
       <BottomNav />
