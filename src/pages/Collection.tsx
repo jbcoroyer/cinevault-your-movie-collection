@@ -1,41 +1,75 @@
 import { useState, useEffect, useMemo } from "react";
-import { Button } from "../components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { BottomNav } from "../components/BottomNav";
-import { PhysicalMovieCard, PhysicalMovieCardSkeleton } from "../components/PhysicalMovieCard";
-import { PhysicalMovieListItem, PhysicalMovieListItemSkeleton } from "../components/PhysicalMovieListItem";
-import { PhysicalMoviePoster, PhysicalMoviePosterSkeleton } from "../components/PhysicalMoviePoster";
-import { AddPhysicalMovieDialog } from "../components/AddPhysicalMovieDialog";
-import { EditPhysicalMovieDialog } from "../components/EditPhysicalMovieDialog";
-import { useAuth } from "../contexts/AuthContext";
-import { getMovieDetails, Movie, MovieDetails } from "../services/tmdb";
-import { getPhysicalMovies, getPhysicalMovieStats, PhysicalMovie } from "../services/physicalMovies";
-import { AuthPlaceholder } from "../components/AuthPlaceholder";
-import {
-  Disc,
-  Plus,
-  Euro,
-  Package,
-  LayoutGrid,
-  List,
-  Image,
-  ArrowUpDown,
-  ArrowUp,
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { BottomNav } from "@/components/BottomNav";
+import { PhysicalMovieCard, PhysicalMovieCardSkeleton } from "@/components/PhysicalMovieCard";
+import { PhysicalMovieListItem, PhysicalMovieListItemSkeleton } from "@/components/PhysicalMovieListItem";
+import { PhysicalMoviePoster, PhysicalMoviePosterSkeleton } from "@/components/PhysicalMoviePoster";
+import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
+import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
+import { CollectionFiltersDrawer, ActiveFiltersBar } from "@/components/collection/CollectionFilters";
+import { CollectionStats } from "@/components/collection/CollectionStats";
+import { CollectionTimeline } from "@/components/collection/CollectionTimeline";
+import { CollectionTopCreators } from "@/components/collection/CollectionTopCreators";
+import { useAuth } from "@/contexts/AuthContext";
+import { getMovieDetails, Movie, MovieDetails } from "@/services/tmdb";
+import { 
+  getPhysicalMovies, 
+  getPhysicalMovieStats, 
+  getGenreStats,
+  getDecadeStats,
+  getDirectorStats,
+  getActorStats,
+  getTimelineStats,
+  getMultiEditions,
+  PhysicalMovie 
+} from "@/services/physicalMovies";
+import { useCollectionFilters } from "@/hooks/useCollectionFilters";
+import { 
+  Disc, 
+  Plus, 
+  LayoutGrid, 
+  List, 
+  Image, 
+  ArrowUpDown, 
+  ArrowUp, 
   ArrowDown,
   Search,
-  Library,
+  X,
+  BarChart3,
+  Calendar,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
-import { cn } from "../lib/utils";
-import { Header } from "../components/Header";
-import { Input } from "../components/ui/input";
+import { cn } from "@/lib/utils";
+import { Header } from "@/components/Header";
 
 type ViewMode = "cards" | "list" | "posters";
-type SortBy = "title" | "year" | "price" | "genre" | "director" | "added";
+type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition";
 type SortOrder = "asc" | "desc";
 
 interface ExtendedMovieDetails extends MovieDetails {
   director?: string;
 }
+
+const sortLabels: Record<SortBy, string> = {
+  title: "Titre",
+  year: "Année",
+  price: "Prix",
+  genre: "Genre",
+  director: "Réalisateur",
+  added: "Date d'ajout",
+  condition: "État",
+};
+
+const conditionOrder = { mint: 1, very_good: 2, good: 3, acceptable: 4 };
 
 export default function Collection() {
   const { user } = useAuth();
@@ -53,7 +87,28 @@ export default function Collection() {
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const [sortBy, setSortBy] = useState<SortBy>("added");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [searchQuery, setSearchQuery] = useState("");
+
+  // Section visibility
+  const [showStats, setShowStats] = useState(true);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [showTopCreators, setShowTopCreators] = useState(false);
+
+  // Use collection filters hook
+  const {
+    filters,
+    filteredMovies,
+    filterOptions,
+    setSearch,
+    toggleFormat,
+    toggleCondition,
+    toggleGenre,
+    toggleDecade,
+    toggleDirector,
+    setPriceRange,
+    resetFilters,
+    hasActiveFilters,
+    activeFilterCount,
+  } = useCollectionFilters(physicalMovies, physicalMovieDetails);
 
   const fetchPhysicalMovies = async () => {
     if (!user) return;
@@ -81,11 +136,7 @@ export default function Collection() {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchPhysicalMovies();
-    } else {
-      setLoading(false);
-    }
+    fetchPhysicalMovies();
   }, [user]);
 
   // Handle edit
@@ -95,20 +146,30 @@ export default function Collection() {
     setEditDialogOpen(true);
   };
 
-  // Sorted and Filtered movies
+  // Toggle sort order
+  const toggleSortOrder = () => {
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  };
+
+  // Calculate stats
+  const physicalStats = useMemo(() => getPhysicalMovieStats(physicalMovies), [physicalMovies]);
+  const genreStats = useMemo(() => getGenreStats(physicalMovies, physicalMovieDetails), [physicalMovies, physicalMovieDetails]);
+  const decadeStats = useMemo(() => getDecadeStats(physicalMovies, physicalMovieDetails), [physicalMovies, physicalMovieDetails]);
+  const directorStats = useMemo(() => getDirectorStats(physicalMovies, physicalMovieDetails), [physicalMovies, physicalMovieDetails]);
+  const actorStats = useMemo(() => getActorStats(physicalMovies, physicalMovieDetails), [physicalMovies, physicalMovieDetails]);
+  const timelineStats = useMemo(() => getTimelineStats(physicalMovies), [physicalMovies]);
+  const multiEditions = useMemo(() => getMultiEditions(physicalMovies), [physicalMovies]);
+
+  // Get edition count for a movie
+  const getEditionCount = (tmdbId: number) => {
+    const group = multiEditions.find(g => g.tmdb_id === tmdbId);
+    return group ? group.editions.length : 1;
+  };
+
+  // Sorted movies
   const sortedMovies = useMemo(() => {
-    let movies = [...physicalMovies];
+    const movies = [...filteredMovies];
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      movies = movies.filter((m) => {
-        const details = physicalMovieDetails[m.tmdb_id];
-        return details?.title.toLowerCase().includes(query) || details?.director?.toLowerCase().includes(query);
-      });
-    }
-
-    // Sort movies
     movies.sort((a, b) => {
       const detailsA = physicalMovieDetails[a.tmdb_id];
       const detailsB = physicalMovieDetails[b.tmdb_id];
@@ -141,14 +202,19 @@ export default function Collection() {
           break;
 
         case "director":
-          const directorA = detailsA?.director || "";
-          const directorB = detailsB?.director || "";
-          comparison = directorA.localeCompare(directorB, "fr");
+          const dirA = detailsA?.director || "";
+          const dirB = detailsB?.director || "";
+          comparison = dirA.localeCompare(dirB, "fr");
           break;
 
         case "added":
-        default:
           comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+
+        case "condition":
+          const condA = conditionOrder[a.condition || "good"];
+          const condB = conditionOrder[b.condition || "good"];
+          comparison = condA - condB;
           break;
       }
 
@@ -156,166 +222,248 @@ export default function Collection() {
     });
 
     return movies;
-  }, [physicalMovies, physicalMovieDetails, sortBy, sortOrder, searchQuery]);
+  }, [filteredMovies, physicalMovieDetails, sortBy, sortOrder]);
 
-  const physicalStats = getPhysicalMovieStats(physicalMovies);
-
-  const toggleSortOrder = () => {
-    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  // Handle director click from top creators
+  const handleDirectorClick = (director: string) => {
+    toggleDirector(director);
   };
-
-  const sortLabels: Record<SortBy, string> = {
-    title: "Titre",
-    year: "Année",
-    price: "Prix",
-    genre: "Genre",
-    director: "Réalisateur",
-    added: "Date d'ajout",
-  };
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background pb-20">
-        <Header />
-        <main className="container mx-auto p-4">
-          <AuthPlaceholder
-            icon={Library}
-            title="Votre Vidéothèque"
-            description="Numérisez votre collection physique de DVD, Blu-ray et 4K pour ne jamais oublier ce que vous possédez."
-            features={[
-              "Scannez et organisez vos films physiques",
-              "Suivez la valeur de votre collection",
-              "Triez par format (DVD, Blu-ray, Steelbook)",
-              "Ne rachetez plus jamais un film en double"
-            ]}
-          />
-        </main>
-        <BottomNav />
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Header />
 
-      <main className="p-4">
-        {/* CTA Button */}
-        <Button
-          onClick={() => setAddDialogOpen(true)}
-          size="lg"
-          className="w-full mb-6 h-14 text-base font-semibold gap-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300"
-        >
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-            <Plus className="w-6 h-6" />
+      <main className="container mx-auto px-4 py-6 space-y-6">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Disc className="w-6 h-6 text-primary" />
+              Ma Collection
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              {physicalStats.totalMovies} film{physicalStats.totalMovies > 1 ? "s" : ""} physique{physicalStats.totalMovies > 1 ? "s" : ""}
+            </p>
           </div>
-          Ajouter un DVD / Blu-ray
-        </Button>
-
-        {/* Search Bar */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher dans ma collection..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+          <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Ajouter</span>
+          </Button>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <PhysicalMovieCardSkeleton key={i} />
-            ))}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="bg-card p-4 rounded-lg border animate-pulse h-24" />
+              ))}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <PhysicalMovieCardSkeleton key={i} />
+              ))}
+            </div>
           </div>
         ) : physicalMovies.length > 0 ? (
           <>
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="bg-card p-4 rounded-lg border border-border">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Package className="w-4 h-4" />
-                  <span className="text-sm">Total</span>
+            {/* Stats Section (Collapsible) */}
+            <section>
+              <button
+                onClick={() => setShowStats(!showStats)}
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Statistiques
+                {showStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+              {showStats && (
+                <CollectionStats
+                  stats={physicalStats}
+                  genreStats={genreStats}
+                  decadeStats={decadeStats}
+                  timelineStats={timelineStats}
+                />
+              )}
+            </section>
+
+            {/* Top Creators Section (Collapsible) */}
+            {(directorStats.length > 0 || actorStats.length > 0) && (
+              <section>
+                <button
+                  onClick={() => setShowTopCreators(!showTopCreators)}
+                  className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
+                >
+                  Vos favoris
+                  {showTopCreators ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                {showTopCreators && (
+                  <CollectionTopCreators
+                    directorStats={directorStats}
+                    actorStats={actorStats}
+                    onDirectorClick={handleDirectorClick}
+                  />
+                )}
+              </section>
+            )}
+
+            {/* Timeline Section (Collapsible) */}
+            {timelineStats.length > 0 && (
+              <section>
+                <button
+                  onClick={() => setShowTimeline(!showTimeline)}
+                  className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Timeline des achats
+                  {showTimeline ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                {showTimeline && (
+                  <CollectionTimeline
+                    timelineStats={timelineStats}
+                    movieDetailsMap={physicalMovieDetails}
+                    onMovieClick={handleEdit}
+                  />
+                )}
+              </section>
+            )}
+
+            {/* Search & Filters Bar */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                {/* Search */}
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher dans ma collection..."
+                    value={filters.search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 pr-9"
+                  />
+                  {filters.search && (
+                    <button
+                      onClick={() => setSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
-                <p className="text-2xl font-bold">{physicalStats.totalMovies}</p>
-                <p className="text-xs text-muted-foreground">films physiques</p>
-              </div>
-              <div className="bg-card p-4 rounded-lg border border-border">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Euro className="w-4 h-4" />
-                  <span className="text-sm">Valeur</span>
+
+                {/* Filters Drawer Button */}
+                <CollectionFiltersDrawer
+                  filters={filters}
+                  filterOptions={filterOptions}
+                  toggleFormat={toggleFormat}
+                  toggleCondition={toggleCondition}
+                  toggleGenre={toggleGenre}
+                  toggleDecade={toggleDecade}
+                  toggleDirector={toggleDirector}
+                  setPriceRange={setPriceRange}
+                  resetFilters={resetFilters}
+                  hasActiveFilters={hasActiveFilters}
+                  activeFilterCount={activeFilterCount}
+                />
+
+                {/* Sort */}
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+                  <SelectTrigger className="w-[130px]">
+                    <ArrowUpDown className="w-4 h-4 mr-2" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(sortLabels).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={toggleSortOrder} 
+                  className="flex-shrink-0"
+                >
+                  {sortOrder === "asc" ? (
+                    <ArrowUp className="w-4 h-4" />
+                  ) : (
+                    <ArrowDown className="w-4 h-4" />
+                  )}
+                </Button>
+
+                {/* View Toggle */}
+                <div className="hidden sm:flex items-center bg-card rounded-lg p-1 border border-border">
+                  <button
+                    onClick={() => setViewMode("cards")}
+                    className={cn(
+                      "p-2 rounded transition-colors",
+                      viewMode === "cards"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    title="Vue cartes"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={cn(
+                      "p-2 rounded transition-colors",
+                      viewMode === "list"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    title="Vue liste"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode("posters")}
+                    className={cn(
+                      "p-2 rounded transition-colors",
+                      viewMode === "posters"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    title="Vue affiches"
+                  >
+                    <Image className="w-4 h-4" />
+                  </button>
                 </div>
-                <p className="text-2xl font-bold">{physicalStats.totalValue.toFixed(2)} €</p>
-                <p className="text-xs text-muted-foreground">estimée</p>
               </div>
+
+              {/* Active Filters Bar */}
+              <ActiveFiltersBar
+                filters={filters}
+                toggleFormat={toggleFormat}
+                toggleCondition={toggleCondition}
+                toggleGenre={toggleGenre}
+                toggleDecade={toggleDecade}
+                toggleDirector={toggleDirector}
+                setPriceRange={setPriceRange}
+                resetFilters={resetFilters}
+                hasActiveFilters={hasActiveFilters}
+              />
             </div>
 
-            {/* Filters & View Toggle */}
-            <div className="flex items-center gap-2 mb-4">
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
-                <SelectTrigger className="w-[140px]">
-                  <ArrowUpDown className="w-4 h-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(sortLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button variant="outline" size="icon" onClick={toggleSortOrder} className="flex-shrink-0">
-                {sortOrder === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-              </Button>
-
-              <div className="flex-1" />
-
-              <div className="flex items-center bg-card rounded-lg p-1 border border-border">
-                <button
-                  onClick={() => setViewMode("cards")}
-                  className={cn(
-                    "p-2 rounded transition-colors",
-                    viewMode === "cards"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  title="Vue cartes"
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={cn(
-                    "p-2 rounded transition-colors",
-                    viewMode === "list"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  title="Vue liste"
-                >
-                  <List className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode("posters")}
-                  className={cn(
-                    "p-2 rounded transition-colors",
-                    viewMode === "posters"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  title="Vue affiches"
-                >
-                  <Image className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+            {/* Results count */}
+            {hasActiveFilters && (
+              <p className="text-sm text-muted-foreground">
+                {sortedMovies.length} résultat{sortedMovies.length > 1 ? "s" : ""}
+                {sortedMovies.length !== physicalMovies.length && ` sur ${physicalMovies.length}`}
+              </p>
+            )}
 
             {/* Movies display */}
             {sortedMovies.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">Aucun film ne correspond à votre recherche.</div>
+              <div className="text-center py-12 text-muted-foreground">
+                <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Aucun film ne correspond à vos critères</p>
+                <Button variant="link" onClick={resetFilters}>
+                  Réinitialiser les filtres
+                </Button>
+              </div>
             ) : (
               <>
                 {viewMode === "cards" && (
@@ -327,6 +475,7 @@ export default function Collection() {
                         movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
                         onDeleted={fetchPhysicalMovies}
                         onEdit={handleEdit}
+                        editionCount={getEditionCount(pm.tmdb_id)}
                       />
                     ))}
                   </div>
@@ -342,6 +491,7 @@ export default function Collection() {
                         director={physicalMovieDetails[pm.tmdb_id]?.director}
                         onDeleted={fetchPhysicalMovies}
                         onEdit={handleEdit}
+                        editionCount={getEditionCount(pm.tmdb_id)}
                       />
                     ))}
                   </div>
@@ -356,6 +506,7 @@ export default function Collection() {
                         movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
                         onDeleted={fetchPhysicalMovies}
                         onEdit={handleEdit}
+                        editionCount={getEditionCount(pm.tmdb_id)}
                       />
                     ))}
                   </div>
@@ -368,16 +519,26 @@ export default function Collection() {
             <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
               <Disc className="w-12 h-12 text-primary" />
             </div>
-            <h2 className="text-xl font-semibold mb-2 text-center">Votre collection est vide</h2>
-            <p className="text-muted-foreground text-center max-w-sm">
+            <h2 className="text-xl font-semibold mb-2 text-center">
+              Votre collection est vide
+            </h2>
+            <p className="text-muted-foreground text-center max-w-sm mb-6">
               Commencez à ajouter vos DVD et Blu-ray pour garder une trace de tous les films que vous possédez.
             </p>
+            <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Ajouter mon premier film
+            </Button>
           </div>
         )}
       </main>
 
       {/* Add Dialog */}
-      <AddPhysicalMovieDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onMovieAdded={fetchPhysicalMovies} />
+      <AddPhysicalMovieDialog 
+        open={addDialogOpen} 
+        onOpenChange={setAddDialogOpen} 
+        onMovieAdded={fetchPhysicalMovies} 
+      />
 
       {/* Edit Dialog */}
       <EditPhysicalMovieDialog
