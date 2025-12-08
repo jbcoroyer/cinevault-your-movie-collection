@@ -65,40 +65,28 @@ export const CollectionFiltersDrawer: React.FC<CollectionFiltersProps> = ({
   const handlePriceCommit = () => {
     const isMinDefault = priceValue[0] === filterOptions.priceRange.min;
     const isMaxDefault = priceValue[1] === filterOptions.priceRange.max;
-    setPriceRange(
-      isMinDefault ? null : priceValue[0],
-      isMaxDefault ? null : priceValue[1]
-    );
+    setPriceRange(isMinDefault ? null : priceValue[0], isMaxDefault ? null : priceValue[1]);
   };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Filter className="w-4 h-4" />
-          Filtres
+        <Button variant="outline" size="icon" className="h-11 w-11 relative flex-shrink-0 border-muted-foreground/20">
+          <Filter className="w-5 h-5" />
           {activeFilterCount > 0 && (
-            <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm border-2 border-background">
               {activeFilterCount}
-            </Badge>
+            </span>
           )}
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-full sm:max-w-md p-0">
-        <SheetHeader className="p-4 border-b">
+        <SheetHeader className="p-6 border-b">
           <div className="flex items-center justify-between">
-            <SheetTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filtres
-            </SheetTitle>
+            <SheetTitle className="flex items-center gap-2 font-serif text-2xl">Filtres</SheetTitle>
             {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetFilters}
-                className="text-muted-foreground"
-              >
-                <RotateCcw className="w-4 h-4 mr-1" />
+              <Button variant="ghost" size="sm" onClick={resetFilters} className="text-muted-foreground h-8">
+                <RotateCcw className="w-4 h-4 mr-2" />
                 Réinitialiser
               </Button>
             )}
@@ -106,7 +94,7 @@ export const CollectionFiltersDrawer: React.FC<CollectionFiltersProps> = ({
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-80px)]">
-          <div className="p-4 space-y-6">
+          <div className="p-6 space-y-8">
             {/* Formats */}
             <FilterSection title="Format">
               <div className="flex flex-wrap gap-2">
@@ -201,7 +189,11 @@ export const CollectionFiltersDrawer: React.FC<CollectionFiltersProps> = ({
             {/* Prix */}
             {filterOptions.priceRange.max > 0 && (
               <FilterSection title="Fourchette de prix">
-                <div className="space-y-4">
+                <div className="space-y-4 px-1">
+                  <div className="flex justify-between text-sm font-medium">
+                    <span>{priceValue[0].toFixed(0)} €</span>
+                    <span>{priceValue[1].toFixed(0)} €</span>
+                  </div>
                   <Slider
                     value={priceValue}
                     onValueChange={handlePriceChange}
@@ -209,12 +201,7 @@ export const CollectionFiltersDrawer: React.FC<CollectionFiltersProps> = ({
                     min={filterOptions.priceRange.min}
                     max={filterOptions.priceRange.max}
                     step={1}
-                    className="mt-2"
                   />
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>{priceValue[0].toFixed(0)} €</span>
-                    <span>{priceValue[1].toFixed(0)} €</span>
-                  </div>
                 </div>
               </FilterSection>
             )}
@@ -232,8 +219,8 @@ interface FilterSectionProps {
 }
 
 const FilterSection: React.FC<FilterSectionProps> = ({ title, children }) => (
-  <div className="space-y-3">
-    <h3 className="text-sm font-medium text-foreground">{title}</h3>
+  <div className="space-y-4">
+    <h3 className="text-base font-medium text-foreground flex items-center gap-2">{title}</h3>
     {children}
   </div>
 );
@@ -249,12 +236,12 @@ const FilterChip: React.FC<FilterChipProps> = ({ label, isActive, onClick, color
   <button
     onClick={onClick}
     className={cn(
-      "px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+      "px-3 py-1.5 rounded-full text-sm font-medium transition-all border",
       isActive
         ? colorClass
-          ? `${colorClass} text-white`
-          : "bg-primary text-primary-foreground"
-        : "bg-muted text-muted-foreground hover:bg-muted/80"
+          ? `${colorClass} text-white border-transparent`
+          : "bg-primary text-primary-foreground border-primary"
+        : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:bg-muted",
     )}
   >
     {label}
@@ -288,17 +275,11 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
   if (!hasActiveFilters) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 py-2">
-      <span className="text-sm text-muted-foreground">Filtres actifs:</span>
-      
+    <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1 items-center">
       {filters.formats.map((format) => (
-        <ActiveFilterChip
-          key={`format-${format}`}
-          label={formatLabels[format]}
-          onRemove={() => toggleFormat(format)}
-        />
+        <ActiveFilterChip key={`format-${format}`} label={formatLabels[format]} onRemove={() => toggleFormat(format)} />
       ))}
-      
+
       {filters.conditions.map((condition) => (
         <ActiveFilterChip
           key={`condition-${condition}`}
@@ -306,43 +287,31 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
           onRemove={() => toggleCondition(condition)}
         />
       ))}
-      
+
       {filters.genres.map((genre) => (
-        <ActiveFilterChip
-          key={`genre-${genre}`}
-          label={genre}
-          onRemove={() => toggleGenre(genre)}
-        />
+        <ActiveFilterChip key={`genre-${genre}`} label={genre} onRemove={() => toggleGenre(genre)} />
       ))}
-      
+
       {filters.decades.map((decade) => (
-        <ActiveFilterChip
-          key={`decade-${decade}`}
-          label={decade}
-          onRemove={() => toggleDecade(decade)}
-        />
+        <ActiveFilterChip key={`decade-${decade}`} label={decade} onRemove={() => toggleDecade(decade)} />
       ))}
-      
+
       {filters.directors.map((director) => (
-        <ActiveFilterChip
-          key={`director-${director}`}
-          label={director}
-          onRemove={() => toggleDirector(director)}
-        />
+        <ActiveFilterChip key={`director-${director}`} label={director} onRemove={() => toggleDirector(director)} />
       ))}
-      
+
       {(filters.priceMin !== null || filters.priceMax !== null) && (
         <ActiveFilterChip
           label={`${filters.priceMin || 0}€ - ${filters.priceMax || "∞"}€`}
           onRemove={() => setPriceRange(null, null)}
         />
       )}
-      
+
       <Button
         variant="ghost"
         size="sm"
         onClick={resetFilters}
-        className="text-xs text-muted-foreground h-7"
+        className="text-xs text-muted-foreground h-7 whitespace-nowrap ml-1"
       >
         Tout effacer
       </Button>
@@ -356,13 +325,11 @@ interface ActiveFilterChipProps {
 }
 
 const ActiveFilterChip: React.FC<ActiveFilterChipProps> = ({ label, onRemove }) => (
-  <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
+  <button
+    onClick={onRemove}
+    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground animate-fade-in flex-shrink-0 group transition-all hover:bg-primary/90"
+  >
     {label}
-    <button
-      onClick={onRemove}
-      className="hover:bg-primary/20 rounded-full p-0.5"
-    >
-      <X className="w-3 h-3" />
-    </button>
-  </span>
+    <X className="w-3 h-3 opacity-70 group-hover:opacity-100 ml-1" />
+  </button>
 );
