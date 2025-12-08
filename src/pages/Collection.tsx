@@ -1,15 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BottomNav } from "@/components/BottomNav";
-import { PhysicalMovieCard, PhysicalMovieCardSkeleton } from "@/components/PhysicalMovieCard";
-import { PhysicalMovieListItem, PhysicalMovieListItemSkeleton } from "@/components/PhysicalMovieListItem";
-import { PhysicalMoviePoster, PhysicalMoviePosterSkeleton } from "@/components/PhysicalMoviePoster";
-import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
-import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
-import { useAuth } from "@/contexts/AuthContext";
-import { getMovieDetails, Movie, MovieDetails } from "@/services/tmdb";
-import { getPhysicalMovies, getPhysicalMovieStats, PhysicalMovie } from "@/services/physicalMovies";
+import { Button } from "../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { BottomNav } from "../components/BottomNav";
+import { PhysicalMovieCard, PhysicalMovieCardSkeleton } from "../components/PhysicalMovieCard";
+import { PhysicalMovieListItem, PhysicalMovieListItemSkeleton } from "../components/PhysicalMovieListItem";
+import { PhysicalMoviePoster, PhysicalMoviePosterSkeleton } from "../components/PhysicalMoviePoster";
+import { AddPhysicalMovieDialog } from "../components/AddPhysicalMovieDialog";
+import { EditPhysicalMovieDialog } from "../components/EditPhysicalMovieDialog";
+import { useAuth } from "../contexts/AuthContext";
+import { getMovieDetails, Movie, MovieDetails } from "../services/tmdb";
+import { getPhysicalMovies, getPhysicalMovieStats, PhysicalMovie } from "../services/physicalMovies";
+import { AuthPlaceholder } from "../components/AuthPlaceholder";
 import {
   Disc,
   Plus,
@@ -22,10 +23,11 @@ import {
   ArrowUp,
   ArrowDown,
   Search,
+  Library,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Header } from "@/components/Header";
-import { Input } from "@/components/ui/input";
+import { cn } from "../lib/utils";
+import { Header } from "../components/Header";
+import { Input } from "../components/ui/input";
 
 type ViewMode = "cards" | "list" | "posters";
 type SortBy = "title" | "year" | "price" | "genre" | "director" | "added";
@@ -79,7 +81,11 @@ export default function Collection() {
   };
 
   useEffect(() => {
-    fetchPhysicalMovies();
+    if (user) {
+      fetchPhysicalMovies();
+    } else {
+      setLoading(false);
+    }
   }, [user]);
 
   // Handle edit
@@ -166,6 +172,28 @@ export default function Collection() {
     director: "Réalisateur",
     added: "Date d'ajout",
   };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background pb-20">
+        <Header />
+        <main className="container mx-auto p-4">
+          <AuthPlaceholder
+            icon={Library}
+            title="Votre Vidéothèque"
+            description="Numérisez votre collection physique de DVD, Blu-ray et 4K pour ne jamais oublier ce que vous possédez."
+            features={[
+              "Scannez et organisez vos films physiques",
+              "Suivez la valeur de votre collection",
+              "Triez par format (DVD, Blu-ray, Steelbook)",
+              "Ne rachetez plus jamais un film en double"
+            ]}
+          />
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
