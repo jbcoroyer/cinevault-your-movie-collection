@@ -7,14 +7,6 @@ import { cva, type VariantProps } from "class-variance-authority";
  * 
  * @description Carte avec effet verre dépoli, bordures lumineuses et hover effects.
  * Utilisable pour tous les conteneurs de l'application.
- * 
- * @example
- * <GlassCard variant="default" hover="lift" glow>
- *   <GlassCardHeader>
- *     <GlassCardTitle>Titre</GlassCardTitle>
- *   </GlassCardHeader>
- *   <GlassCardContent>Contenu</GlassCardContent>
- * </GlassCard>
  */
 
 const glassCardVariants = cva(
@@ -82,9 +74,7 @@ const glassCardVariants = cva(
 export interface GlassCardProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof glassCardVariants> {
-  /** Ajoute un effet de lueur dorée autour de la carte */
   glow?: boolean;
-  /** Désactive les animations pour les préférences de mouvement réduit */
   reducedMotion?: boolean;
 }
 
@@ -168,6 +158,44 @@ const GlassCardFooter = React.forwardRef<
 ));
 GlassCardFooter.displayName = "GlassCardFooter";
 
+/* --- Stat Component --- */
+
+interface GlassCardStatProps extends React.HTMLAttributes<HTMLDivElement> {
+  icon?: React.ReactNode;
+  value: number | string;
+  label: string;
+  variant?: "default" | "primary";
+}
+
+const GlassCardStat = React.forwardRef<HTMLDivElement, GlassCardStatProps>(
+  ({ className, icon, value, label, variant = "default", ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("h-full flex items-center justify-between", className)}
+      {...props}
+    >
+      <div>
+        <p className={cn(
+          "text-3xl font-bold font-display",
+          variant === "primary" && "text-primary"
+        )}>
+          {value}
+        </p>
+        <p className="text-sm text-muted-foreground">{label}</p>
+      </div>
+      {icon && (
+        <div className={cn(
+          "w-12 h-12 rounded-xl flex items-center justify-center",
+          variant === "primary" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+        )}>
+          {icon}
+        </div>
+      )}
+    </div>
+  )
+);
+GlassCardStat.displayName = "GlassCardStat";
+
 export {
   GlassCard,
   GlassCardHeader,
@@ -175,4 +203,5 @@ export {
   GlassCardDescription,
   GlassCardContent,
   GlassCardFooter,
+  GlassCardStat,
 };

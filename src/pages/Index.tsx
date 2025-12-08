@@ -4,7 +4,7 @@ import { Header } from "../components/Header";
 import { BottomNav } from "../components/BottomNav";
 import { MovieSection } from "../components/MovieSection";
 import { FollowingMoviesSection } from "../components/FollowingMoviesSection";
-import { FeaturedMovieCard, MovieCard } from "../components/MovieCard";
+import { MovieCardFeatured, MovieCard } from "../components/MovieCard";
 import {
   BentoGrid,
   BentoItem,
@@ -14,7 +14,7 @@ import {
   BentoTitle,
   BentoValue,
   BentoDescription,
-} from "../components/ui/BentoGrid";
+} from "../components/bento/BentoGrid";
 import { GlassCard } from "../components/ui/GlassCard";
 import { getPopularMovies, getNowAvailableMovies, Movie, getImageUrl } from "../services/tmdb";
 import { useAuth } from "../contexts/AuthContext";
@@ -384,7 +384,6 @@ export default function Index() {
           movies={popular}
           loading={loading}
           seeMoreLink="/movies/popular"
-          showRanks
           cardSize="lg"
         />
 

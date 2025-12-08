@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Movie, getImageUrl } from "@/services/tmdb";
-import { BentoGrid, BentoCard, BentoCardImage } from "./bento/BentoGrid";
-import { GlassCard, GlassCardStat } from "./ui/GlassCard";
+import { BentoGrid, BentoCard, BentoCardImage } from "@/components/bento/BentoGrid";
+import { GlassCardStat } from "@/components/ui/GlassCard";
 import { 
   Film, 
   Trophy, 
