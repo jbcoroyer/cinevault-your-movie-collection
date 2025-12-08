@@ -1,354 +1,244 @@
 import { Link } from "react-router-dom";
 import { Movie, getImageUrl } from "@/services/tmdb";
 import { cn } from "@/lib/utils";
-import { Star, Play, Clock, Heart } from "lucide-react";
+import { Star, Clock, Heart, Play } from "lucide-react";
 
 /**
- * MovieCard — Carte de film premium avec effet glassmorphism
+ * MovieCard - Carte de film avec effet glassmorphism premium
  *
- * @description Carte interactive avec hover effects sophistiqués,
- * overlay d'informations et animations fluides.
+ * Features:
+ * - Hover avec scale + glow aurora
+ * - Badge de note flottant
+ * - Overlay gradient animé
+ * - Quick actions au survol
  */
 
 interface MovieCardProps {
   movie: Movie;
   size?: "sm" | "md" | "lg" | "xl";
   showInfo?: boolean;
-  /** Affiche un badge de rang (1, 2, 3...) */
-  rank?: number;
-  /** Animation delay pour stagger effect */
-  delay?: number;
-  /** Affiche les actions rapides au hover */
   showQuickActions?: boolean;
+  priority?: boolean;
+  className?: string;
 }
+
+const sizeConfig = {
+  sm: {
+    wrapper: "w-[100px] sm:w-[110px]",
+    title: "text-xs",
+    meta: "text-[10px]",
+    badge: "text-[9px] px-1.5 py-0.5",
+  },
+  md: {
+    wrapper: "w-[140px] sm:w-[160px]",
+    title: "text-sm",
+    meta: "text-xs",
+    badge: "text-[10px] px-2 py-1",
+  },
+  lg: {
+    wrapper: "w-[180px] sm:w-[200px]",
+    title: "text-base",
+    meta: "text-sm",
+    badge: "text-xs px-2 py-1",
+  },
+  xl: {
+    wrapper: "w-[220px] sm:w-[260px]",
+    title: "text-lg",
+    meta: "text-sm",
+    badge: "text-xs px-2.5 py-1",
+  },
+};
 
 export const MovieCard: React.FC<MovieCardProps> = ({
   movie,
   size = "md",
-  showInfo = false,
-  rank,
-  delay = 0,
+  showInfo = true,
   showQuickActions = false,
+  priority = false,
+  className,
 }) => {
-  const posterUrl = getImageUrl(movie.poster_path, size === "sm" ? "w200" : "w300");
+  const posterUrl = getImageUrl(movie.poster_path, size === "xl" ? "w500" : "w300");
   const year = movie.release_date?.split("-")[0];
-  const rating = movie.vote_average?.toFixed(1);
-
-  const sizeClasses = {
-    sm: "w-[90px] sm:w-[100px]",
-    md: "w-[130px] sm:w-[150px]",
-    lg: "w-[160px] sm:w-[180px]",
-    xl: "w-[200px] sm:w-[220px]",
-  };
+  const config = sizeConfig[size];
+  const hasGoodRating = movie.vote_average >= 7;
 
   return (
-    <Link
-      to={`/movie/${movie.id}`}
-      className={cn("group relative flex-shrink-0 block", "opacity-0 animate-fade-in-up", sizeClasses[size])}
-      style={{ animationDelay: `${delay}ms`, animationFillMode: "forwards" }}
-    >
-      {/* Container avec effet glass au hover */}
-      <div className="relative">
-        {/* Rank Badge */}
-        {rank && (
-          <div
-            className={cn(
-              "absolute -left-2 -top-2 z-20",
-              "w-8 h-8 sm:w-10 sm:h-10",
-              "rounded-xl bg-gradient-to-br from-primary to-primary/80",
-              "flex items-center justify-center",
-              "font-stats text-sm sm:text-base font-bold text-primary-foreground",
-              "shadow-glow-sm",
-              "transition-transform duration-300 group-hover:scale-110",
-            )}
-          >
-            {rank}
+    <Link to={`/movie/${movie.id}`} className={cn("group flex-shrink-0 block", config.wrapper, className)}>
+      {/* Poster Container */}
+      <div className="movie-card-hover aspect-[2/3] bg-muted">
+        {posterUrl ? (
+          <img
+            src={posterUrl}
+            alt={movie.title}
+            className="w-full h-full object-cover"
+            loading={priority ? "eager" : "lazy"}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+            <span className="text-muted-foreground text-xs text-center px-3 font-medium">{movie.title}</span>
           </div>
         )}
 
-        {/* Image Container */}
-        <div
-          className={cn(
-            "relative overflow-hidden rounded-xl sm:rounded-2xl",
-            "aspect-poster",
-            "bg-muted",
-            // Transition et shadow
-            "transition-all duration-500 ease-out",
-            "shadow-[0_4px_20px_rgba(0,0,0,0.1)]",
-            "dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)]",
-            // Hover effects
-            "group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.2)]",
-            "dark:group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)]",
-            "group-hover:translate-y-[-6px]",
-            // Border subtle
-            "ring-1 ring-white/10 dark:ring-white/5",
-            "group-hover:ring-primary/30",
-          )}
-        >
-          {posterUrl ? (
-            <img
-              src={posterUrl}
-              alt={movie.title}
-              className={cn(
-                "w-full h-full object-cover",
-                "transition-transform duration-700 ease-out",
-                "group-hover:scale-110",
-              )}
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-              <span className="text-muted-foreground text-xs text-center px-2 font-medium">{movie.title}</span>
-            </div>
-          )}
-
-          {/* Gradient Overlay - Always visible, enhanced on hover */}
+        {/* Rating Badge - Visible on hover */}
+        {movie.vote_average > 0 && (
           <div
             className={cn(
-              "absolute inset-0",
-              "bg-gradient-to-t from-black/70 via-black/0 to-transparent",
-              "opacity-60 group-hover:opacity-100",
-              "transition-opacity duration-500",
-            )}
-          />
-
-          {/* Top Overlay - Rating Badge */}
-          {rating && Number(rating) > 0 && (
-            <div
-              className={cn(
-                "absolute top-2 right-2",
-                "flex items-center gap-1",
-                "px-2 py-1 rounded-lg",
-                "bg-black/60 backdrop-blur-md",
-                "border border-white/10",
-                "opacity-0 group-hover:opacity-100",
-                "transform translate-y-2 group-hover:translate-y-0",
-                "transition-all duration-300",
-              )}
-            >
-              <Star className="w-3 h-3 text-primary fill-primary" />
-              <span className="text-xs font-semibold text-white">{rating}</span>
-            </div>
-          )}
-
-          {/* Bottom Overlay - Info on hover */}
-          <div
-            className={cn(
-              "absolute bottom-0 left-0 right-0 p-3",
-              "transform translate-y-full group-hover:translate-y-0",
-              "transition-transform duration-500 ease-out",
+              "absolute top-2 right-2 flex items-center gap-1",
+              "glass rounded-full",
+              "opacity-0 group-hover:opacity-100 transition-all duration-300",
+              "translate-y-1 group-hover:translate-y-0",
+              config.badge,
+              hasGoodRating ? "text-amber-400" : "text-foreground",
             )}
           >
-            {/* Quick Actions */}
-            {showQuickActions && (
-              <div className="flex items-center gap-2 mb-2">
-                <button
-                  className={cn(
-                    "w-8 h-8 rounded-full",
-                    "bg-white/20 backdrop-blur-md",
-                    "flex items-center justify-center",
-                    "hover:bg-primary hover:scale-110",
-                    "transition-all duration-200",
-                  )}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // TODO: Add to watchlist
-                  }}
-                >
-                  <Clock className="w-4 h-4 text-white" />
-                </button>
-                <button
-                  className={cn(
-                    "w-8 h-8 rounded-full",
-                    "bg-white/20 backdrop-blur-md",
-                    "flex items-center justify-center",
-                    "hover:bg-red-500 hover:scale-110",
-                    "transition-all duration-200",
-                  )}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // TODO: Add to favorites
-                  }}
-                >
-                  <Heart className="w-4 h-4 text-white" />
-                </button>
-              </div>
-            )}
-
-            {/* Year Badge */}
-            {year && <span className="text-xs text-white/80 font-medium">{year}</span>}
+            <Star className="w-3 h-3 fill-current" />
+            <span className="font-semibold">{movie.vote_average.toFixed(1)}</span>
           </div>
+        )}
 
-          {/* Play Icon Center - on hover */}
+        {/* Quick Actions Overlay */}
+        {showQuickActions && (
           <div
             className={cn(
-              "absolute inset-0 flex items-center justify-center",
-              "opacity-0 group-hover:opacity-100",
-              "transition-opacity duration-300",
+              "absolute inset-0 flex items-center justify-center gap-2",
+              "opacity-0 group-hover:opacity-100 transition-all duration-300",
+              "bg-black/40 backdrop-blur-sm",
             )}
           >
-            <div
-              className={cn(
-                "w-12 h-12 sm:w-14 sm:h-14 rounded-full",
-                "bg-primary/90 backdrop-blur-sm",
-                "flex items-center justify-center",
-                "shadow-glow",
-                "transform scale-50 group-hover:scale-100",
-                "transition-all duration-500 ease-out",
-              )}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                // TODO: Add to watchlist
+              }}
+              className="w-10 h-10 rounded-full glass flex items-center justify-center text-white hover:scale-110 transition-transform"
+              aria-label="Ajouter à la watchlist"
             >
-              <Play className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground ml-1" fill="currentColor" />
-            </div>
+              <Clock className="w-4 h-4" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                // TODO: Play trailer
+              }}
+              className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground hover:scale-110 transition-transform glow-sm"
+              aria-label="Voir la bande-annonce"
+            >
+              <Play className="w-5 h-5 fill-current ml-0.5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                // TODO: Add to favorites
+              }}
+              className="w-10 h-10 rounded-full glass flex items-center justify-center text-white hover:scale-110 transition-transform"
+              aria-label="Ajouter aux favoris"
+            >
+              <Heart className="w-4 h-4" />
+            </button>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Title & Info - Below card */}
+      {/* Info */}
       {showInfo && (
         <div className="mt-3 space-y-1">
-          <h3
-            className={cn(
-              "font-medium line-clamp-2 leading-tight",
-              "text-sm sm:text-base",
-              "transition-colors duration-300",
-              "group-hover:text-primary",
-            )}
-          >
+          <h3 className={cn("font-medium line-clamp-1 group-hover:text-primary transition-colors", config.title)}>
             {movie.title}
           </h3>
-          {year && <p className="text-xs text-muted-foreground">{year}</p>}
+          {year && <p className={cn("text-muted-foreground", config.meta)}>{year}</p>}
         </div>
       )}
     </Link>
   );
 };
 
-/* --- Skeleton Loader --- */
-
+/**
+ * MovieCardSkeleton - Placeholder animé
+ */
 export const MovieCardSkeleton: React.FC<{ size?: "sm" | "md" | "lg" | "xl" }> = ({ size = "md" }) => {
-  const sizeClasses = {
-    sm: "w-[90px] sm:w-[100px]",
-    md: "w-[130px] sm:w-[150px]",
-    lg: "w-[160px] sm:w-[180px]",
-    xl: "w-[200px] sm:w-[220px]",
-  };
+  const config = sizeConfig[size];
 
   return (
-    <div className={cn("flex-shrink-0", sizeClasses[size])}>
-      <div
-        className={cn(
-          "aspect-poster rounded-xl sm:rounded-2xl",
-          "bg-gradient-to-br from-muted via-muted/80 to-muted",
-          "animate-shimmer",
-        )}
-      />
+    <div className={cn("flex-shrink-0", config.wrapper)}>
+      <div className="aspect-[2/3] rounded-2xl animate-shimmer" />
       <div className="mt-3 space-y-2">
-        <div className="h-4 bg-muted rounded animate-shimmer w-3/4" />
-        <div className="h-3 bg-muted rounded animate-shimmer w-1/2" />
+        <div className="h-4 w-3/4 rounded animate-shimmer" />
+        <div className="h-3 w-1/2 rounded animate-shimmer" />
       </div>
     </div>
   );
 };
 
-/* --- Featured Movie Card (Large Hero Style) --- */
-
-interface FeaturedMovieCardProps {
+/**
+ * MovieCardFeatured - Grande carte pour mise en avant
+ */
+interface MovieCardFeaturedProps {
   movie: Movie;
   className?: string;
 }
 
-export const FeaturedMovieCard: React.FC<FeaturedMovieCardProps> = ({ movie, className }) => {
-  const backdropUrl = getImageUrl(movie.backdrop_path, "w1280");
+export const MovieCardFeatured: React.FC<MovieCardFeaturedProps> = ({ movie, className }) => {
+  const backdropUrl = getImageUrl(movie.backdrop_path, "w780");
   const year = movie.release_date?.split("-")[0];
-  const rating = movie.vote_average?.toFixed(1);
 
   return (
     <Link
       to={`/movie/${movie.id}`}
-      className={cn(
-        "group relative block overflow-hidden rounded-2xl sm:rounded-3xl",
-        "aspect-[16/9] sm:aspect-[21/9]",
-        className,
-      )}
+      className={cn("relative block rounded-3xl overflow-hidden group", "aspect-[16/9] sm:aspect-[21/9]", className)}
     >
       {/* Background Image */}
       {backdropUrl ? (
         <img
           src={backdropUrl}
           alt={movie.title}
-          className={cn(
-            "absolute inset-0 w-full h-full object-cover",
-            "transition-transform duration-700 ease-out",
-            "group-hover:scale-105",
-          )}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
       )}
 
-      {/* Gradient Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
 
       {/* Content */}
-      <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 md:p-8">
-        {/* Label */}
-        <span className="section-label mb-2 text-white/90">À l'affiche</span>
-
-        {/* Title */}
-        <h2
-          className={cn(
-            "font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold",
-            "text-white text-shadow-hero",
-            "max-w-2xl leading-tight",
-          )}
-        >
-          {movie.title}
-        </h2>
-
-        {/* Meta */}
-        <div className="flex items-center gap-4 mt-3 text-white/80">
-          {year && <span className="text-sm sm:text-base">{year}</span>}
-          {rating && Number(rating) > 0 && (
-            <span className="flex items-center gap-1">
-              <Star className="w-4 h-4 text-primary fill-primary" />
-              <span className="text-sm sm:text-base font-medium">{rating}</span>
-            </span>
-          )}
-        </div>
-
-        {/* CTA Button - appears on hover */}
-        <div
-          className={cn(
-            "mt-4 opacity-0 group-hover:opacity-100",
-            "transform translate-y-4 group-hover:translate-y-0",
-            "transition-all duration-500",
-          )}
-        >
-          <span
-            className={cn(
-              "inline-flex items-center gap-2",
-              "px-5 py-2.5 rounded-xl",
-              "bg-primary text-primary-foreground",
-              "font-semibold text-sm",
-              "shadow-glow-sm",
-            )}
-          >
-            <Play className="w-4 h-4" fill="currentColor" />
-            Découvrir
+      <div className="absolute inset-0 p-6 sm:p-8 flex flex-col justify-end">
+        <div className="max-w-xl">
+          {/* Label */}
+          <span className="inline-block px-3 py-1 rounded-full glass text-xs font-medium text-white/90 mb-3">
+            À l'affiche
           </span>
+
+          {/* Title */}
+          <h2 className="font-display text-2xl sm:text-4xl font-bold text-white mb-2 line-clamp-2">{movie.title}</h2>
+
+          {/* Meta */}
+          <div className="flex items-center gap-4 text-white/80 text-sm">
+            {year && <span>{year}</span>}
+            {movie.vote_average > 0 && (
+              <span className="flex items-center gap-1">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                {movie.vote_average.toFixed(1)}
+              </span>
+            )}
+          </div>
+
+          {/* Overview */}
+          {movie.overview && (
+            <p className="text-white/70 text-sm mt-3 line-clamp-2 max-w-lg hidden sm:block">{movie.overview}</p>
+          )}
         </div>
       </div>
 
-      {/* Glass border effect */}
+      {/* Hover Glow */}
       <div
         className={cn(
-          "absolute inset-0 rounded-2xl sm:rounded-3xl",
-          "ring-1 ring-inset ring-white/10",
-          "group-hover:ring-primary/30",
-          "transition-all duration-500",
+          "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500",
+          "bg-gradient-to-t from-primary/20 via-transparent to-transparent",
         )}
       />
     </Link>
   );
 };
+
+export default MovieCard;
