@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BottomNav } from "@/components/BottomNav";
-import { PhysicalMovieListItem, PhysicalMovieListItemSkeleton } from "@/components/PhysicalMovieListItem";
+import { PhysicalMovieListItem } from "@/components/PhysicalMovieListItem";
 import { PhysicalMoviePoster, PhysicalMoviePosterSkeleton } from "@/components/PhysicalMoviePoster";
 import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
 import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
@@ -39,11 +39,15 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
+  Star,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/Header";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Type mis à jour sans "cards"
+// Suppression de 'cards' du type
 type ViewMode = "list" | "posters";
 type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition";
 type SortOrder = "asc" | "desc";
@@ -80,11 +84,6 @@ export default function Collection() {
   const [viewMode, setViewMode] = useState<ViewMode>("posters");
   const [sortBy, setSortBy] = useState<SortBy>("added");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-
-  // Section visibility - Stats repliées par défaut
-  const [showStats, setShowStats] = useState(false);
-  const [showTimeline, setShowTimeline] = useState(false);
-  const [showTopCreators, setShowTopCreators] = useState(false);
 
   // Use collection filters hook
   const {
@@ -257,6 +256,103 @@ export default function Collection() {
           </Button>
         </div>
 
+        {/* Dashboard Widgets Row - Les 3 boutons/fenêtres */}
+        {physicalMovies.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            {/* 1. Statistiques */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group">
+                  <div className="p-2 rounded-full bg-primary/10 text-primary mb-2 group-hover:scale-110 transition-transform">
+                    <BarChart3 className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs sm:text-sm font-medium text-center">Statistiques</span>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-primary" />
+                    Statistiques de la collection
+                  </DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="flex-1 pr-4 -mr-4">
+                  <div className="p-1">
+                    <CollectionStats
+                      stats={physicalStats}
+                      genreStats={genreStats}
+                      decadeStats={decadeStats}
+                      timelineStats={timelineStats}
+                    />
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+
+            {/* 2. Favoris (Top Creators) */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group">
+                  <div className="p-2 rounded-full bg-yellow-500/10 text-yellow-500 mb-2 group-hover:scale-110 transition-transform">
+                    <Trophy className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs sm:text-sm font-medium text-center">Favoris</span>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Star className="w-5 h-5 text-yellow-500" />
+                    Réalisateurs & Acteurs favoris
+                  </DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="flex-1 pr-4 -mr-4">
+                  <div className="p-1">
+                    <CollectionTopCreators
+                      directorStats={directorStats}
+                      actorStats={actorStats}
+                      onDirectorClick={(director) => {
+                        // Il faudrait fermer la modale idéalement, mais le hook est dans le parent
+                        // On peut juste appliquer le filtre, l'utilisateur fermera la modale pour voir
+                        handleDirectorClick(director);
+                      }}
+                    />
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+
+            {/* 3. Timeline */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group">
+                  <div className="p-2 rounded-full bg-blue-500/10 text-blue-500 mb-2 group-hover:scale-110 transition-transform">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs sm:text-sm font-medium text-center">Timeline</span>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-blue-500" />
+                    Historique des achats
+                  </DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="flex-1 pr-4 -mr-4">
+                  <div className="p-1">
+                    <CollectionTimeline
+                      timelineStats={timelineStats}
+                      movieDetailsMap={physicalMovieDetails}
+                      onMovieClick={handleEdit}
+                    />
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
+
         {loading ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -264,75 +360,14 @@ export default function Collection() {
                 <div key={i} className="bg-card p-4 rounded-lg border animate-pulse h-24" />
               ))}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4">
+              {Array.from({ length: 12 }).map((_, i) => (
                 <PhysicalMoviePosterSkeleton key={i} />
               ))}
             </div>
           </div>
         ) : physicalMovies.length > 0 ? (
           <>
-            {/* Stats Section (Collapsible) */}
-            <section>
-              <button
-                onClick={() => setShowStats(!showStats)}
-                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
-              >
-                <BarChart3 className="w-4 h-4" />
-                Statistiques
-                {showStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-              {showStats && (
-                <CollectionStats
-                  stats={physicalStats}
-                  genreStats={genreStats}
-                  decadeStats={decadeStats}
-                  timelineStats={timelineStats}
-                />
-              )}
-            </section>
-
-            {/* Top Creators Section (Collapsible) */}
-            {(directorStats.length > 0 || actorStats.length > 0) && (
-              <section>
-                <button
-                  onClick={() => setShowTopCreators(!showTopCreators)}
-                  className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
-                >
-                  Vos favoris
-                  {showTopCreators ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
-                {showTopCreators && (
-                  <CollectionTopCreators
-                    directorStats={directorStats}
-                    actorStats={actorStats}
-                    onDirectorClick={handleDirectorClick}
-                  />
-                )}
-              </section>
-            )}
-
-            {/* Timeline Section (Collapsible) */}
-            {timelineStats.length > 0 && (
-              <section>
-                <button
-                  onClick={() => setShowTimeline(!showTimeline)}
-                  className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
-                >
-                  <Calendar className="w-4 h-4" />
-                  Timeline des achats
-                  {showTimeline ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
-                {showTimeline && (
-                  <CollectionTimeline
-                    timelineStats={timelineStats}
-                    movieDetailsMap={physicalMovieDetails}
-                    onMovieClick={handleEdit}
-                  />
-                )}
-              </section>
-            )}
-
             {/* Search & Filters Bar */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -389,7 +424,7 @@ export default function Collection() {
                   {sortOrder === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
                 </Button>
 
-                {/* View Toggle - Modifié pour n'avoir que Posters et List */}
+                {/* View Toggle */}
                 <div className="hidden sm:flex items-center bg-card rounded-lg p-1 border border-border">
                   <button
                     onClick={() => setViewMode("posters")}
