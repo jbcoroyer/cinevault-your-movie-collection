@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserMovies } from "@/hooks/useUserMovies";
 import { BadgeUnlockDialog } from "@/components/BadgeUnlockDialog";
@@ -19,11 +19,9 @@ export interface GameBadge {
 
 // --- CONSTANTES EXPORTÉES ---
 export const CULT_MOVIES = [
-  238, 278, 155, 680, 13, 1891, 157336, 27205, 129, 497,
-  111, 122, 105, 274, 16869, 399566, 637, 335983, 19404, 389,
-  550, 603, 299536, 120, 121, 272, 185, 807, 101, 11,
-  280, 539, 19995, 24428, 271110, 284054, 98, 920, 24, 601,
-  128, 10681, 152601, 77338, 11324, 313369, 399055, 299534, 131631, 354912,
+  238, 278, 155, 680, 13, 1891, 157336, 27205, 129, 497, 111, 122, 105, 274, 16869, 399566, 637, 335983, 19404, 389,
+  550, 603, 299536, 120, 121, 272, 185, 807, 101, 11, 280, 539, 19995, 24428, 271110, 284054, 98, 920, 24, 601, 128,
+  10681, 152601, 77338, 11324, 313369, 399055, 299534, 131631, 354912,
 ];
 
 export const LEVELS = [0, 100, 300, 600, 1000, 1500, 2200, 3000, 4000, 5000];
@@ -124,7 +122,6 @@ const BadgeNotificationContext = createContext<BadgeNotificationContextType | nu
 
 export function useBadgeNotification() {
   const context = useContext(BadgeNotificationContext);
-  // Return default values if not in provider (for safety)
   if (!context) {
     return {
       currentXp: 0,
@@ -146,15 +143,16 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
 
   const [unlockedBadgeQueue, setUnlockedBadgeQueue] = useState<GameBadge[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isProcessingClose, setIsProcessingClose] = useState(false);
 
   const watchedMovieIds = useMemo(
     () => userMovies?.filter((m) => m.status === "watched").map((m) => m.tmdb_id) || [],
-    [userMovies]
+    [userMovies],
   );
 
   const favoriteMovieIds = useMemo(
     () => userMovies?.filter((m) => m.is_favorite).map((m) => m.tmdb_id) || [],
-    [userMovies]
+    [userMovies],
   );
 
   const { currentXp, currentLevel, nextLevelXp, progressPercent, unlockedBadges } = useMemo(() => {
@@ -213,26 +211,31 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
 
     if (newUnlocks.length > 0) {
       setUnlockedBadgeQueue((prev) => {
-        const existingIds = new Set(prev.map(b => b.id));
-        const filtered = newUnlocks.filter(b => !existingIds.has(b.id));
+        const existingIds = new Set(prev.map((b) => b.id));
+        const filtered = newUnlocks.filter((b) => !existingIds.has(b.id));
         return [...prev, ...filtered];
       });
     }
   }, [unlockedBadges, user]);
 
-  // Show dialog when queue has items
+  // Show dialog when queue has items (with protection against rapid re-opening)
   useEffect(() => {
-    if (unlockedBadgeQueue.length > 0 && !isDialogOpen) {
+    if (unlockedBadgeQueue.length > 0 && !isDialogOpen && !isProcessingClose) {
       setIsDialogOpen(true);
     }
-  }, [unlockedBadgeQueue, isDialogOpen]);
+  }, [unlockedBadgeQueue, isDialogOpen, isProcessingClose]);
 
-  const handleCloseDialog = () => {
+  // Handle dialog close - unified handler for both button click and outside click
+  const handleCloseDialog = useCallback(() => {
+    if (isProcessingClose) return;
+
+    setIsProcessingClose(true);
     setIsDialogOpen(false);
 
     if (unlockedBadgeQueue.length > 0 && user) {
       const badgeToMark = unlockedBadgeQueue[0];
 
+      // Mark badge as seen in localStorage
       const seenBadgesKey = `seen_badges_${user.id}`;
       const storedSeenBadges = localStorage.getItem(seenBadgesKey);
       const seenBadges: string[] = storedSeenBadges ? JSON.parse(storedSeenBadges) : [];
@@ -242,35 +245,60 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
         localStorage.setItem(seenBadgesKey, JSON.stringify(updatedSeen));
       }
 
+      // Remove badge from queue after a small delay to prevent flickering
       setTimeout(() => {
         setUnlockedBadgeQueue((prev) => prev.slice(1));
+        setIsProcessingClose(false);
       }, 300);
+    } else {
+      setIsProcessingClose(false);
     }
-  };
+  }, [unlockedBadgeQueue, user, isProcessingClose]);
 
-  const triggerTestBadge = () => {
-    // Pick a random badge for testing
+  // Handle onOpenChange from Dialog - this is called when clicking outside or pressing Escape
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        handleCloseDialog();
+      }
+    },
+    [handleCloseDialog],
+  );
+
+  const triggerTestBadge = useCallback(() => {
     const testBadge = BADGES_CONFIG[Math.floor(Math.random() * BADGES_CONFIG.length)];
     setUnlockedBadgeQueue((prev) => [...prev, testBadge]);
-  };
+  }, []);
 
-  const value = {
-    currentXp,
-    currentLevel,
-    nextLevelXp,
-    progressPercent,
-    unlockedBadges,
-    watchedMovieIds,
-    favoriteMovieIds,
-    triggerTestBadge,
-  };
+  const value = useMemo(
+    () => ({
+      currentXp,
+      currentLevel,
+      nextLevelXp,
+      progressPercent,
+      unlockedBadges,
+      watchedMovieIds,
+      favoriteMovieIds,
+      triggerTestBadge,
+    }),
+    [
+      currentXp,
+      currentLevel,
+      nextLevelXp,
+      progressPercent,
+      unlockedBadges,
+      watchedMovieIds,
+      favoriteMovieIds,
+      triggerTestBadge,
+    ],
+  );
 
   return (
     <BadgeNotificationContext.Provider value={value}>
       {children}
       <BadgeUnlockDialog
         open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        onOpenChange={handleOpenChange}
         badge={unlockedBadgeQueue[0] || null}
         onClose={handleCloseDialog}
       />
