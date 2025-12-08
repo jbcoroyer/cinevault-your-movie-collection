@@ -449,3 +449,9 @@ export const getPopularMoviesPaginated = async (page: number = 1): Promise<{ mov
     totalPages: data.total_pages,
   };
 };
+
+// Discover movies with custom filters
+export const discoverMovies = async (params: Record<string, string>): Promise<Movie[]> => {
+  const data = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", params);
+  return data.results;
+};
