@@ -11,7 +11,7 @@ import { CollectionFiltersDrawer, ActiveFiltersBar } from "@/components/collecti
 import { CollectionStats } from "@/components/collection/CollectionStats";
 import { CollectionTimeline } from "@/components/collection/CollectionTimeline";
 import { CollectionTopCreators } from "@/components/collection/CollectionTopCreators";
-import { ShelfView } from "@/components/collection/ShelfView"; // Nouveau composant
+import { ShelfView } from "@/components/collection/ShelfView";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMovieDetails, Movie, MovieDetails } from "@/services/tmdb";
 import {
@@ -40,14 +40,13 @@ import {
   Calendar,
   Star,
   Trophy,
-  Library, // Nouvelle icône
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/Header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Types mis à jour
 type ViewMode = "list" | "posters" | "shelf";
 type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition";
 type SortOrder = "asc" | "desc";
@@ -80,8 +79,8 @@ export default function Collection() {
   const [editingMovie, setEditingMovie] = useState<PhysicalMovie | null>(null);
   const [editingMovieDetails, setEditingMovieDetails] = useState<Movie | null>(null);
 
-  // View & Sort state - "shelf" par défaut pour l'expérience immersive, ou "posters" si vous préférez
-  const [viewMode, setViewMode] = useState<ViewMode>("posters");
+  // View & Sort state - "shelf" par défaut
+  const [viewMode, setViewMode] = useState<ViewMode>("shelf");
   const [sortBy, setSortBy] = useState<SortBy>("added");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
@@ -368,12 +367,13 @@ export default function Collection() {
           <>
             {/* Search & Filters Bar */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
+              {/* Ajout de flex-wrap pour la compatibilité mobile */}
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Search */}
-                <div className="relative flex-1 max-w-sm">
+                <div className="relative flex-1 min-w-[140px] max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="Rechercher dans ma collection..."
+                    placeholder="Rechercher..."
                     value={filters.search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-9 pr-9"
@@ -405,7 +405,7 @@ export default function Collection() {
 
                 {/* Sort */}
                 <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
-                  <SelectTrigger className="w-[130px]">
+                  <SelectTrigger className="w-[110px] sm:w-[130px]">
                     <ArrowUpDown className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
@@ -422,8 +422,8 @@ export default function Collection() {
                   {sortOrder === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
                 </Button>
 
-                {/* View Toggle */}
-                <div className="hidden sm:flex items-center bg-card rounded-lg p-1 border border-border">
+                {/* View Toggle - Visible partout grâce à flex-wrap */}
+                <div className="flex items-center bg-card rounded-lg p-1 border border-border">
                   <button
                     onClick={() => setViewMode("posters")}
                     className={cn(
