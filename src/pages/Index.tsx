@@ -5,13 +5,9 @@ import { MovieSection } from "@/components/MovieSection";
 import { getPopularMovies, getNowAvailableMovies, Movie } from "@/services/tmdb";
 import { WatchedTimeline } from "@/components/WatchedTimeline";
 import { useAuth } from "@/contexts/AuthContext";
-import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
-import { Button } from "@/components/ui/button";
-import { Trophy } from "lucide-react";
 
 export default function Index() {
   const { user } = useAuth();
-  const { triggerTestBadge } = useBadgeNotification();
   const [nowAvailable, setNowAvailable] = useState<Movie[]>([]);
   const [popular, setPopular] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,18 +29,10 @@ export default function Index() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
       <Header />
 
-      <main className="py-6">
-        {/* Test button for badge popup */}
-        <div className="container mx-auto px-4 mb-4">
-          <Button onClick={triggerTestBadge} variant="outline" size="sm" className="gap-2">
-            <Trophy className="w-4 h-4" />
-            Tester un badge
-          </Button>
-        </div>
-
+      <main className="py-4 sm:py-6">
         <MovieSection
           title="🎬 Actuellement à visionner"
           movies={nowAvailable}
