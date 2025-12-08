@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, Disc, MoreVertical } from "lucide-react";
+import { Trash2, Disc, MoreVertical, Copy } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,14 +17,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Movie, getImageUrl } from "@/services/tmdb";
-import { PhysicalMovie, formatLabels, deletePhysicalMovie } from "@/services/physicalMovies";
+import { PhysicalMovie, formatLabels, formatColors, deletePhysicalMovie } from "@/services/physicalMovies";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { ConditionBadge, ConditionDot } from "./collection/ConditionBadge";
 
 interface PhysicalMovieCardProps {
   physicalMovie: PhysicalMovie;
   movieDetails: Movie | null;
   onDeleted: () => void;
   onEdit: (physicalMovie: PhysicalMovie, movieDetails: Movie | null) => void;
+  editionCount?: number; // Nombre d'éditions de ce film
 }
 
 export const PhysicalMovieCard: React.FC<PhysicalMovieCardProps> = ({
@@ -32,6 +35,7 @@ export const PhysicalMovieCard: React.FC<PhysicalMovieCardProps> = ({
   movieDetails,
   onDeleted,
   onEdit,
+  editionCount = 1,
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -50,7 +54,7 @@ export const PhysicalMovieCard: React.FC<PhysicalMovieCardProps> = ({
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Empêcher le clic si on clique sur le menu
+    // Prevent click if clicking on menu
     if ((e.target as HTMLElement).closest("[data-menu-trigger]")) {
       return;
     }
@@ -58,6 +62,8 @@ export const PhysicalMovieCard: React.FC<PhysicalMovieCardProps> = ({
   };
 
   const posterUrl = movieDetails?.poster_path ? getImageUrl(movieDetails.poster_path, "w300") : null;
+
+  const condition = physicalMovie.condition || "good";
 
   return (
     <>
@@ -74,9 +80,27 @@ export const PhysicalMovieCard: React.FC<PhysicalMovieCardProps> = ({
         )}
 
         {/* Format badge */}
-        <div className="absolute top-2 left-2 px-2 py-1 bg-primary text-primary-foreground text-xs font-medium rounded">
+        <div
+          className={cn(
+            "absolute top-2 left-2 px-2 py-1 text-white text-xs font-medium rounded",
+            formatColors[physicalMovie.format],
+          )}
+        >
           {formatLabels[physicalMovie.format]}
         </div>
+
+        {/* Condition dot */}
+        <div className="absolute top-2 left-20">
+          <ConditionDot condition={condition} className="w-2.5 h-2.5" />
+        </div>
+
+        {/* Multi-edition badge */}
+        {editionCount > 1 && (
+          <div className="absolute top-2 right-10 px-1.5 py-0.5 bg-background/90 text-foreground text-[10px] font-medium rounded flex items-center gap-0.5">
+            <Copy className="w-3 h-3" />
+            {editionCount}
+          </div>
+        )}
 
         {/* Menu */}
         <DropdownMenu>
