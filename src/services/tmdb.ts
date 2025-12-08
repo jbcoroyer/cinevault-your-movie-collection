@@ -172,6 +172,11 @@ export const getTrendingMovies = async (): Promise<Movie[]> => {
   const data = await fetchTMDB<TMDBResponse<Movie>>("/trending/movie/week");
   return data.results;
 };
+export const getTopRatedMovies = async (): Promise<Movie[]> => {
+  const response = await fetch(`${BASE_URL}/movie/top_rated?api_key=${API_KEY}&language=fr-FR&region=FR`);
+  const data = await response.json();
+  return data.results;
+};
 
 export const getPopularMovies = async (): Promise<Movie[]> => {
   const data = await fetchTMDB<TMDBResponse<Movie>>("/movie/popular");
