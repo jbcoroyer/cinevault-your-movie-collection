@@ -4,52 +4,47 @@ import { cn } from "../lib/utils";
 import { ProfileMenu } from "./ProfileMenu";
 
 const navItems = [
-  { to: "/", icon: Home, label: "Accueil" },
-  { to: "/search", icon: Search, label: "Recherche" },
-  { to: "/collection", icon: Library, label: "Collection" },
-  { to: "/lists", icon: ListVideo, label: "Listes" },
-  { to: "/badges", icon: Trophy, label: "Badges" },
+  { to: "/", label: "Accueil" },
+  { to: "/search", label: "Rechercher" },
+  { to: "/collection", label: "Collection" },
+  { to: "/lists", label: "Listes" },
+  { to: "/badges", label: "Badges" },
 ];
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-      <div className="flex items-center justify-between px-4 h-14 max-w-7xl mx-auto">
+    <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border/50">
+      <div className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 max-w-7xl mx-auto">
         {/* Logo */}
         <h1
-          className="text-lg sm:text-xl font-bold text-foreground cursor-pointer flex-shrink-0"
+          className="font-serif text-xl sm:text-2xl font-medium text-foreground cursor-pointer tracking-tight"
           onClick={() => navigate("/")}
         >
-          Cine<span className="text-primary">Vault</span>
+          Ciné<span className="text-primary">Vault</span>
         </h1>
 
-        {/* Desktop Navigation - Centered */}
-        <nav className="hidden md:flex items-center gap-1 flex-1 justify-center max-w-2xl mx-4">
-          {navItems.map(({ to, icon: Icon, label }) => (
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-1">
+          {navItems.map(({ to, label }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap",
-                  isActive
-                    ? "text-primary bg-primary/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                  "px-4 py-2 text-sm font-medium transition-all duration-200 rounded-md",
+                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
                 )
               }
             >
-              <Icon className="w-4 h-4" />
-              <span className="hidden lg:inline">{label}</span>
+              {label}
             </NavLink>
           ))}
         </nav>
 
-        {/* Profile Menu */}
-        <div className="flex-shrink-0">
-          <ProfileMenu />
-        </div>
+        {/* Profile */}
+        <ProfileMenu />
       </div>
     </header>
   );
