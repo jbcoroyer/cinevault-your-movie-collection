@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BottomNav } from "@/components/BottomNav";
-import { PhysicalMovieCard, PhysicalMovieCardSkeleton } from "@/components/PhysicalMovieCard";
 import { PhysicalMovieListItem, PhysicalMovieListItemSkeleton } from "@/components/PhysicalMovieListItem";
 import { PhysicalMoviePoster, PhysicalMoviePosterSkeleton } from "@/components/PhysicalMoviePoster";
 import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
@@ -29,7 +28,6 @@ import { useCollectionFilters } from "@/hooks/useCollectionFilters";
 import {
   Disc,
   Plus,
-  LayoutGrid,
   List,
   Image,
   ArrowUpDown,
@@ -45,7 +43,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/Header";
 
-type ViewMode = "cards" | "list" | "posters";
+// Type mis à jour sans "cards"
+type ViewMode = "list" | "posters";
 type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition";
 type SortOrder = "asc" | "desc";
 
@@ -77,13 +76,13 @@ export default function Collection() {
   const [editingMovie, setEditingMovie] = useState<PhysicalMovie | null>(null);
   const [editingMovieDetails, setEditingMovieDetails] = useState<Movie | null>(null);
 
-  // View & Sort state
-  const [viewMode, setViewMode] = useState<ViewMode>("cards");
+  // View & Sort state - "posters" par défaut
+  const [viewMode, setViewMode] = useState<ViewMode>("posters");
   const [sortBy, setSortBy] = useState<SortBy>("added");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
-  // Section visibility
-  const [showStats, setShowStats] = useState(true);
+  // Section visibility - Stats repliées par défaut
+  const [showStats, setShowStats] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
   const [showTopCreators, setShowTopCreators] = useState(false);
 
@@ -390,19 +389,19 @@ export default function Collection() {
                   {sortOrder === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
                 </Button>
 
-                {/* View Toggle */}
+                {/* View Toggle - Modifié pour n'avoir que Posters et List */}
                 <div className="hidden sm:flex items-center bg-card rounded-lg p-1 border border-border">
                   <button
-                    onClick={() => setViewMode("cards")}
+                    onClick={() => setViewMode("posters")}
                     className={cn(
                       "p-2 rounded transition-colors",
-                      viewMode === "cards"
+                      viewMode === "posters"
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:text-foreground",
                     )}
-                    title="Vue cartes"
+                    title="Vue affiches"
                   >
-                    <LayoutGrid className="w-4 h-4" />
+                    <Image className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setViewMode("list")}
@@ -415,18 +414,6 @@ export default function Collection() {
                     title="Vue liste"
                   >
                     <List className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode("posters")}
-                    className={cn(
-                      "p-2 rounded transition-colors",
-                      viewMode === "posters"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                    title="Vue affiches"
-                  >
-                    <Image className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -464,10 +451,10 @@ export default function Collection() {
               </div>
             ) : (
               <>
-                {viewMode === "cards" && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {viewMode === "posters" && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4">
                     {sortedMovies.map((pm) => (
-                      <PhysicalMovieCard
+                      <PhysicalMoviePoster
                         key={pm.id}
                         physicalMovie={pm}
                         movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
@@ -487,21 +474,6 @@ export default function Collection() {
                         physicalMovie={pm}
                         movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
                         director={physicalMovieDetails[pm.tmdb_id]?.director}
-                        onDeleted={fetchPhysicalMovies}
-                        onEdit={handleEdit}
-                        editionCount={getEditionCount(pm.tmdb_id)}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {viewMode === "posters" && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-                    {sortedMovies.map((pm) => (
-                      <PhysicalMoviePoster
-                        key={pm.id}
-                        physicalMovie={pm}
-                        movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
                         onDeleted={fetchPhysicalMovies}
                         onEdit={handleEdit}
                         editionCount={getEditionCount(pm.tmdb_id)}
