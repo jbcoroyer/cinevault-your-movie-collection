@@ -1,21 +1,21 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { toast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import { z } from 'zod';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, PlayCircle } from "lucide-react";
+import { z } from "zod";
 
-const emailSchema = z.string().email('Email invalide');
-const passwordSchema = z.string().min(6, 'Minimum 6 caractères');
+const emailSchema = z.string().email("Email invalide");
+const passwordSchema = z.string().min(6, "Minimum 6 caractères");
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -37,7 +37,7 @@ export default function Auth() {
     }
 
     if (!isLogin && password !== confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
+      newErrors.confirmPassword = "Les mots de passe ne correspondent pas";
     }
 
     setErrors(newErrors);
@@ -51,25 +51,23 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { error } = isLogin
-        ? await signIn(email, password)
-        : await signUp(email, password);
+      const { error } = isLogin ? await signIn(email, password) : await signUp(email, password);
 
       if (error) {
         let message = error.message;
-        if (error.message.includes('Invalid login credentials')) {
-          message = 'Email ou mot de passe incorrect';
-        } else if (error.message.includes('User already registered')) {
-          message = 'Cet email est déjà utilisé';
+        if (error.message.includes("Invalid login credentials")) {
+          message = "Email ou mot de passe incorrect";
+        } else if (error.message.includes("User already registered")) {
+          message = "Cet email est déjà utilisé";
         }
-        toast({ title: 'Erreur', description: message, variant: 'destructive' });
+        toast({ title: "Erreur", description: message, variant: "destructive" });
       } else {
         if (isLogin) {
-          navigate('/');
+          navigate("/");
         } else {
           toast({
-            title: 'Compte créé',
-            description: 'Vérifiez votre email pour confirmer votre compte',
+            title: "Compte créé",
+            description: "Vérifiez votre email pour confirmer votre compte",
           });
         }
       }
@@ -82,7 +80,7 @@ export default function Auth() {
     setLoading(true);
     const { error } = await signInWithGoogle();
     if (error) {
-      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     }
     setLoading(false);
   };
@@ -90,13 +88,22 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm animate-fade-in">
+        {/* BOUTON RETOUR DISCRET */}
+        <Link
+          to="/"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Retour à l'accueil
+        </Link>
+
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Cine<span className="text-primary">Vault</span>
-          </h1>
-          <p className="text-muted-foreground">
-            {isLogin ? 'Bon retour parmi nous' : 'Créez votre compte'}
-          </p>
+          <Link to="/" className="inline-block">
+            <h1 className="text-3xl font-bold mb-2 cursor-pointer hover:opacity-80 transition-opacity">
+              Cine<span className="text-primary">Vault</span>
+            </h1>
+          </Link>
+          <p className="text-muted-foreground">{isLogin ? "Bon retour parmi nous" : "Créez votre compte"}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -113,9 +120,7 @@ export default function Auth() {
                 className="pl-10"
               />
             </div>
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
           </div>
 
           <div className="space-y-2">
@@ -124,7 +129,7 @@ export default function Auth() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 id="password"
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -138,9 +143,7 @@ export default function Auth() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {errors.password && (
-              <p className="text-xs text-destructive">{errors.password}</p>
-            )}
+            {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
           </div>
 
           {!isLogin && (
@@ -150,32 +153,27 @@ export default function Auth() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="pl-10"
                 />
               </div>
-              {errors.confirmPassword && (
-                <p className="text-xs text-destructive">{errors.confirmPassword}</p>
-              )}
+              {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword}</p>}
             </div>
           )}
 
           {isLogin && (
             <div className="text-right">
-              <Link
-                to="/forgot-password"
-                className="text-sm text-primary hover:underline"
-              >
+              <Link to="/forgot-password" className="text-sm text-primary hover:underline">
                 Mot de passe oublié ?
               </Link>
             </div>
           )}
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Chargement...' : isLogin ? 'Se connecter' : 'S\'inscrire'}
+            {loading ? "Chargement..." : isLogin ? "Se connecter" : "S'inscrire"}
           </Button>
         </form>
 
@@ -188,13 +186,7 @@ export default function Auth() {
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-        >
+        <Button type="button" variant="outline" className="w-full mb-4" onClick={handleGoogleSignIn} disabled={loading}>
           <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
             <path
               fill="currentColor"
@@ -213,11 +205,18 @@ export default function Auth() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          {isLogin ? 'Continuer avec Google' : 'S\'inscrire avec Google'}
+          {isLogin ? "Continuer avec Google" : "S'inscrire avec Google"}
+        </Button>
+
+        {/* --- NOUVEAU BOUTON : Continuer sans compte --- */}
+        <Button asChild variant="ghost" className="w-full text-muted-foreground hover:text-foreground">
+          <Link to="/">
+            Continuer sans compte <PlayCircle className="ml-2 w-4 h-4" />
+          </Link>
         </Button>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          {isLogin ? "Pas encore de compte ? " : 'Déjà un compte ? '}
+          {isLogin ? "Pas encore de compte ? " : "Déjà un compte ? "}
           <button
             type="button"
             onClick={() => {
@@ -226,7 +225,7 @@ export default function Auth() {
             }}
             className="text-primary hover:underline font-medium"
           >
-            {isLogin ? 'S\'inscrire' : 'Se connecter'}
+            {isLogin ? "S'inscrire" : "Se connecter"}
           </button>
         </p>
       </div>
