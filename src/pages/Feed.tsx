@@ -4,7 +4,6 @@ import { BottomNav } from "@/components/BottomNav";
 import { ReviewCard } from "@/components/ReviewCard";
 import { EditReviewDialog } from "@/components/EditReviewDialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useReviews, Review } from "@/hooks/useReviews";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageSquare, Users, Globe, RefreshCw, Loader2 } from "lucide-react";
@@ -14,13 +13,7 @@ type FeedType = "following" | "global";
 
 export default function Feed() {
   const { user } = useAuth();
-  const {
-    loading,
-    fetchAllReviews,
-    fetchFollowingReviews,
-    updateReview,
-    deleteReview,
-  } = useReviews();
+  const { loading, fetchAllReviews, fetchFollowingReviews, updateReview, deleteReview } = useReviews();
 
   const [feedType, setFeedType] = useState<FeedType>("following");
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -32,13 +25,13 @@ export default function Feed() {
 
   const loadReviews = useCallback(async () => {
     let data: Review[] = [];
-    
+
     if (feedType === "following" && user) {
       data = await fetchFollowingReviews();
     } else {
       data = await fetchAllReviews();
     }
-    
+
     setReviews(data);
   }, [feedType, user, fetchAllReviews, fetchFollowingReviews]);
 
@@ -77,8 +70,8 @@ export default function Feed() {
                 contains_spoilers: data.contains_spoilers,
                 updated_at: new Date().toISOString(),
               }
-            : r
-        )
+            : r,
+        ),
       );
       setEditingReview(null);
     }
@@ -92,10 +85,6 @@ export default function Feed() {
     }
   };
 
-  const handleFeedTypeChange = (value: string) => {
-    setFeedType(value as FeedType);
-  };
-
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Header />
@@ -105,32 +94,41 @@ export default function Feed() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold">Avis</h1>
+            <h1 className="text-2xl font-bold font-serif">Avis</h1>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleRefresh}
-            disabled={refreshing || loading}
-          >
+          <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={refreshing || loading}>
             <RefreshCw className={cn("w-5 h-5", refreshing && "animate-spin")} />
           </Button>
         </div>
 
-        {/* Feed type tabs */}
+        {/* Feed type tabs (Segmented Control) */}
         {user && (
-          <Tabs value={feedType} onValueChange={handleFeedTypeChange} className="mb-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="following" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Abonnements
-              </TabsTrigger>
-              <TabsTrigger value="global" className="flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                Tous les avis
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex p-1 bg-muted/50 rounded-xl mb-6 relative">
+            <button
+              onClick={() => setFeedType("following")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                feedType === "following"
+                  ? "bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Users className="w-4 h-4" />
+              Abonnements
+            </button>
+            <button
+              onClick={() => setFeedType("global")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                feedType === "global"
+                  ? "bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Globe className="w-4 h-4" />
+              Tous les avis
+            </button>
+          </div>
         )}
 
         {/* Reviews list */}
@@ -148,11 +146,7 @@ export default function Feed() {
                 : "Soyez le premier à partager votre avis sur un film !"}
             </p>
             {feedType === "following" && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setFeedType("global")}
-              >
+              <Button variant="outline" className="mt-4" onClick={() => setFeedType("global")}>
                 <Globe className="w-4 h-4 mr-2" />
                 Voir tous les avis
               </Button>
@@ -160,14 +154,10 @@ export default function Feed() {
           </div>
         ) : (
           <div className="space-y-4">
-            {reviews.map((review) => (
-              <ReviewCard
-                key={review.id}
-                review={review}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                showMovie={true}
-              />
+            {reviews.map((review, index) => (
+              <div key={review.id} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+                <ReviewCard review={review} onEdit={handleEdit} onDelete={handleDelete} showMovie={true} />
+              </div>
             ))}
           </div>
         )}
