@@ -106,6 +106,29 @@ export const BADGES_CONFIG: GameBadge[] = [
   },
 ];
 
+// --- HELPERS ---
+const getSeenBadgesKey = (userId: string) => `cinevault_seen_badges_${userId}`;
+
+const getSeenBadges = (userId: string): Set<string> => {
+  try {
+    const stored = localStorage.getItem(getSeenBadgesKey(userId));
+    if (stored) {
+      return new Set(JSON.parse(stored));
+    }
+  } catch (e) {
+    console.error("Error reading seen badges from localStorage:", e);
+  }
+  return new Set();
+};
+
+const saveSeenBadges = (userId: string, badgeIds: Set<string>) => {
+  try {
+    localStorage.setItem(getSeenBadgesKey(userId), JSON.stringify(Array.from(badgeIds)));
+  } catch (e) {
+    console.error("Error saving seen badges to localStorage:", e);
+  }
+};
+
 // --- CONTEXT ---
 interface BadgeNotificationContextType {
   currentXp: number;
@@ -145,10 +168,11 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isProcessingClose, setIsProcessingClose] = useState(false);
 
-  // Track if initial sync is done - prevents popups on first load
-  const isInitialSyncDone = useRef(false);
-  // Track previously known unlocked badges to detect NEW unlocks
-  const previousUnlockedBadges = useRef<Set<string>>(new Set());
+  // Track seen badges (persisted in localStorage)
+  const [seenBadges, setSeenBadges] = useState<Set<string>>(new Set());
+
+  // Track if initial load is complete
+  const isInitialized = useRef(false);
 
   const watchedMovieIds = useMemo(
     () => userMovies?.filter((m) => m.status === "watched").map((m) => m.tmdb_id) || [],
@@ -195,34 +219,57 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
     };
   }, [watchedMovieIds, favoriteMovieIds]);
 
-  // Detect NEW badge unlocks (not just any unlocked badge)
+  // Load seen badges from localStorage on user change
   useEffect(() => {
-    // Wait for user and movies to be loaded
+    if (user) {
+      const stored = getSeenBadges(user.id);
+      setSeenBadges(stored);
+      isInitialized.current = false; // Reset initialization flag for new user
+    } else {
+      setSeenBadges(new Set());
+      isInitialized.current = false;
+    }
+  }, [user?.id]);
+
+  // Detect NEW badge unlocks
+  useEffect(() => {
+    // Wait for user, movies to load, and seenBadges to be loaded
     if (!user || moviesLoading) return;
 
-    // On first load, just sync the state without showing popups
-    if (!isInitialSyncDone.current) {
-      previousUnlockedBadges.current = new Set(unlockedBadges);
-      isInitialSyncDone.current = true;
-      console.log("[Badges] Initial sync done. Unlocked badges:", Array.from(unlockedBadges));
+    // On first load after user login, sync seen badges with currently unlocked badges
+    // This prevents showing popups for badges that were unlocked in previous sessions
+    if (!isInitialized.current) {
+      // Mark all currently unlocked badges as seen (no popup)
+      const updatedSeenBadges = new Set(seenBadges);
+      let hasNewBadges = false;
+
+      unlockedBadges.forEach((badgeId) => {
+        if (!updatedSeenBadges.has(badgeId)) {
+          updatedSeenBadges.add(badgeId);
+          hasNewBadges = true;
+        }
+      });
+
+      if (hasNewBadges) {
+        setSeenBadges(updatedSeenBadges);
+        saveSeenBadges(user.id, updatedSeenBadges);
+      }
+
+      isInitialized.current = true;
       return;
     }
 
-    // Find badges that are newly unlocked (not in previous state)
+    // After initialization, check for NEW badges (unlocked but not yet seen)
     const newlyUnlocked: GameBadge[] = [];
 
     unlockedBadges.forEach((badgeId) => {
-      if (!previousUnlockedBadges.current.has(badgeId)) {
+      if (!seenBadges.has(badgeId)) {
         const badgeConfig = BADGES_CONFIG.find((b) => b.id === badgeId);
         if (badgeConfig) {
           newlyUnlocked.push(badgeConfig);
-          console.log("[Badges] New badge unlocked:", badgeId);
         }
       }
     });
-
-    // Update previous state
-    previousUnlockedBadges.current = new Set(unlockedBadges);
 
     // Add newly unlocked badges to queue
     if (newlyUnlocked.length > 0) {
@@ -232,17 +279,7 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
         return [...prev, ...filtered];
       });
     }
-  }, [unlockedBadges, user, moviesLoading]);
-
-  // Reset initial sync when user changes (logout/login)
-  useEffect(() => {
-    if (!user) {
-      isInitialSyncDone.current = false;
-      previousUnlockedBadges.current = new Set();
-      setUnlockedBadgeQueue([]);
-      setIsDialogOpen(false);
-    }
-  }, [user]);
+  }, [unlockedBadges, user, moviesLoading, seenBadges]);
 
   // Show dialog when queue has items
   useEffect(() => {
@@ -258,12 +295,24 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
     setIsProcessingClose(true);
     setIsDialogOpen(false);
 
+    // Mark the badge as seen
+    if (unlockedBadgeQueue.length > 0 && user) {
+      const badgeToMark = unlockedBadgeQueue[0];
+
+      setSeenBadges((prev) => {
+        const updated = new Set(prev);
+        updated.add(badgeToMark.id);
+        saveSeenBadges(user.id, updated);
+        return updated;
+      });
+    }
+
     // Remove badge from queue after delay
     setTimeout(() => {
       setUnlockedBadgeQueue((prev) => prev.slice(1));
       setIsProcessingClose(false);
     }, 300);
-  }, [isProcessingClose]);
+  }, [isProcessingClose, unlockedBadgeQueue, user]);
 
   // Handle onOpenChange from Dialog
   const handleOpenChange = useCallback(
@@ -276,8 +325,11 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
   );
 
   const triggerTestBadge = useCallback(() => {
-    const testBadge = BADGES_CONFIG[Math.floor(Math.random() * BADGES_CONFIG.length)];
-    setUnlockedBadgeQueue((prev) => [...prev, { ...testBadge, id: `test_${Date.now()}` }]);
+    const testBadge = {
+      ...BADGES_CONFIG[Math.floor(Math.random() * BADGES_CONFIG.length)],
+      id: `test_${Date.now()}`, // Unique ID so it doesn't affect real badges
+    };
+    setUnlockedBadgeQueue((prev) => [...prev, testBadge]);
   }, []);
 
   const value = useMemo(
