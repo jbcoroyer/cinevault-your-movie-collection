@@ -1,13 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BottomNav } from "@/components/BottomNav";
 import { PhysicalMovieCard, PhysicalMovieCardSkeleton } from "@/components/PhysicalMovieCard";
 import { PhysicalMovieListItem, PhysicalMovieListItemSkeleton } from "@/components/PhysicalMovieListItem";
@@ -20,33 +14,33 @@ import { CollectionTimeline } from "@/components/collection/CollectionTimeline";
 import { CollectionTopCreators } from "@/components/collection/CollectionTopCreators";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMovieDetails, Movie, MovieDetails } from "@/services/tmdb";
-import { 
-  getPhysicalMovies, 
-  getPhysicalMovieStats, 
+import {
+  getPhysicalMovies,
+  getPhysicalMovieStats,
   getGenreStats,
   getDecadeStats,
   getDirectorStats,
   getActorStats,
   getTimelineStats,
   getMultiEditions,
-  PhysicalMovie 
+  PhysicalMovie,
 } from "@/services/physicalMovies";
 import { useCollectionFilters } from "@/hooks/useCollectionFilters";
-import { 
-  Disc, 
-  Plus, 
-  LayoutGrid, 
-  List, 
-  Image, 
-  ArrowUpDown, 
-  ArrowUp, 
+import {
+  Disc,
+  Plus,
+  LayoutGrid,
+  List,
+  Image,
+  ArrowUpDown,
+  ArrowUp,
   ArrowDown,
   Search,
   X,
   BarChart3,
   Calendar,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/Header";
@@ -153,16 +147,28 @@ export default function Collection() {
 
   // Calculate stats
   const physicalStats = useMemo(() => getPhysicalMovieStats(physicalMovies), [physicalMovies]);
-  const genreStats = useMemo(() => getGenreStats(physicalMovies, physicalMovieDetails), [physicalMovies, physicalMovieDetails]);
-  const decadeStats = useMemo(() => getDecadeStats(physicalMovies, physicalMovieDetails), [physicalMovies, physicalMovieDetails]);
-  const directorStats = useMemo(() => getDirectorStats(physicalMovies, physicalMovieDetails), [physicalMovies, physicalMovieDetails]);
-  const actorStats = useMemo(() => getActorStats(physicalMovies, physicalMovieDetails), [physicalMovies, physicalMovieDetails]);
+  const genreStats = useMemo(
+    () => getGenreStats(physicalMovies, physicalMovieDetails),
+    [physicalMovies, physicalMovieDetails],
+  );
+  const decadeStats = useMemo(
+    () => getDecadeStats(physicalMovies, physicalMovieDetails),
+    [physicalMovies, physicalMovieDetails],
+  );
+  const directorStats = useMemo(
+    () => getDirectorStats(physicalMovies, physicalMovieDetails),
+    [physicalMovies, physicalMovieDetails],
+  );
+  const actorStats = useMemo(
+    () => getActorStats(physicalMovies, physicalMovieDetails),
+    [physicalMovies, physicalMovieDetails],
+  );
   const timelineStats = useMemo(() => getTimelineStats(physicalMovies), [physicalMovies]);
   const multiEditions = useMemo(() => getMultiEditions(physicalMovies), [physicalMovies]);
 
   // Get edition count for a movie
   const getEditionCount = (tmdbId: number) => {
-    const group = multiEditions.find(g => g.tmdb_id === tmdbId);
+    const group = multiEditions.find((g) => g.tmdb_id === tmdbId);
     return group ? group.editions.length : 1;
   };
 
@@ -242,7 +248,8 @@ export default function Collection() {
               Ma Collection
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              {physicalStats.totalMovies} film{physicalStats.totalMovies > 1 ? "s" : ""} physique{physicalStats.totalMovies > 1 ? "s" : ""}
+              {physicalStats.totalMovies} film{physicalStats.totalMovies > 1 ? "s" : ""} physique
+              {physicalStats.totalMovies > 1 ? "s" : ""}
             </p>
           </div>
           <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
@@ -379,17 +386,8 @@ export default function Collection() {
                   </SelectContent>
                 </Select>
 
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={toggleSortOrder} 
-                  className="flex-shrink-0"
-                >
-                  {sortOrder === "asc" ? (
-                    <ArrowUp className="w-4 h-4" />
-                  ) : (
-                    <ArrowDown className="w-4 h-4" />
-                  )}
+                <Button variant="outline" size="icon" onClick={toggleSortOrder} className="flex-shrink-0">
+                  {sortOrder === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
                 </Button>
 
                 {/* View Toggle */}
@@ -519,9 +517,7 @@ export default function Collection() {
             <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
               <Disc className="w-12 h-12 text-primary" />
             </div>
-            <h2 className="text-xl font-semibold mb-2 text-center">
-              Votre collection est vide
-            </h2>
+            <h2 className="text-xl font-semibold mb-2 text-center">Votre collection est vide</h2>
             <p className="text-muted-foreground text-center max-w-sm mb-6">
               Commencez à ajouter vos DVD et Blu-ray pour garder une trace de tous les films que vous possédez.
             </p>
@@ -534,11 +530,7 @@ export default function Collection() {
       </main>
 
       {/* Add Dialog */}
-      <AddPhysicalMovieDialog 
-        open={addDialogOpen} 
-        onOpenChange={setAddDialogOpen} 
-        onMovieAdded={fetchPhysicalMovies} 
-      />
+      <AddPhysicalMovieDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onMovieAdded={fetchPhysicalMovies} />
 
       {/* Edit Dialog */}
       <EditPhysicalMovieDialog
