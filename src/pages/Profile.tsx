@@ -231,7 +231,7 @@ export default function Profile() {
         {/* Top 5 */}
         <Top5Section
           topMovies={topMovies}
-          onSetTopMovie={isOwnProfile ? setTopMovie : undefined}
+          onSetMovie={isOwnProfile ? setTopMovie : undefined}
           editable={isOwnProfile}
         />
 
