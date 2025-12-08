@@ -24,7 +24,6 @@ import { searchUsers, getPopularUsers, UserProfile } from "@/services/users";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Header } from "@/components/Header";
-import { supabase } from "@/integrations/supabase/client";
 
 type SearchTab = "films" | "users";
 
