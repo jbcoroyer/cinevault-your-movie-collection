@@ -1,113 +1,12 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef, ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserMovies } from "@/hooks/useUserMovies";
+import { getPhysicalMovies } from "@/services/physicalMovies";
 import { BadgeUnlockDialog } from "@/components/BadgeUnlockDialog";
-import { Trophy, Crown, Film, Star, Video, Clapperboard, Zap, Medal } from "lucide-react";
-
-// --- TYPES ---
-export interface GameBadge {
-  id: string;
-  title: string;
-  description: string;
-  xp: number;
-  icon: React.ElementType;
-  color: string;
-  condition: (movies: number[], favorites: number[]) => boolean;
-  progress?: (movies: number[], favorites: number[]) => number;
-  maxProgress?: number;
-}
-
-// --- CONSTANTES EXPORTÉES ---
-export const CULT_MOVIES = [
-  238, 278, 155, 680, 13, 1891, 157336, 27205, 129, 497, 111, 122, 105, 274, 16869, 399566, 637, 335983, 19404, 389,
-  550, 603, 299536, 120, 121, 272, 185, 807, 101, 11, 280, 539, 19995, 24428, 271110, 284054, 98, 920, 24, 601, 128,
-  10681, 152601, 77338, 11324, 313369, 399055, 299534, 131631, 354912,
-];
-
-export const LEVELS = [0, 100, 300, 600, 1000, 1500, 2200, 3000, 4000, 5000];
-
-export const BADGES_CONFIG: GameBadge[] = [
-  {
-    id: "starter_1",
-    title: "Premier Pas",
-    description: "Marquer votre premier film comme vu",
-    xp: 50,
-    icon: Film,
-    color: "text-blue-500",
-    condition: (ids) => ids.length >= 1,
-    progress: (ids) => Math.min(ids.length, 1),
-    maxProgress: 1,
-  },
-  {
-    id: "collector_1",
-    title: "Coup de Cœur",
-    description: "Ajouter 5 films à vos favoris",
-    xp: 100,
-    icon: Star,
-    color: "text-yellow-500",
-    condition: (_, favs) => favs.length >= 5,
-    progress: (_, favs) => Math.min(favs ? favs.length : 0, 5),
-    maxProgress: 5,
-  },
-  {
-    id: "watcher_5",
-    title: "Cinéphile en herbe",
-    description: "Voir 5 films",
-    xp: 100,
-    icon: Video,
-    color: "text-green-500",
-    condition: (ids) => ids.length >= 5,
-    progress: (ids) => Math.min(ids.length, 5),
-    maxProgress: 5,
-  },
-  {
-    id: "gangster_10",
-    title: "Affranchi",
-    description: "Voir 10 films (Challenge Gangster)",
-    xp: 250,
-    icon: Clapperboard,
-    color: "text-red-600",
-    condition: (ids) => ids.length >= 10,
-    progress: (ids) => Math.min(ids.length, 10),
-    maxProgress: 10,
-  },
-  {
-    id: "watcher_20",
-    title: "Binge Watcher",
-    description: "Voir 20 films",
-    xp: 300,
-    icon: Zap,
-    color: "text-purple-500",
-    condition: (ids) => ids.length >= 20,
-    progress: (ids) => Math.min(ids.length, 20),
-    maxProgress: 20,
-  },
-  {
-    id: "cult_50",
-    title: "Légende du Cinéma",
-    description: "Voir 50 films",
-    xp: 1000,
-    icon: Crown,
-    color: "text-amber-500",
-    condition: (ids) => ids.length >= 50,
-    progress: (ids) => Math.min(ids.length, 50),
-    maxProgress: 50,
-  },
-  {
-    id: "critic_10",
-    title: "Critique d'art",
-    description: "Laisser 10 avis",
-    xp: 500,
-    icon: Medal,
-    color: "text-pink-500",
-    condition: () => false,
-    progress: () => 3,
-    maxProgress: 10,
-  },
-];
+import { BADGES_DATA, LEVEL_MILESTONES, GameBadge, BadgeTier } from "@/data/gameData";
 
 // --- HELPERS ---
-const getSeenBadgesKey = (userId: string) => `cinevault_seen_badges_${userId}`;
+const getSeenBadgesKey = (userId: string) => `cinevault_seen_badges_v2_${userId}`;
 
 const getSeenBadges = (userId: string): Set<string> => {
   try {
@@ -129,15 +28,30 @@ const saveSeenBadges = (userId: string, badgeIds: Set<string>) => {
   }
 };
 
-// --- CONTEXT ---
+// --- TYPES DE DONNÉES UTILISATEUR POUR LE JEU ---
+interface UserGameStats {
+  watchedIds: Set<number>;
+  favoriteIds: Set<number>;
+  reviewCount: number;
+  physicalCount: number;
+}
+
+// --- CONTEXT TYPE ---
+export interface UnlockedBadgeInfo {
+  badgeId: string;
+  tierIndex: number;
+  tier: BadgeTier;
+  unlockedAt: Date; // Pour le tri futur si on le stocke
+}
+
 interface BadgeNotificationContextType {
   currentXp: number;
   currentLevel: number;
   nextLevelXp: number;
+  currentLevelXp: number; // XP au début du niveau actuel
   progressPercent: number;
-  unlockedBadges: Set<string>;
-  watchedMovieIds: number[];
-  favoriteMovieIds: number[];
+  unlockedBadges: UnlockedBadgeInfo[]; // Liste enrichie des badges débloqués
+  userStats: UserGameStats;
   triggerTestBadge: () => void;
 }
 
@@ -146,16 +60,7 @@ const BadgeNotificationContext = createContext<BadgeNotificationContextType | nu
 export function useBadgeNotification() {
   const context = useContext(BadgeNotificationContext);
   if (!context) {
-    return {
-      currentXp: 0,
-      currentLevel: 1,
-      nextLevelXp: 100,
-      progressPercent: 0,
-      unlockedBadges: new Set<string>(),
-      watchedMovieIds: [],
-      favoriteMovieIds: [],
-      triggerTestBadge: () => {},
-    };
+    throw new Error("useBadgeNotification must be used within a BadgeNotificationProvider");
   }
   return context;
 }
@@ -163,205 +68,209 @@ export function useBadgeNotification() {
 export function BadgeNotificationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { userMovies, loading: moviesLoading } = useUserMovies();
+  
+  // État local pour le nombre de films physiques (pas dans userMovies)
+  const [physicalCount, setPhysicalCount] = useState(0);
 
-  const [unlockedBadgeQueue, setUnlockedBadgeQueue] = useState<GameBadge[]>([]);
+  const [unlockedBadgeQueue, setUnlockedBadgeQueue] = useState<{ badge: GameBadge; tier: BadgeTier }[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isProcessingClose, setIsProcessingClose] = useState(false);
 
-  // Track seen badges (persisted in localStorage)
+  // Track seen badges (persisted in localStorage) - Format: "badgeId_tierIndex"
   const [seenBadges, setSeenBadges] = useState<Set<string>>(new Set());
 
   // Track if initial load is complete
   const isInitialized = useRef(false);
 
-  const watchedMovieIds = useMemo(
-    () => userMovies?.filter((m) => m.status === "watched").map((m) => m.tmdb_id) || [],
-    [userMovies],
-  );
+  // Récupérer les films physiques
+  useEffect(() => {
+    const fetchPhysical = async () => {
+      if (!user) return;
+      const data = await getPhysicalMovies(user.id);
+      setPhysicalCount(data.length);
+    };
+    fetchPhysical();
+  }, [user]);
 
-  const favoriteMovieIds = useMemo(
-    () => userMovies?.filter((m) => m.is_favorite).map((m) => m.tmdb_id) || [],
-    [userMovies],
-  );
+  // Calculer les stats de jeu
+  const userStats: UserGameStats = useMemo(() => {
+    const watched = new Set<number>();
+    const favorites = new Set<number>();
+    let reviews = 0;
 
-  const { currentXp, currentLevel, nextLevelXp, progressPercent, unlockedBadges } = useMemo(() => {
-    let xp = 0;
-    const unlocked = new Set<string>();
-
-    for (const badge of BADGES_CONFIG) {
-      if (badge.condition(watchedMovieIds, favoriteMovieIds)) {
-        xp += badge.xp;
-        unlocked.add(badge.id);
+    userMovies.forEach(m => {
+      if (m.status === 'watched') {
+        watched.add(m.tmdb_id);
+        if (m.review && m.review.length > 5) reviews++;
       }
-    }
+      if (m.is_favorite) favorites.add(m.tmdb_id);
+    });
 
+    return {
+      watchedIds: watched,
+      favoriteIds: favorites,
+      reviewCount: reviews,
+      physicalCount: physicalCount
+    };
+  }, [userMovies, physicalCount]);
+
+  // Cœur du système : Calculer l'XP et les badges débloqués
+  const { currentXp, currentLevel, nextLevelXp, currentLevelXp, progressPercent, unlockedBadges, newlyUnlocked } = useMemo(() => {
+    let xp = 0;
+    const unlocked: UnlockedBadgeInfo[] = [];
+    const newUnlocks: { badge: GameBadge; tier: BadgeTier; uniqueKey: string }[] = [];
+
+    // Parcourir toutes les configs de badges
+    BADGES_DATA.forEach(badge => {
+      // Déterminer la progression actuelle pour ce badge
+      let currentProgress = 0;
+
+      if (badge.id === 'total_watched') currentProgress = userStats.watchedIds.size;
+      else if (badge.id === 'reviews_count') currentProgress = userStats.reviewCount;
+      else if (badge.id === 'favorites_count') currentProgress = userStats.favoriteIds.size;
+      else if (badge.id === 'physical_count') currentProgress = userStats.physicalCount;
+      else if (badge.movieIds) {
+        // Pour les collections (Réalisateurs, Sagas, Genres)
+        // Compte combien d'IDs de la liste sont dans watchedIds
+        currentProgress = badge.movieIds.filter(id => userStats.watchedIds.has(id)).length;
+      }
+
+      // Vérifier quels tiers sont débloqués
+      badge.tiers.forEach((tier, index) => {
+        if (currentProgress >= tier.target) {
+          xp += tier.xp;
+          unlocked.push({
+            badgeId: badge.id,
+            tierIndex: index,
+            tier: tier,
+            unlockedAt: new Date() // Idéalement, viendrait de la date du dernier film vu
+          });
+
+          // Vérifier si c'est nouveau pour la notification
+          const uniqueKey = `${badge.id}_${index}`;
+          if (!seenBadges.has(uniqueKey) && isInitialized.current) {
+            newUnlocks.push({ badge, tier, uniqueKey });
+          }
+        }
+      });
+    });
+
+    // Calcul du niveau
     let level = 1;
-    for (let i = 0; i < LEVELS.length; i++) {
-      if (xp >= LEVELS[i]) {
-        level = i + 1;
+    let levelXpStart = 0;
+    let levelXpEnd = LEVEL_MILESTONES[0];
+
+    for (let i = 0; i < LEVEL_MILESTONES.length; i++) {
+      if (xp >= LEVEL_MILESTONES[i]) {
+        level = i + 2; // Index 0 = completion du niveau 1 -> passage niveau 2
+        levelXpStart = LEVEL_MILESTONES[i];
       } else {
+        levelXpEnd = LEVEL_MILESTONES[i];
         break;
       }
     }
 
-    const currentLevelBaseXp = LEVELS[level - 1];
-    const nextLevelTargetXp = LEVELS[level] || LEVELS[level - 1] * 1.5;
-    const xpInLevel = xp - currentLevelBaseXp;
-    const xpNeededForNext = nextLevelTargetXp - currentLevelBaseXp;
-    const percent = Math.min(100, Math.max(0, (xpInLevel / xpNeededForNext) * 100));
+    const xpInCurrentLevel = xp - levelXpStart;
+    const xpNeededForCurrentLevel = levelXpEnd - levelXpStart;
+    const percent = Math.min(100, Math.max(0, (xpInCurrentLevel / xpNeededForCurrentLevel) * 100));
 
     return {
       currentXp: xp,
       currentLevel: level,
-      nextLevelXp: nextLevelTargetXp,
+      nextLevelXp: levelXpEnd,
+      currentLevelXp: levelXpStart,
       progressPercent: percent,
       unlockedBadges: unlocked,
+      newlyUnlocked: newUnlocks
     };
-  }, [watchedMovieIds, favoriteMovieIds]);
+  }, [userStats, seenBadges]);
 
-  // Load seen badges from localStorage on user change
+  // Chargement des badges vus depuis localStorage
   useEffect(() => {
     if (user) {
       const stored = getSeenBadges(user.id);
       setSeenBadges(stored);
-      isInitialized.current = false; // Reset initialization flag for new user
+      // Petite pause pour laisser le temps de charger avant de déclencher des notifs
+      setTimeout(() => {
+        isInitialized.current = true;
+      }, 1000);
     } else {
       setSeenBadges(new Set());
       isInitialized.current = false;
     }
   }, [user?.id]);
 
-  // Detect NEW badge unlocks
+  // Gestion de la file d'attente des notifications
   useEffect(() => {
-    // Wait for user, movies to load, and seenBadges to be loaded
-    if (!user || moviesLoading) return;
-
-    // On first load after user login, sync seen badges with currently unlocked badges
-    // This prevents showing popups for badges that were unlocked in previous sessions
-    if (!isInitialized.current) {
-      // Mark all currently unlocked badges as seen (no popup)
-      const updatedSeenBadges = new Set(seenBadges);
-      let hasNewBadges = false;
-
-      unlockedBadges.forEach((badgeId) => {
-        if (!updatedSeenBadges.has(badgeId)) {
-          updatedSeenBadges.add(badgeId);
-          hasNewBadges = true;
-        }
-      });
-
-      if (hasNewBadges) {
-        setSeenBadges(updatedSeenBadges);
-        saveSeenBadges(user.id, updatedSeenBadges);
-      }
-
-      isInitialized.current = true;
-      return;
-    }
-
-    // After initialization, check for NEW badges (unlocked but not yet seen)
-    const newlyUnlocked: GameBadge[] = [];
-
-    unlockedBadges.forEach((badgeId) => {
-      if (!seenBadges.has(badgeId)) {
-        const badgeConfig = BADGES_CONFIG.find((b) => b.id === badgeId);
-        if (badgeConfig) {
-          newlyUnlocked.push(badgeConfig);
-        }
-      }
-    });
-
-    // Add newly unlocked badges to queue
     if (newlyUnlocked.length > 0) {
-      setUnlockedBadgeQueue((prev) => {
-        const existingIds = new Set(prev.map((b) => b.id));
-        const filtered = newlyUnlocked.filter((b) => !existingIds.has(b.id));
-        return [...prev, ...filtered];
+      // Ajouter à la queue
+      const queueItems = newlyUnlocked.map(item => ({
+        badge: {
+          ...item.badge,
+          // Surcharge temporaire pour l'affichage dans le dialog
+          title: item.tier.title, // On affiche "Expert" au lieu de "Visionneur"
+          xp: item.tier.xp
+        },
+        tier: item.tier
+      }));
+      
+      setUnlockedBadgeQueue(prev => [...prev, ...queueItems]);
+
+      // Marquer comme vu immédiatement pour ne pas re-trigger
+      setSeenBadges(prev => {
+        const updated = new Set(prev);
+        newlyUnlocked.forEach(item => updated.add(item.uniqueKey));
+        if (user) saveSeenBadges(user.id, updated);
+        return updated;
       });
     }
-  }, [unlockedBadges, user, moviesLoading, seenBadges]);
+  }, [newlyUnlocked, user]);
 
-  // Show dialog when queue has items
+  // Afficher le dialog
   useEffect(() => {
     if (unlockedBadgeQueue.length > 0 && !isDialogOpen && !isProcessingClose) {
       setIsDialogOpen(true);
     }
   }, [unlockedBadgeQueue, isDialogOpen, isProcessingClose]);
 
-  // Handle dialog close
   const handleCloseDialog = useCallback(() => {
     if (isProcessingClose) return;
-
     setIsProcessingClose(true);
     setIsDialogOpen(false);
 
-    // Mark the badge as seen
-    if (unlockedBadgeQueue.length > 0 && user) {
-      const badgeToMark = unlockedBadgeQueue[0];
-
-      setSeenBadges((prev) => {
-        const updated = new Set(prev);
-        updated.add(badgeToMark.id);
-        saveSeenBadges(user.id, updated);
-        return updated;
-      });
-    }
-
-    // Remove badge from queue after delay
     setTimeout(() => {
-      setUnlockedBadgeQueue((prev) => prev.slice(1));
+      setUnlockedBadgeQueue(prev => prev.slice(1));
       setIsProcessingClose(false);
     }, 300);
-  }, [isProcessingClose, unlockedBadgeQueue, user]);
-
-  // Handle onOpenChange from Dialog
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) {
-        handleCloseDialog();
-      }
-    },
-    [handleCloseDialog],
-  );
+  }, [isProcessingClose]);
 
   const triggerTestBadge = useCallback(() => {
-    const testBadge = {
-      ...BADGES_CONFIG[Math.floor(Math.random() * BADGES_CONFIG.length)],
-      id: `test_${Date.now()}`, // Unique ID so it doesn't affect real badges
-    };
-    setUnlockedBadgeQueue((prev) => [...prev, testBadge]);
+    const randomBadge = BADGES_DATA[0];
+    const randomTier = randomBadge.tiers[0];
+    setUnlockedBadgeQueue(prev => [...prev, { 
+      badge: { ...randomBadge, title: "Test Badge", xp: 500 }, 
+      tier: randomTier 
+    }]);
   }, []);
 
-  const value = useMemo(
-    () => ({
-      currentXp,
-      currentLevel,
-      nextLevelXp,
-      progressPercent,
-      unlockedBadges,
-      watchedMovieIds,
-      favoriteMovieIds,
-      triggerTestBadge,
-    }),
-    [
-      currentXp,
-      currentLevel,
-      nextLevelXp,
-      progressPercent,
-      unlockedBadges,
-      watchedMovieIds,
-      favoriteMovieIds,
-      triggerTestBadge,
-    ],
-  );
+  const value = {
+    currentXp,
+    currentLevel,
+    nextLevelXp,
+    currentLevelXp,
+    progressPercent,
+    unlockedBadges,
+    userStats,
+    triggerTestBadge
+  };
 
   return (
     <BadgeNotificationContext.Provider value={value}>
       {children}
       <BadgeUnlockDialog
         open={isDialogOpen}
-        onOpenChange={handleOpenChange}
-        badge={unlockedBadgeQueue[0] || null}
+        onOpenChange={(open) => !open && handleCloseDialog()}
+        badge={unlockedBadgeQueue[0]?.badge || null} // Le composant BadgeUnlockDialog attend l'ancien format, on adapte
         onClose={handleCloseDialog}
       />
     </BadgeNotificationContext.Provider>
