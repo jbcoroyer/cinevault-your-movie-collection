@@ -17,7 +17,9 @@ import {
 } from "../components/ui/dropdown-menu";
 import { useUserLists } from "../hooks/useUserLists";
 import { useUserMovies } from "../hooks/useUserMovies";
+import { useAuth } from "../contexts/AuthContext";
 import { getMovieDetails, getImageUrl, Movie } from "../services/tmdb";
+import { AuthPlaceholder } from "../components/AuthPlaceholder";
 import {
   Plus,
   ListVideo,
@@ -47,6 +49,7 @@ interface CategoryCard {
 
 export default function Lists() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { lists, loading: listsLoading, createList, updateList, deleteList } = useUserLists();
   const { userMovies, loading: moviesLoading } = useUserMovies();
 
@@ -144,7 +147,6 @@ export default function Lists() {
 
   const isLoading = moviesLoading || loadingMovies;
 
-  // Get backdrop for a special list (last added movie)
   const getCategoryBackdrop = (category: CategoryCard): string | null => {
     const categoryMovies = category.getMovies();
     if (categoryMovies.length > 0) {
@@ -190,7 +192,28 @@ export default function Lists() {
     setEditingList(list.id);
   };
 
-  // If a special list is selected, show the movie grid
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background pb-20 md:pb-8">
+        <Header />
+        <main className="container mx-auto p-4">
+          <AuthPlaceholder
+            icon={ListVideo}
+            title="Vos Listes Personnalisées"
+            description="Créez et partagez des listes de films pour chaque occasion. Ne perdez plus jamais une recommandation."
+            features={[
+              "Gérez votre Watchlist",
+              "Créez des listes à thèmes (ex: 'Soirée Frisson')",
+              "Suivez les films que vous avez vus",
+              "Partagez vos listes avec vos amis"
+            ]}
+          />
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
+
   if (selectedSpecial) {
     const category = specialLists.find((c) => c.id === selectedSpecial)!;
     const categoryMovies = category.getMovies();
@@ -284,7 +307,6 @@ export default function Lists() {
           </Dialog>
         </div>
 
-        {/* Special Lists (Watchlist, Watched, Favorites) */}
         <div className="mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {specialLists.map((category) => {
@@ -298,7 +320,6 @@ export default function Lists() {
                   onClick={() => setSelectedSpecial(category.id)}
                   className="group relative h-20 rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary w-full shadow-card hover:shadow-elevated transition-all"
                 >
-                  {/* Background Image */}
                   {backdrop ? (
                     <img
                       src={getImageUrl(backdrop, "w500") || ""}
@@ -311,10 +332,8 @@ export default function Lists() {
                     </div>
                   )}
 
-                  {/* Dark Overlay/Gradient */}
                   <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-transparent group-hover:from-black/95 group-hover:via-black/80 transition-all duration-300" />
 
-                  {/* Content */}
                   <div className="absolute inset-0 flex flex-row items-center px-4 gap-3 text-white">
                     <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm group-hover:bg-primary/20 transition-colors">
                       <Icon className="w-5 h-5" />
@@ -332,7 +351,6 @@ export default function Lists() {
           </div>
         </div>
 
-        {/* Custom Lists */}
         <h2 className="text-lg font-semibold mb-3">Listes personnalisées</h2>
 
         {listsLoading ? (
@@ -411,7 +429,6 @@ export default function Lists() {
         )}
       </div>
 
-      {/* Edit Dialog */}
       <Dialog open={!!editingList} onOpenChange={(open) => !open && setEditingList(null)}>
         <DialogContent>
           <DialogHeader>
