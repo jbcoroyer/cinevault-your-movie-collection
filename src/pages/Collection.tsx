@@ -46,6 +46,7 @@ import { cn } from "@/lib/utils";
 import { Header } from "@/components/Header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { EmptyState } from "@/components/EmptyState";
 
 type ViewMode = "list" | "posters" | "shelf";
 type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition";
@@ -233,15 +234,15 @@ export default function Collection() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
+    <div className="min-h-dvh bg-background pb-20 md:pb-8">
       <Header />
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Disc className="w-6 h-6 text-primary" />
+            <h1 className="text-3xl font-serif font-bold flex items-center gap-2">
+              <Disc className="w-8 h-8 text-primary" />
               Ma Collection
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
@@ -249,7 +250,7 @@ export default function Collection() {
               {physicalStats.totalMovies > 1 ? "s" : ""}
             </p>
           </div>
-          <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+          <Button onClick={() => setAddDialogOpen(true)} className="gap-2 shadow-glow-sm">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Ajouter</span>
           </Button>
@@ -257,25 +258,25 @@ export default function Collection() {
 
         {/* Dashboard Widgets Row */}
         {physicalMovies.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
             {/* 1. Statistiques */}
             <Dialog>
               <DialogTrigger asChild>
-                <button className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group">
-                  <div className="p-2 rounded-full bg-primary/10 text-primary mb-2 group-hover:scale-110 transition-transform">
+                <button className="flex flex-col items-center justify-center p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group active:scale-95">
+                  <div className="p-2.5 rounded-full bg-primary/10 text-primary mb-2 group-hover:scale-110 transition-transform">
                     <BarChart3 className="w-5 h-5" />
                   </div>
                   <span className="text-xs sm:text-sm font-medium text-center">Statistiques</span>
                 </button>
               </DialogTrigger>
               <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-4 border-b bg-background z-10 shrink-0">
+                <DialogHeader className="p-6 pb-4 border-b bg-background/50 backdrop-blur-sm z-10 shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-primary" />
                     Statistiques de la collection
                   </DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="h-[70vh] w-full">
+                <ScrollArea className="h-[70vh] w-full bg-background/50">
                   <div className="p-6">
                     <CollectionStats
                       stats={physicalStats}
@@ -291,21 +292,21 @@ export default function Collection() {
             {/* 2. Favoris (Top Creators) */}
             <Dialog>
               <DialogTrigger asChild>
-                <button className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group">
-                  <div className="p-2 rounded-full bg-yellow-500/10 text-yellow-500 mb-2 group-hover:scale-110 transition-transform">
+                <button className="flex flex-col items-center justify-center p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group active:scale-95">
+                  <div className="p-2.5 rounded-full bg-yellow-500/10 text-yellow-500 mb-2 group-hover:scale-110 transition-transform">
                     <Trophy className="w-5 h-5" />
                   </div>
                   <span className="text-xs sm:text-sm font-medium text-center">Favoris</span>
                 </button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-4 border-b bg-background z-10 shrink-0">
+                <DialogHeader className="p-6 pb-4 border-b bg-background/50 backdrop-blur-sm z-10 shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <Star className="w-5 h-5 text-yellow-500" />
                     Réalisateurs & Acteurs favoris
                   </DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="h-[70vh] w-full">
+                <ScrollArea className="h-[70vh] w-full bg-background/50">
                   <div className="p-6">
                     <CollectionTopCreators
                       directorStats={directorStats}
@@ -322,21 +323,21 @@ export default function Collection() {
             {/* 3. Timeline */}
             <Dialog>
               <DialogTrigger asChild>
-                <button className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group">
-                  <div className="p-2 rounded-full bg-blue-500/10 text-blue-500 mb-2 group-hover:scale-110 transition-transform">
+                <button className="flex flex-col items-center justify-center p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group active:scale-95">
+                  <div className="p-2.5 rounded-full bg-blue-500/10 text-blue-500 mb-2 group-hover:scale-110 transition-transform">
                     <Calendar className="w-5 h-5" />
                   </div>
                   <span className="text-xs sm:text-sm font-medium text-center">Timeline</span>
                 </button>
               </DialogTrigger>
               <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-4 border-b bg-background z-10 shrink-0">
+                <DialogHeader className="p-6 pb-4 border-b bg-background/50 backdrop-blur-sm z-10 shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-blue-500" />
                     Historique des achats
                   </DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="h-[70vh] w-full">
+                <ScrollArea className="h-[70vh] w-full bg-background/50">
                   <div className="p-6">
                     <CollectionTimeline
                       timelineStats={timelineStats}
@@ -366,24 +367,24 @@ export default function Collection() {
         ) : physicalMovies.length > 0 ? (
           <>
             {/* Search & Filters Bar */}
-            <div className="space-y-3">
-              {/* Ajout de flex-wrap pour la compatibilité mobile */}
+            <div className="sticky top-16 z-30 bg-background/80 backdrop-blur-md p-2 -mx-2 rounded-xl border border-border/50 shadow-sm space-y-3 mb-4">
+              {/* Flex wrap pour mobile */}
               <div className="flex flex-wrap items-center gap-2">
                 {/* Search */}
-                <div className="relative flex-1 min-w-[140px] max-w-sm">
+                <div className="relative flex-1 min-w-[160px] max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Rechercher..."
                     value={filters.search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 pr-9"
+                    className="pl-9 pr-9 h-9 bg-muted/50 border-transparent focus:bg-background focus:border-input transition-all"
                   />
                   {filters.search && (
                     <button
                       onClick={() => setSearch("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3 h-3" />
                     </button>
                   )}
                 </div>
@@ -405,9 +406,11 @@ export default function Collection() {
 
                 {/* Sort */}
                 <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
-                  <SelectTrigger className="w-[110px] sm:w-[130px]">
-                    <ArrowUpDown className="w-4 h-4 mr-2" />
-                    <SelectValue />
+                  <SelectTrigger className="w-[120px] sm:w-[140px] h-9 bg-muted/50 border-transparent">
+                    <div className="flex items-center gap-2">
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-70" />
+                      <SelectValue />
+                    </div>
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(sortLabels).map(([value, label]) => (
@@ -418,18 +421,20 @@ export default function Collection() {
                   </SelectContent>
                 </Select>
 
-                <Button variant="outline" size="icon" onClick={toggleSortOrder} className="flex-shrink-0">
+                <Button variant="ghost" size="icon" onClick={toggleSortOrder} className="h-9 w-9 flex-shrink-0">
                   {sortOrder === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
                 </Button>
 
-                {/* View Toggle - Visible partout grâce à flex-wrap */}
-                <div className="flex items-center bg-card rounded-lg p-1 border border-border">
+                <div className="w-px h-6 bg-border mx-1 hidden sm:block" />
+
+                {/* View Toggle */}
+                <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-transparent">
                   <button
                     onClick={() => setViewMode("posters")}
                     className={cn(
-                      "p-2 rounded transition-colors",
+                      "p-1.5 rounded-md transition-all active:scale-95",
                       viewMode === "posters"
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                     title="Vue affiches"
@@ -439,9 +444,9 @@ export default function Collection() {
                   <button
                     onClick={() => setViewMode("list")}
                     className={cn(
-                      "p-2 rounded transition-colors",
+                      "p-1.5 rounded-md transition-all active:scale-95",
                       viewMode === "list"
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                     title="Vue liste"
@@ -451,9 +456,9 @@ export default function Collection() {
                   <button
                     onClick={() => setViewMode("shelf")}
                     className={cn(
-                      "p-2 rounded transition-colors",
+                      "p-1.5 rounded-md transition-all active:scale-95",
                       viewMode === "shelf"
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                     title="Vue étagère"
@@ -478,26 +483,28 @@ export default function Collection() {
             </div>
 
             {/* Results count */}
-            {hasActiveFilters && (
-              <p className="text-sm text-muted-foreground">
-                {sortedMovies.length} résultat{sortedMovies.length > 1 ? "s" : ""}
-                {sortedMovies.length !== physicalMovies.length && ` sur ${physicalMovies.length}`}
-              </p>
-            )}
+            <div className="flex justify-between items-end px-1">
+              {hasActiveFilters && (
+                <p className="text-sm text-muted-foreground animate-fade-in">
+                  {sortedMovies.length} résultat{sortedMovies.length > 1 ? "s" : ""}
+                  {sortedMovies.length !== physicalMovies.length && ` sur ${physicalMovies.length}`}
+                </p>
+              )}
+            </div>
 
             {/* Movies display */}
             {sortedMovies.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Aucun film ne correspond à vos critères</p>
-                <Button variant="link" onClick={resetFilters}>
-                  Réinitialiser les filtres
-                </Button>
-              </div>
+              <EmptyState
+                icon={Search}
+                title="Aucun résultat"
+                description="Essayez de modifier vos filtres ou d'ajouter de nouveaux films."
+                actionLabel="Réinitialiser les filtres"
+                onAction={resetFilters}
+              />
             ) : (
-              <>
+              <div className="min-h-[50vh]">
                 {viewMode === "posters" && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4 animate-fade-in">
                     {sortedMovies.map((pm) => (
                       <PhysicalMoviePoster
                         key={pm.id}
@@ -512,7 +519,7 @@ export default function Collection() {
                 )}
 
                 {viewMode === "list" && (
-                  <div className="space-y-3">
+                  <div className="space-y-2 animate-fade-in">
                     {sortedMovies.map((pm) => (
                       <PhysicalMovieListItem
                         key={pm.id}
@@ -528,30 +535,25 @@ export default function Collection() {
                 )}
 
                 {viewMode === "shelf" && (
-                  <div className="animate-fade-in">
+                  <div className="animate-fade-in space-y-4">
                     <ShelfView movies={sortedMovies} movieDetailsMap={physicalMovieDetails} onMovieClick={handleEdit} />
-                    <p className="text-center text-xs text-muted-foreground mt-4 italic">
-                      Survolez les tranches pour voir les détails. Cliquez pour éditer.
+                    <p className="text-center text-xs text-muted-foreground italic">
+                      Survolez les tranches pour voir les détails.
                     </p>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 px-4">
-            <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-              <Disc className="w-12 h-12 text-primary" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2 text-center">Votre collection est vide</h2>
-            <p className="text-muted-foreground text-center max-w-sm mb-6">
-              Commencez à ajouter vos DVD et Blu-ray pour garder une trace de tous les films que vous possédez.
-            </p>
-            <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Ajouter mon premier film
-            </Button>
-          </div>
+          <EmptyState
+            icon={Disc}
+            title="Votre collection est vide"
+            description="Commencez à ajouter vos DVD et Blu-ray pour construire votre vidéothèque numérique ultime."
+            actionLabel="Ajouter mon premier film"
+            onAction={() => setAddDialogOpen(true)}
+            className="mt-12"
+          />
         )}
       </main>
 
