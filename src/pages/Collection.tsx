@@ -239,7 +239,7 @@ export default function Collection() {
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-serif font-bold flex items-center gap-2">
               <Disc className="w-8 h-8 text-primary" />
@@ -250,9 +250,9 @@ export default function Collection() {
               {physicalStats.totalMovies > 1 ? "s" : ""}
             </p>
           </div>
-          <Button onClick={() => setAddDialogOpen(true)} className="gap-2 shadow-glow-sm">
+          <Button onClick={() => setAddDialogOpen(true)} className="gap-2 shadow-glow-sm w-full sm:w-auto">
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Ajouter</span>
+            Ajouter un film
           </Button>
         </div>
 
@@ -366,33 +366,117 @@ export default function Collection() {
           </div>
         ) : physicalMovies.length > 0 ? (
           <>
-            {/* Search & Filters Bar */}
-            <div className="sticky top-16 z-30 bg-background/80 backdrop-blur-md p-2 -mx-2 rounded-xl border border-border/50 shadow-sm space-y-3 mb-4">
-              {/* Flex wrap pour mobile */}
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Search */}
-                <div className="relative flex-1 min-w-[160px] max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Rechercher..."
-                    value={filters.search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 pr-9 h-9 bg-muted/50 border-transparent focus:bg-background focus:border-input transition-all"
+            {/* STICKY TOOLBAR (Glassmorphism & Harmonized) */}
+            <div className="sticky top-14 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50 p-4 sm:p-6 mb-6 -mx-4 sm:-mx-6 shadow-sm">
+              <div className="container mx-auto flex flex-col gap-4">
+                {/* Ligne 1: Recherche & Vue */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  {/* Barre de recherche */}
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Rechercher dans la collection..."
+                      value={filters.search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-9 pr-9 h-10 bg-muted/30 border-transparent focus:bg-background focus:border-primary/50 transition-all rounded-lg"
+                    />
+                    {filters.search && (
+                      <button
+                        onClick={() => setSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Bouton Filtres */}
+                  <CollectionFiltersDrawer
+                    filters={filters}
+                    filterOptions={filterOptions}
+                    toggleFormat={toggleFormat}
+                    toggleCondition={toggleCondition}
+                    toggleGenre={toggleGenre}
+                    toggleDecade={toggleDecade}
+                    toggleDirector={toggleDirector}
+                    setPriceRange={setPriceRange}
+                    resetFilters={resetFilters}
+                    hasActiveFilters={hasActiveFilters}
+                    activeFilterCount={activeFilterCount}
                   />
-                  {filters.search && (
+
+                  {/* Tri */}
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+                    <SelectTrigger className="w-[140px] h-10 bg-muted/30 border-transparent hover:bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <ArrowUpDown className="w-3.5 h-3.5 opacity-70" />
+                        <SelectValue />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(sortLabels).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleSortOrder}
+                    className="h-10 w-10 flex-shrink-0 bg-muted/30 hover:bg-muted/50 rounded-lg"
+                  >
+                    {sortOrder === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+                  </Button>
+
+                  <div className="w-px h-6 bg-border mx-1 hidden md:block" />
+
+                  {/* Toggle Vue (Segmented Control style) */}
+                  <div className="flex bg-muted/50 rounded-lg p-1 border border-transparent">
                     <button
-                      onClick={() => setSearch("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                      onClick={() => setViewMode("shelf")}
+                      className={cn(
+                        "p-1.5 rounded-md transition-all duration-200 active:scale-95",
+                        viewMode === "shelf"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                      title="Étagère"
                     >
-                      <X className="w-3 h-3" />
+                      <Library className="w-4 h-4" />
                     </button>
-                  )}
+                    <button
+                      onClick={() => setViewMode("posters")}
+                      className={cn(
+                        "p-1.5 rounded-md transition-all duration-200 active:scale-95",
+                        viewMode === "posters"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                      title="Affiches"
+                    >
+                      <Image className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode("list")}
+                      className={cn(
+                        "p-1.5 rounded-md transition-all duration-200 active:scale-95",
+                        viewMode === "list"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                      title="Liste"
+                    >
+                      <List className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Filters Drawer Button */}
-                <CollectionFiltersDrawer
+                {/* Ligne 2: Chips de filtres actifs */}
+                <ActiveFiltersBar
                   filters={filters}
-                  filterOptions={filterOptions}
                   toggleFormat={toggleFormat}
                   toggleCondition={toggleCondition}
                   toggleGenre={toggleGenre}
@@ -401,85 +485,8 @@ export default function Collection() {
                   setPriceRange={setPriceRange}
                   resetFilters={resetFilters}
                   hasActiveFilters={hasActiveFilters}
-                  activeFilterCount={activeFilterCount}
                 />
-
-                {/* Sort */}
-                <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
-                  <SelectTrigger className="w-[120px] sm:w-[140px] h-9 bg-muted/50 border-transparent">
-                    <div className="flex items-center gap-2">
-                      <ArrowUpDown className="w-3.5 h-3.5 opacity-70" />
-                      <SelectValue />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(sortLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Button variant="ghost" size="icon" onClick={toggleSortOrder} className="h-9 w-9 flex-shrink-0">
-                  {sortOrder === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-                </Button>
-
-                <div className="w-px h-6 bg-border mx-1 hidden sm:block" />
-
-                {/* View Toggle */}
-                <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-transparent">
-                  <button
-                    onClick={() => setViewMode("posters")}
-                    className={cn(
-                      "p-1.5 rounded-md transition-all active:scale-95",
-                      viewMode === "posters"
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                    title="Vue affiches"
-                  >
-                    <Image className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode("list")}
-                    className={cn(
-                      "p-1.5 rounded-md transition-all active:scale-95",
-                      viewMode === "list"
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                    title="Vue liste"
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode("shelf")}
-                    className={cn(
-                      "p-1.5 rounded-md transition-all active:scale-95",
-                      viewMode === "shelf"
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                    title="Vue étagère"
-                  >
-                    <Library className="w-4 h-4" />
-                  </button>
-                </div>
               </div>
-
-              {/* Active Filters Bar */}
-              <ActiveFiltersBar
-                filters={filters}
-                toggleFormat={toggleFormat}
-                toggleCondition={toggleCondition}
-                toggleGenre={toggleGenre}
-                toggleDecade={toggleDecade}
-                toggleDirector={toggleDirector}
-                setPriceRange={setPriceRange}
-                resetFilters={resetFilters}
-                hasActiveFilters={hasActiveFilters}
-              />
             </div>
 
             {/* Results count */}
@@ -504,7 +511,7 @@ export default function Collection() {
             ) : (
               <div className="min-h-[50vh]">
                 {viewMode === "posters" && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4 animate-fade-in">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3 sm:gap-4 animate-fade-in">
                     {sortedMovies.map((pm) => (
                       <PhysicalMoviePoster
                         key={pm.id}
