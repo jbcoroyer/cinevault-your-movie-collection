@@ -2,7 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Prevent horizontal overflow on mobile */
+/* Fonts - Serif for headlines, Sans for body */
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap");
+
+/* Prevent horizontal overflow */
 html,
 body,
 #root {
@@ -11,77 +14,85 @@ body,
   max-width: 100vw;
 }
 
-/* ... reste du fichier ... */
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap");
-
 @layer base {
   :root {
-    --background: 36 33% 97%;
-    --foreground: 0 0% 10%;
+    /* Light mode - Cream/warm tones */
+    --background: 40 30% 96%;
+    --foreground: 30 10% 10%;
 
-    --card: 30 26% 94%;
-    --card-foreground: 0 0% 10%;
+    --card: 40 25% 93%;
+    --card-foreground: 30 10% 10%;
 
-    --popover: 36 33% 97%;
-    --popover-foreground: 0 0% 10%;
+    --popover: 40 30% 96%;
+    --popover-foreground: 30 10% 10%;
 
-    --primary: 31 52% 64%;
-    --primary-foreground: 0 0% 100%;
+    /* Gold primary */
+    --primary: 38 60% 50%;
+    --primary-foreground: 30 10% 10%;
 
-    --secondary: 30 26% 94%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 40 20% 90%;
+    --secondary-foreground: 30 10% 10%;
 
-    --muted: 30 20% 90%;
-    --muted-foreground: 0 0% 42%;
+    --muted: 40 15% 88%;
+    --muted-foreground: 30 10% 45%;
 
-    --accent: 31 52% 64%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 38 60% 50%;
+    --accent-foreground: 30 10% 10%;
+
+    /* Accent colors for bento blocks */
+    --coral: 12 80% 62%;
+    --cream: 45 40% 92%;
+    --gold: 38 60% 50%;
+    --sage: 150 20% 60%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 20% 88%;
-    --input: 30 20% 88%;
-    --ring: 31 52% 64%;
+    --border: 40 20% 85%;
+    --input: 40 20% 85%;
+    --ring: 38 60% 50%;
 
-    --radius: 1rem;
-
-    /* Custom tokens */
-    --card-radius: 1rem;
-    --button-radius: 0.75rem;
-    --shadow-card: 0 2px 8px -2px hsl(30 20% 50% / 0.08);
-    --shadow-elevated: 0 8px 24px -8px hsl(30 20% 50% / 0.12);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --radius: 0.5rem;
+    --card-radius: 0.75rem;
+    --button-radius: 0.5rem;
   }
 
   .dark {
-    --background: 0 0% 8%;
-    --foreground: 36 33% 97%;
+    /* Dark mode - Deep black with warm undertones */
+    --background: 30 10% 6%;
+    --foreground: 40 20% 95%;
 
-    --card: 0 0% 12%;
-    --card-foreground: 36 33% 97%;
+    --card: 30 10% 10%;
+    --card-foreground: 40 20% 95%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 36 33% 97%;
+    --popover: 30 10% 8%;
+    --popover-foreground: 40 20% 95%;
 
-    --primary: 31 52% 64%;
-    --primary-foreground: 0 0% 10%;
+    /* Gold primary - slightly brighter in dark */
+    --primary: 38 65% 55%;
+    --primary-foreground: 30 10% 6%;
 
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 36 33% 97%;
+    --secondary: 30 10% 15%;
+    --secondary-foreground: 40 20% 95%;
 
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 30 10% 18%;
+    --muted-foreground: 40 10% 55%;
 
-    --accent: 31 52% 64%;
-    --accent-foreground: 0 0% 10%;
+    --accent: 38 65% 55%;
+    --accent-foreground: 30 10% 6%;
+
+    /* Accent colors for bento blocks - adjusted for dark */
+    --coral: 12 75% 55%;
+    --cream: 45 30% 85%;
+    --gold: 38 65% 55%;
+    --sage: 150 25% 45%;
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 31 52% 64%;
+    --border: 30 10% 18%;
+    --input: 30 10% 18%;
+    --ring: 38 65% 55%;
   }
 }
 
@@ -91,45 +102,116 @@ body,
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: "DM Sans", sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: "Inter", system-ui, sans-serif;
   }
 
+  /* Serif headlines */
   h1,
   h2,
-  h3,
+  h3 {
+    font-family: "Playfair Display", Georgia, serif;
+    @apply font-medium tracking-tight;
+  }
+
   h4,
   h5,
   h6 {
+    font-family: "Inter", system-ui, sans-serif;
     @apply font-semibold tracking-tight;
   }
 }
 
 @layer components {
-  .card-elevated {
-    @apply bg-card rounded-[var(--card-radius)] shadow-[var(--shadow-card)] transition-all duration-300;
+  /* Film grain overlay */
+  .grain-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   }
 
-  .card-elevated:hover {
-    @apply shadow-[var(--shadow-elevated)];
+  .dark .grain-overlay {
+    opacity: 0.04;
   }
 
-  .btn-primary {
-    @apply bg-primary text-primary-foreground rounded-[var(--button-radius)] px-6 py-3 font-medium transition-all duration-300;
+  /* Bento card styles */
+  .bento-card {
+    @apply rounded-xl p-4 sm:p-6 transition-all duration-300;
   }
 
-  .btn-primary:hover {
+  .bento-gold {
+    background: hsl(var(--gold));
+    color: hsl(30 10% 10%);
+  }
+
+  .bento-coral {
+    background: hsl(var(--coral));
+    color: hsl(30 10% 10%);
+  }
+
+  .bento-cream {
+    background: hsl(var(--cream));
+    color: hsl(30 10% 10%);
+  }
+
+  .bento-dark {
+    @apply bg-card;
+  }
+
+  /* Movie poster card */
+  .poster-card {
+    @apply relative overflow-hidden rounded-lg transition-all duration-300;
+  }
+
+  .poster-card:hover {
+    @apply scale-[1.02];
+  }
+
+  .poster-card img {
+    @apply w-full h-full object-cover;
+  }
+
+  /* Editorial text styles */
+  .editorial-title {
+    font-family: "Playfair Display", Georgia, serif;
+    @apply text-3xl sm:text-4xl md:text-5xl font-medium leading-tight;
+  }
+
+  .editorial-subtitle {
+    font-family: "Playfair Display", Georgia, serif;
+    @apply text-xl sm:text-2xl font-normal italic text-muted-foreground;
+  }
+
+  /* Elegant button */
+  .btn-elegant {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-md font-medium text-sm transition-all duration-300;
+  }
+
+  .btn-elegant:hover {
     @apply opacity-90 scale-[1.02];
   }
 
-  .skeleton-shimmer {
-    @apply animate-pulse bg-muted rounded-[var(--card-radius)];
+  /* Section label */
+  .section-label {
+    @apply text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground font-medium;
   }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  /* Hide scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 
   .hide-scrollbar {
@@ -140,66 +222,86 @@ body,
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
-}
 
-/* Safe area for iOS devices */
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-/* Improve touch targets on mobile */
-@media (max-width: 768px) {
-  button,
-  a,
-  [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
+  /* Text balance */
+  .text-balance {
+    text-wrap: balance;
   }
-}
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
+  /* Animation utilities */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
-/* Better text rendering */
-body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
-/* Animation for fade in */
-@keyframes fade-in {
-  from {
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out forwards;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.5s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.3s ease-out forwards;
+  }
+
+  /* Stagger children */
+  .stagger-children > * {
     opacity: 0;
-    transform: translateY(10px);
+    animation: fade-in-up 0.4s ease-out forwards;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .stagger-children > *:nth-child(1) {
+    animation-delay: 0ms;
   }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
-
-/* Hide scrollbar but keep functionality */
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-/* Legacy class name support */
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
+  .stagger-children > *:nth-child(2) {
+    animation-delay: 50ms;
+  }
+  .stagger-children > *:nth-child(3) {
+    animation-delay: 100ms;
+  }
+  .stagger-children > *:nth-child(4) {
+    animation-delay: 150ms;
+  }
+  .stagger-children > *:nth-child(5) {
+    animation-delay: 200ms;
+  }
+  .stagger-children > *:nth-child(6) {
+    animation-delay: 250ms;
+  }
+  .stagger-children > *:nth-child(7) {
+    animation-delay: 300ms;
+  }
+  .stagger-children > *:nth-child(8) {
+    animation-delay: 350ms;
+  }
 }
