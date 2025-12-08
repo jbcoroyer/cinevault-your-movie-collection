@@ -10,9 +10,22 @@ import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMovieDetails, Movie, MovieDetails } from "@/services/tmdb";
 import { getPhysicalMovies, getPhysicalMovieStats, PhysicalMovie } from "@/services/physicalMovies";
-import { Disc, Plus, Euro, Package, LayoutGrid, List, Image, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Disc,
+  Plus,
+  Euro,
+  Package,
+  LayoutGrid,
+  List,
+  Image,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Search,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/Header";
+import { Input } from "@/components/ui/input";
 
 type ViewMode = "cards" | "list" | "posters";
 type SortBy = "title" | "year" | "price" | "genre" | "director" | "added";
@@ -38,6 +51,7 @@ export default function Collection() {
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const [sortBy, setSortBy] = useState<SortBy>("added");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchPhysicalMovies = async () => {
     if (!user) return;
@@ -75,10 +89,20 @@ export default function Collection() {
     setEditDialogOpen(true);
   };
 
-  // Sorted movies
+  // Sorted and Filtered movies
   const sortedMovies = useMemo(() => {
-    const movies = [...physicalMovies];
+    let movies = [...physicalMovies];
 
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      movies = movies.filter((m) => {
+        const details = physicalMovieDetails[m.tmdb_id];
+        return details?.title.toLowerCase().includes(query) || details?.director?.toLowerCase().includes(query);
+      });
+    }
+
+    // Sort movies
     movies.sort((a, b) => {
       const detailsA = physicalMovieDetails[a.tmdb_id];
       const detailsB = physicalMovieDetails[b.tmdb_id];
@@ -126,7 +150,7 @@ export default function Collection() {
     });
 
     return movies;
-  }, [physicalMovies, physicalMovieDetails, sortBy, sortOrder]);
+  }, [physicalMovies, physicalMovieDetails, sortBy, sortOrder, searchQuery]);
 
   const physicalStats = getPhysicalMovieStats(physicalMovies);
 
@@ -159,6 +183,17 @@ export default function Collection() {
           </div>
           Ajouter un DVD / Blu-ray
         </Button>
+
+        {/* Search Bar */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher dans ma collection..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
 
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -251,47 +286,53 @@ export default function Collection() {
             </div>
 
             {/* Movies display */}
-            {viewMode === "cards" && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {sortedMovies.map((pm) => (
-                  <PhysicalMovieCard
-                    key={pm.id}
-                    physicalMovie={pm}
-                    movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
-                    onDeleted={fetchPhysicalMovies}
-                    onEdit={handleEdit}
-                  />
-                ))}
-              </div>
-            )}
+            {sortedMovies.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">Aucun film ne correspond à votre recherche.</div>
+            ) : (
+              <>
+                {viewMode === "cards" && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {sortedMovies.map((pm) => (
+                      <PhysicalMovieCard
+                        key={pm.id}
+                        physicalMovie={pm}
+                        movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
+                        onDeleted={fetchPhysicalMovies}
+                        onEdit={handleEdit}
+                      />
+                    ))}
+                  </div>
+                )}
 
-            {viewMode === "list" && (
-              <div className="space-y-3">
-                {sortedMovies.map((pm) => (
-                  <PhysicalMovieListItem
-                    key={pm.id}
-                    physicalMovie={pm}
-                    movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
-                    director={physicalMovieDetails[pm.tmdb_id]?.director}
-                    onDeleted={fetchPhysicalMovies}
-                    onEdit={handleEdit}
-                  />
-                ))}
-              </div>
-            )}
+                {viewMode === "list" && (
+                  <div className="space-y-3">
+                    {sortedMovies.map((pm) => (
+                      <PhysicalMovieListItem
+                        key={pm.id}
+                        physicalMovie={pm}
+                        movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
+                        director={physicalMovieDetails[pm.tmdb_id]?.director}
+                        onDeleted={fetchPhysicalMovies}
+                        onEdit={handleEdit}
+                      />
+                    ))}
+                  </div>
+                )}
 
-            {viewMode === "posters" && (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-                {sortedMovies.map((pm) => (
-                  <PhysicalMoviePoster
-                    key={pm.id}
-                    physicalMovie={pm}
-                    movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
-                    onDeleted={fetchPhysicalMovies}
-                    onEdit={handleEdit}
-                  />
-                ))}
-              </div>
+                {viewMode === "posters" && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+                    {sortedMovies.map((pm) => (
+                      <PhysicalMoviePoster
+                        key={pm.id}
+                        physicalMovie={pm}
+                        movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
+                        onDeleted={fetchPhysicalMovies}
+                        onEdit={handleEdit}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </>
         ) : (
