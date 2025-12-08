@@ -1,0 +1,323 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+
+export interface Review {
+  id: string;
+  user_id: string;
+  tmdb_id: number;
+  movie_title: string;
+  movie_poster_path: string | null;
+  movie_release_year: number | null;
+  rating: number | null;
+  content: string;
+  contains_spoilers: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined from profiles
+  username?: string;
+  avatar_url?: string;
+}
+
+export interface CreateReviewData {
+  tmdb_id: number;
+  movie_title: string;
+  movie_poster_path: string | null;
+  movie_release_year: number | null;
+  rating?: number;
+  content: string;
+  contains_spoilers?: boolean;
+}
+
+export interface UpdateReviewData {
+  rating?: number;
+  content?: string;
+  contains_spoilers?: boolean;
+}
+
+export function useReviews() {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>([]);
+
+  // Récupérer tous les avis (feed global)
+  const fetchAllReviews = useCallback(async (limit = 50): Promise<Review[]> => {
+    setLoading(true);
+    try {
+      const { data: reviewsData, error } = await supabase
+        .from("reviews")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+
+      if (!reviewsData || reviewsData.length === 0) {
+        setReviews([]);
+        return [];
+      }
+
+      // Récupérer les profils des utilisateurs
+      const userIds = [...new Set(reviewsData.map((r) => r.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds);
+
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
+
+      const reviewsWithProfiles = reviewsData.map((r) => ({
+        ...r,
+        username: profileMap.get(r.user_id)?.username || "Utilisateur",
+        avatar_url: profileMap.get(r.user_id)?.avatar_url,
+      })) as Review[];
+
+      setReviews(reviewsWithProfiles);
+      return reviewsWithProfiles;
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Récupérer les avis des utilisateurs suivis
+  const fetchFollowingReviews = useCallback(async (limit = 50): Promise<Review[]> => {
+    if (!user) return [];
+
+    setLoading(true);
+    try {
+      // Récupérer les IDs des utilisateurs suivis
+      const { data: follows } = await supabase
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", user.id);
+
+      const followingIds = follows?.map((f) => f.following_id) || [];
+      
+      // Inclure aussi ses propres avis
+      followingIds.push(user.id);
+
+      if (followingIds.length === 0) return [];
+
+      const { data: reviewsData, error } = await supabase
+        .from("reviews")
+        .select("*")
+        .in("user_id", followingIds)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+
+      if (!reviewsData || reviewsData.length === 0) return [];
+
+      // Récupérer les profils
+      const userIds = [...new Set(reviewsData.map((r) => r.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds);
+
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
+
+      return reviewsData.map((r) => ({
+        ...r,
+        username: profileMap.get(r.user_id)?.username || "Utilisateur",
+        avatar_url: profileMap.get(r.user_id)?.avatar_url,
+      })) as Review[];
+    } catch (error) {
+      console.error("Error fetching following reviews:", error);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Récupérer les avis d'un utilisateur spécifique
+  const fetchUserReviews = useCallback(async (userId: string, limit = 20): Promise<Review[]> => {
+    try {
+      const { data, error } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+
+      // Récupérer le profil
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .eq("id", userId)
+        .single();
+
+      return (data || []).map((r) => ({
+        ...r,
+        username: profile?.username || "Utilisateur",
+        avatar_url: profile?.avatar_url,
+      })) as Review[];
+    } catch (error) {
+      console.error("Error fetching user reviews:", error);
+      return [];
+    }
+  }, []);
+
+  // Récupérer les avis pour un film spécifique
+  const fetchMovieReviews = useCallback(async (tmdbId: number, limit = 20): Promise<Review[]> => {
+    try {
+      const { data: reviewsData, error } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("tmdb_id", tmdbId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+
+      if (!reviewsData || reviewsData.length === 0) return [];
+
+      // Récupérer les profils
+      const userIds = [...new Set(reviewsData.map((r) => r.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds);
+
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
+
+      return reviewsData.map((r) => ({
+        ...r,
+        username: profileMap.get(r.user_id)?.username || "Utilisateur",
+        avatar_url: profileMap.get(r.user_id)?.avatar_url,
+      })) as Review[];
+    } catch (error) {
+      console.error("Error fetching movie reviews:", error);
+      return [];
+    }
+  }, []);
+
+  // Récupérer son propre avis sur un film
+  const getMyReview = useCallback(async (tmdbId: number): Promise<Review | null> => {
+    if (!user) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("tmdb_id", tmdbId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as Review | null;
+    } catch (error) {
+      console.error("Error fetching my review:", error);
+      return null;
+    }
+  }, [user]);
+
+  // Créer un avis
+  const createReview = async (data: CreateReviewData): Promise<Review | null> => {
+    if (!user) {
+      toast({ title: "Connexion requise", variant: "destructive" });
+      return null;
+    }
+
+    try {
+      const { data: review, error } = await supabase
+        .from("reviews")
+        .insert({
+          user_id: user.id,
+          tmdb_id: data.tmdb_id,
+          movie_title: data.movie_title,
+          movie_poster_path: data.movie_poster_path,
+          movie_release_year: data.movie_release_year,
+          rating: data.rating,
+          content: data.content,
+          contains_spoilers: data.contains_spoilers || false,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === "23505") {
+          toast({ title: "Vous avez déjà publié un avis sur ce film", variant: "destructive" });
+        } else {
+          throw error;
+        }
+        return null;
+      }
+
+      toast({ title: "Avis publié !" });
+      return review as Review;
+    } catch (error) {
+      console.error("Error creating review:", error);
+      toast({ title: "Erreur lors de la publication", variant: "destructive" });
+      return null;
+    }
+  };
+
+  // Mettre à jour un avis
+  const updateReview = async (reviewId: string, data: UpdateReviewData): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from("reviews")
+        .update({
+          rating: data.rating,
+          content: data.content,
+          contains_spoilers: data.contains_spoilers,
+        })
+        .eq("id", reviewId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({ title: "Avis modifié" });
+      return true;
+    } catch (error) {
+      console.error("Error updating review:", error);
+      toast({ title: "Erreur lors de la modification", variant: "destructive" });
+      return false;
+    }
+  };
+
+  // Supprimer un avis
+  const deleteReview = async (reviewId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from("reviews")
+        .delete()
+        .eq("id", reviewId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({ title: "Avis supprimé" });
+      return true;
+    } catch (error) {
+      console.error("Error deleting review:", error);
+      toast({ title: "Erreur lors de la suppression", variant: "destructive" });
+      return false;
+    }
+  };
+
+  return {
+    reviews,
+    loading,
+    fetchAllReviews,
+    fetchFollowingReviews,
+    fetchUserReviews,
+    fetchMovieReviews,
+    getMyReview,
+    createReview,
+    updateReview,
+    deleteReview,
+  };
+}
