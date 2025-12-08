@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef, ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserMovies } from "@/hooks/useUserMovies";
 import { BadgeUnlockDialog } from "@/components/BadgeUnlockDialog";
@@ -139,11 +139,16 @@ export function useBadgeNotification() {
 
 export function BadgeNotificationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const { userMovies } = useUserMovies();
+  const { userMovies, loading: moviesLoading } = useUserMovies();
 
   const [unlockedBadgeQueue, setUnlockedBadgeQueue] = useState<GameBadge[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isProcessingClose, setIsProcessingClose] = useState(false);
+
+  // Track if initial sync is done - prevents popups on first load
+  const isInitialSyncDone = useRef(false);
+  // Track previously known unlocked badges to detect NEW unlocks
+  const previousUnlockedBadges = useRef<Set<string>>(new Set());
 
   const watchedMovieIds = useMemo(
     () => userMovies?.filter((m) => m.status === "watched").map((m) => m.tmdb_id) || [],
@@ -190,72 +195,77 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
     };
   }, [watchedMovieIds, favoriteMovieIds]);
 
-  // Detect new badges
+  // Detect NEW badge unlocks (not just any unlocked badge)
   useEffect(() => {
-    if (!user) return;
+    // Wait for user and movies to be loaded
+    if (!user || moviesLoading) return;
 
-    const seenBadgesKey = `seen_badges_${user.id}`;
-    const storedSeenBadges = localStorage.getItem(seenBadgesKey);
-    const seenBadges: string[] = storedSeenBadges ? JSON.parse(storedSeenBadges) : [];
+    // On first load, just sync the state without showing popups
+    if (!isInitialSyncDone.current) {
+      previousUnlockedBadges.current = new Set(unlockedBadges);
+      isInitialSyncDone.current = true;
+      console.log("[Badges] Initial sync done. Unlocked badges:", Array.from(unlockedBadges));
+      return;
+    }
 
-    const newUnlocks: GameBadge[] = [];
+    // Find badges that are newly unlocked (not in previous state)
+    const newlyUnlocked: GameBadge[] = [];
 
     unlockedBadges.forEach((badgeId) => {
-      if (!seenBadges.includes(badgeId)) {
+      if (!previousUnlockedBadges.current.has(badgeId)) {
         const badgeConfig = BADGES_CONFIG.find((b) => b.id === badgeId);
         if (badgeConfig) {
-          newUnlocks.push(badgeConfig);
+          newlyUnlocked.push(badgeConfig);
+          console.log("[Badges] New badge unlocked:", badgeId);
         }
       }
     });
 
-    if (newUnlocks.length > 0) {
+    // Update previous state
+    previousUnlockedBadges.current = new Set(unlockedBadges);
+
+    // Add newly unlocked badges to queue
+    if (newlyUnlocked.length > 0) {
       setUnlockedBadgeQueue((prev) => {
         const existingIds = new Set(prev.map((b) => b.id));
-        const filtered = newUnlocks.filter((b) => !existingIds.has(b.id));
+        const filtered = newlyUnlocked.filter((b) => !existingIds.has(b.id));
         return [...prev, ...filtered];
       });
     }
-  }, [unlockedBadges, user]);
+  }, [unlockedBadges, user, moviesLoading]);
 
-  // Show dialog when queue has items (with protection against rapid re-opening)
+  // Reset initial sync when user changes (logout/login)
+  useEffect(() => {
+    if (!user) {
+      isInitialSyncDone.current = false;
+      previousUnlockedBadges.current = new Set();
+      setUnlockedBadgeQueue([]);
+      setIsDialogOpen(false);
+    }
+  }, [user]);
+
+  // Show dialog when queue has items
   useEffect(() => {
     if (unlockedBadgeQueue.length > 0 && !isDialogOpen && !isProcessingClose) {
       setIsDialogOpen(true);
     }
   }, [unlockedBadgeQueue, isDialogOpen, isProcessingClose]);
 
-  // Handle dialog close - unified handler for both button click and outside click
+  // Handle dialog close
   const handleCloseDialog = useCallback(() => {
     if (isProcessingClose) return;
 
     setIsProcessingClose(true);
     setIsDialogOpen(false);
 
-    if (unlockedBadgeQueue.length > 0 && user) {
-      const badgeToMark = unlockedBadgeQueue[0];
-
-      // Mark badge as seen in localStorage
-      const seenBadgesKey = `seen_badges_${user.id}`;
-      const storedSeenBadges = localStorage.getItem(seenBadgesKey);
-      const seenBadges: string[] = storedSeenBadges ? JSON.parse(storedSeenBadges) : [];
-
-      if (!seenBadges.includes(badgeToMark.id)) {
-        const updatedSeen = [...seenBadges, badgeToMark.id];
-        localStorage.setItem(seenBadgesKey, JSON.stringify(updatedSeen));
-      }
-
-      // Remove badge from queue after a small delay to prevent flickering
-      setTimeout(() => {
-        setUnlockedBadgeQueue((prev) => prev.slice(1));
-        setIsProcessingClose(false);
-      }, 300);
-    } else {
+    // Remove badge from queue after delay
+    setTimeout(() => {
+      setUnlockedBadgeQueue((prev) => prev.slice(1));
       setIsProcessingClose(false);
-    }
-  }, [unlockedBadgeQueue, user, isProcessingClose]);
+    }, 300);
+  }, [isProcessingClose]);
 
-  // Handle onOpenChange from Dialog - this is called when clicking outside or pressing Escape
+  // Handle onOpenChange from Dialog
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (!open) {
@@ -267,7 +277,7 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
 
   const triggerTestBadge = useCallback(() => {
     const testBadge = BADGES_CONFIG[Math.floor(Math.random() * BADGES_CONFIG.length)];
-    setUnlockedBadgeQueue((prev) => [...prev, testBadge]);
+    setUnlockedBadgeQueue((prev) => [...prev, { ...testBadge, id: `test_${Date.now()}` }]);
   }, []);
 
   const value = useMemo(
