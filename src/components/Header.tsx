@@ -16,20 +16,24 @@ export const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-      <div className="flex items-center justify-between px-4 h-14 container mx-auto relative">
-        <h1 className="text-xl font-bold text-foreground cursor-pointer" onClick={() => navigate("/")}>
+      <div className="flex items-center justify-between px-4 h-14 max-w-7xl mx-auto">
+        {/* Logo */}
+        <h1
+          className="text-lg sm:text-xl font-bold text-foreground cursor-pointer flex-shrink-0"
+          onClick={() => navigate("/")}
+        >
           Cine<span className="text-primary">Vault</span>
         </h1>
 
         {/* Desktop Navigation - Centered */}
-        <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+        <nav className="hidden md:flex items-center gap-1 flex-1 justify-center max-w-2xl mx-4">
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-button text-sm font-medium transition-all duration-200",
+                  "flex items-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap",
                   isActive
                     ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted",
@@ -37,12 +41,15 @@ export const Header: React.FC = () => {
               }
             >
               <Icon className="w-4 h-4" />
-              <span>{label}</span>
+              <span className="hidden lg:inline">{label}</span>
             </NavLink>
           ))}
         </nav>
 
-        <ProfileMenu />
+        {/* Profile Menu */}
+        <div className="flex-shrink-0">
+          <ProfileMenu />
+        </div>
       </div>
     </header>
   );
