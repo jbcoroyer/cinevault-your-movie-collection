@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../integrations/supabase/client";
@@ -11,7 +11,9 @@ import { Switch } from "../components/ui/switch";
 import { Separator } from "../components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { toast } from "../hooks/use-toast";
-import { Moon, Sun, Mail, Bell, RefreshCw, CheckCircle2, ShieldCheck, Lock, Laptop } from "lucide-react";
+import { Moon, Sun, Mail, Bell, RefreshCw, CheckCircle2, Lock, Laptop, Palette, Check } from "lucide-react";
+import { ACCENT_COLORS, applyThemeColor } from "@/lib/theme-config";
+import { cn } from "@/lib/utils";
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -31,13 +33,32 @@ export default function Settings() {
   const [notifMarketing, setNotifMarketing] = useState(false);
   const [notifSecurity, setNotifSecurity] = useState(true);
 
+  // État pour la couleur d'accentuation
+  const [accentColor, setAccentColor] = useState("default");
+
   // État pour la mise à jour
   const [updateLoading, setUpdateLoading] = useState(false);
+
+  useEffect(() => {
+    const savedColor = localStorage.getItem("theme-accent") || "default";
+    setAccentColor(savedColor);
+  }, []);
 
   // Toggle dark mode
   const isDarkMode = theme === "dark";
   const handleThemeToggle = (checked: boolean) => {
     setTheme(checked ? "dark" : "light");
+  };
+
+  // Changement de couleur
+  const handleColorChange = (colorValue: string) => {
+    setAccentColor(colorValue);
+    localStorage.setItem("theme-accent", colorValue);
+    applyThemeColor(colorValue);
+    toast({
+      title: "Thème mis à jour",
+      description: "La couleur d'accentuation a été modifiée.",
+    });
   };
 
   // Gestion du changement d'email
@@ -136,29 +157,54 @@ export default function Settings() {
       <main className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
         <h1 className="text-2xl font-bold mb-6">Paramètres</h1>
 
-        {/* --- APPARENCE --- */}
+        {/* --- APPARENCE & THEME --- */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-              Apparence
+              <Palette className="h-5 w-5" />
+              Apparence & Thème
             </CardTitle>
-            <CardDescription>Personnalisez l'apparence de l'application.</CardDescription>
+            <CardDescription>Personnalisez l'expérience visuelle de CineVault.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
+            {/* Mode Sombre */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Sun className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="theme-toggle" className="text-base cursor-pointer">
-                  Thème sombre
+                <div className="p-2 rounded-full bg-muted">
+                  {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                </div>
+                <Label htmlFor="theme-toggle" className="text-base cursor-pointer font-medium">
+                  Mode sombre
                 </Label>
-                <Moon className="h-4 w-4 text-muted-foreground" />
               </div>
-              <Switch
-                id="theme-toggle"
-                checked={isDarkMode}
-                onCheckedChange={handleThemeToggle}
-              />
+              <Switch id="theme-toggle" checked={isDarkMode} onCheckedChange={handleThemeToggle} />
+            </div>
+
+            <Separator />
+
+            {/* Couleur d'accentuation */}
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Couleur d'accentuation</Label>
+              <div className="grid grid-cols-5 sm:grid-cols-10 gap-3">
+                {ACCENT_COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    onClick={() => handleColorChange(color.value)}
+                    className={cn(
+                      "group relative w-full aspect-square rounded-full flex items-center justify-center transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-primary",
+                      color.class,
+                      accentColor === color.value &&
+                        "ring-2 ring-offset-2 ring-offset-background ring-foreground scale-110",
+                    )}
+                    title={color.name}
+                  >
+                    {accentColor === color.value && <Check className="w-4 h-4 text-white drop-shadow-md" />}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                Cette couleur s'appliquera aux boutons, liens et éléments actifs de l'application.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -246,16 +292,10 @@ export default function Settings() {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                disabled={passwordLoading || !newPassword || !confirmPassword}
-                className="w-full"
-              >
+              <Button type="submit" disabled={passwordLoading || !newPassword || !confirmPassword} className="w-full">
                 {passwordLoading ? "Mise à jour..." : "Changer le mot de passe"}
               </Button>
-              <p className="text-xs text-muted-foreground">
-                Le mot de passe doit contenir au moins 6 caractères.
-              </p>
+              <p className="text-xs text-muted-foreground">Le mot de passe doit contenir au moins 6 caractères.</p>
             </form>
           </CardContent>
         </Card>
@@ -275,11 +315,7 @@ export default function Settings() {
                 <Label className="text-base">Alertes de sécurité</Label>
                 <p className="text-xs text-muted-foreground">Emails concernant la sécurité de votre compte.</p>
               </div>
-              <Switch
-                checked={notifSecurity}
-                onCheckedChange={setNotifSecurity}
-                disabled
-              />
+              <Switch checked={notifSecurity} onCheckedChange={setNotifSecurity} disabled />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
