@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trophy, Lock, CheckCircle2, Crown, Zap, Filter, Star } from "lucide-react";
+import { Trophy, Lock, CheckCircle2, Crown, Zap, Filter, Star, Clapperboard, Film, Disc } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Badges() {
