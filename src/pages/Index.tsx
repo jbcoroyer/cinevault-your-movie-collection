@@ -51,28 +51,34 @@ export default function Index() {
                 alt={featuredMovie.title}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
+              {/* CORRECTION CONTRASTE : Utilisation de couleurs sombres fixes au lieu de 'background' qui change selon le thème */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/80 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#09090b]/90 via-[#09090b]/50 to-transparent" />
             </div>
 
             {/* Content */}
             <div className="relative z-10 container mx-auto px-4 sm:px-6">
               <div className="max-w-2xl space-y-6 animate-fade-in-up">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-primary text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-primary text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-sm">
                   <Zap className="w-3 h-3" /> La Référence Cinéma
                 </div>
 
-                <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl font-bold leading-[1.1] text-white">
+                <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl font-bold leading-[1.1] text-white drop-shadow-lg">
                   Votre collection de films, <span className="text-primary">réinventée.</span>
                 </h1>
 
-                <p className="text-lg sm:text-xl text-slate-300 leading-relaxed max-w-lg">
+                {/* Texte plus clair pour meilleur contraste */}
+                <p className="text-lg sm:text-xl text-gray-100 leading-relaxed max-w-lg drop-shadow-md font-medium">
                   Organisez votre vidéothèque physique, suivez ce que vous regardez, gagnez des badges et découvrez vos
                   prochains coups de cœur.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                  <Button asChild size="lg" className="h-12 px-8 text-base font-semibold shadow-xl shadow-primary/20">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="h-12 px-8 text-base font-semibold shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+                  >
                     <Link to="/auth?mode=signup">
                       Commencer l'aventure
                       <ArrowRight className="w-5 h-5 ml-2" />
@@ -82,7 +88,7 @@ export default function Index() {
                     asChild
                     variant="outline"
                     size="lg"
-                    className="h-12 px-8 text-base bg-white/5 border-white/20 hover:bg-white/10 text-white"
+                    className="h-12 px-8 text-base bg-white/10 border-white/30 hover:bg-white/20 text-white backdrop-blur-sm"
                   >
                     <Link to="/search">
                       <PlayCircle className="w-5 h-5 mr-2" />
@@ -91,17 +97,18 @@ export default function Index() {
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-6 pt-6 text-sm text-slate-400 font-medium">
-                  <div className="flex items-center gap-2">
-                    <MonitorPlay className="w-4 h-4 text-primary" />
+                {/* Icônes de fonctionnalités plus contrastées */}
+                <div className="flex flex-wrap items-center gap-6 pt-6 text-sm text-gray-200 font-semibold">
+                  <div className="flex items-center gap-2 drop-shadow-sm">
+                    <MonitorPlay className="w-5 h-5 text-primary" />
                     <span>Gestion de collection</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-primary" />
+                  <div className="flex items-center gap-2 drop-shadow-sm">
+                    <Trophy className="w-5 h-5 text-primary" />
                     <span>Gamification</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Film className="w-4 h-4 text-primary" />
+                  <div className="flex items-center gap-2 drop-shadow-sm">
+                    <Film className="w-5 h-5 text-primary" />
                     <span>Infos complètes</span>
                   </div>
                 </div>
