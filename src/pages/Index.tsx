@@ -16,6 +16,16 @@ import {
   BentoDescription,
 } from "../components/bento/BentoGrid";
 import { GlassCard } from "../components/ui/GlassCard";
+
+// New home components
+import {
+  LiveActivityFeed,
+  CommunityStats,
+  MostOwnedMovies,
+  TopCollectorsCarousel,
+  RareEditionsSection,
+} from "../components/home";
+
 import { getPopularMovies, getNowAvailableMovies, Movie, getImageUrl } from "../services/tmdb";
 import { useAuth } from "../contexts/AuthContext";
 import { useBadgeNotification } from "../contexts/BadgeNotificationContext";
@@ -34,18 +44,24 @@ import {
   Sparkles,
   TrendingUp,
   Eye,
+  Disc,
+  Users,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import { cn } from "@/lib/utils";
 
 /**
- * Index Page — Landing & Dashboard
+ * Index Page — Landing & Dashboard (Refonte v2)
  *
- * @description Page d'accueil avec:
+ * @description Page d'accueil repensée avec:
+ * - Live Activity Feed (bandeau temps réel)
+ * - Compteurs communautaires animés
+ * - Collections populaires (carrousel profils)
+ * - Films les plus possédés (classement)
+ * - Raretés & Collectors (showcase)
  * - Hero cinematique glassmorphism (visiteurs)
  * - Dashboard Bento Grid personnalisé (utilisateurs connectés)
- * - Sections de films avec animations stagger
  */
 
 export default function Index() {
@@ -72,38 +88,32 @@ export default function Index() {
     fetchMovies();
   }, []);
 
-  const featuredMovie = popular[0];
-  const secondaryMovies = popular.slice(1, 4);
+  // Featured movie for hero
+  const featuredMovie = nowAvailable[0] || popular[0];
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8 overflow-x-hidden">
-      {/* Grain Overlay */}
-      <div className="grain-overlay" />
-
-      {/* Mesh Gradient Background */}
-      <div className="fixed inset-0 mesh-gradient opacity-50 pointer-events-none" />
-
+    <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="relative w-full max-w-full">
+      <main className="pb-24 md:pb-8">
         {/* ========================================
-            LANDING HERO — Visiteurs non connectés
+            HERO SECTION — Non-connectés uniquement
             ======================================== */}
-        {!user && featuredMovie && (
-          <section className="relative w-full min-h-[90vh] sm:min-h-[85vh] flex items-end pb-16 sm:pb-24">
-            {/* Background Image avec parallax subtle */}
+        {!user && (
+          <section className="relative min-h-[85vh] flex items-center overflow-hidden">
+            {/* Background Image with Ken Burns effect */}
             <div className="absolute inset-0 z-0">
-              <img
-                src={`https://image.tmdb.org/t/p/original${featuredMovie.backdrop_path}`}
-                alt={featuredMovie.title}
-                className="w-full h-full object-cover scale-105"
-              />
-
-              {/* Multiple gradient overlays pour profondeur */}
-              <div className="absolute inset-0 bg-black/40" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-background/60 via-transparent to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
+              {featuredMovie?.backdrop_path && (
+                <img
+                  src={`https://image.tmdb.org/t/p/original${featuredMovie.backdrop_path}`}
+                  alt=""
+                  className="w-full h-full object-cover scale-105 animate-[kenburns_30s_ease-in-out_infinite_alternate]"
+                />
+              )}
+              {/* Overlays */}
+              <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/30" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
             </div>
 
             {/* Content */}
@@ -120,7 +130,7 @@ export default function Index() {
                   )}
                 >
                   <Sparkles className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium text-white">Votre cinémathèque personnelle</span>
+                  <span className="text-sm font-medium text-white">La communauté des collectionneurs de films</span>
                 </div>
 
                 {/* Title */}
@@ -132,9 +142,9 @@ export default function Index() {
                     "animate-fade-in-up stagger-1",
                   )}
                 >
-                  Organisez votre
+                  Votre vidéothèque
                   <br />
-                  <span className="text-gradient-gold">passion cinéma</span>
+                  <span className="text-gradient-gold">mérite mieux</span>
                 </h1>
 
                 {/* Subtitle */}
@@ -145,8 +155,8 @@ export default function Index() {
                     "animate-fade-in-up stagger-2",
                   )}
                 >
-                  Créez votre collection, suivez vos films vus, découvrez des pépites et gagnez des badges. Tout votre
-                  univers cinéma en un seul endroit.
+                  Cataloguez vos DVD et Blu-ray, découvrez les collections des autres passionnés, et trouvez vos
+                  prochaines pépites grâce à la communauté.
                 </p>
 
                 {/* CTA Buttons */}
@@ -157,7 +167,7 @@ export default function Index() {
                     onClick={() => navigate("/auth")}
                   >
                     <UserPlus className="w-5 h-5 mr-2" />
-                    Commencer gratuitement
+                    Créer ma collection
                   </Button>
                   <Button
                     variant="outline"
@@ -177,10 +187,10 @@ export default function Index() {
                 {/* Features Pills */}
                 <div className={cn("flex flex-wrap gap-3 mt-10", "animate-fade-in-up stagger-4")}>
                   {[
-                    { icon: Library, label: "Collection physique" },
+                    { icon: Disc, label: "Collection physique" },
+                    { icon: Users, label: "Communauté active" },
                     { icon: Trophy, label: "Gamification" },
-                    { icon: Film, label: "Infos TMDB" },
-                    { icon: MonitorPlay, label: "Streaming" },
+                    { icon: TrendingUp, label: "Découvertes" },
                   ].map(({ icon: Icon, label }) => (
                     <div
                       key={label}
@@ -199,19 +209,39 @@ export default function Index() {
                 </div>
               </div>
             </div>
+
+            {/* Ken Burns animation */}
+            <style>{`
+              @keyframes kenburns {
+                0% { transform: scale(1.05) translate(0, 0); }
+                100% { transform: scale(1.15) translate(-2%, -2%); }
+              }
+            `}</style>
           </section>
         )}
+
+        {/* ========================================
+            LIVE ACTIVITY FEED — Bandeau temps réel
+            ======================================== */}
+        <LiveActivityFeed className="mt-0" />
+
+        {/* ========================================
+            COMMUNITY STATS — Compteurs animés
+            ======================================== */}
+        <CommunityStats />
 
         {/* ========================================
             DASHBOARD BENTO — Utilisateurs connectés
             ======================================== */}
         {user && !loading && (
-          <section className="relative px-4 sm:px-6 py-8 sm:py-12 mb-8">
+          <section className="relative px-4 sm:px-6 py-8 sm:py-12">
             <div className="container mx-auto">
               {/* Section Header */}
               <div className="mb-6 sm:mb-8">
                 <span className="section-label">Tableau de bord</span>
-                <h2 className="font-display text-2xl sm:text-3xl font-semibold mt-1">Bienvenue</h2>
+                <h2 className="font-display text-2xl sm:text-3xl font-semibold mt-1">
+                  Bienvenue, {user.email?.split("@")[0]}
+                </h2>
               </div>
 
               {/* Bento Grid */}
@@ -250,118 +280,102 @@ export default function Index() {
                   interactive
                   animationDelay={100}
                   onClick={() => navigate("/badges")}
-                  className="lg:col-span-2 lg:row-span-2"
                 >
                   <BentoContent>
                     <BentoIcon color="primary">
                       <Zap className="w-5 h-5" />
                     </BentoIcon>
-                    <div className="mt-auto">
-                      <BentoLabel>Niveau</BentoLabel>
-                      <BentoValue className="text-gradient-gold">{currentLevel}</BentoValue>
-                      <div className="mt-3">
-                        <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                          <span>{currentXp} XP</span>
-                          <span>{nextLevelXp} XP</span>
-                        </div>
-                        <Progress value={progressPercent} className="h-2" />
-                      </div>
+                    <BentoLabel className="mt-3">Niveau {currentLevel}</BentoLabel>
+                    <BentoValue className="text-gradient-gold">{currentXp} XP</BentoValue>
+                    <div className="mt-3 space-y-1.5">
+                      <Progress value={progressPercent} className="h-2" />
+                      <p className="text-xs text-muted-foreground">
+                        {nextLevelXp - currentXp} XP pour le niveau {currentLevel + 1}
+                      </p>
                     </div>
                   </BentoContent>
                 </BentoItem>
 
-                {/* Badges Count */}
+                {/* Collection Stats */}
                 <BentoItem
-                  size="sm"
-                  variant="glass"
-                  interactive
-                  animationDelay={150}
-                  onClick={() => navigate("/badges")}
-                  className="lg:col-span-2"
-                >
-                  <BentoContent padding="sm">
-                    <div className="flex items-center justify-between h-full">
-                      <div>
-                        <BentoValue>{unlockedBadges.length}</BentoValue>
-                        <BentoDescription>Badges débloqués</BentoDescription>
-                      </div>
-                      <BentoIcon color="primary">
-                        <Trophy className="w-5 h-5" />
-                      </BentoIcon>
-                    </div>
-                  </BentoContent>
-                </BentoItem>
-
-                {/* Films Vus */}
-                <BentoItem
-                  size="sm"
+                  size="md"
                   variant="glass"
                   interactive
                   animationDelay={200}
-                  onClick={() => navigate("/profile")}
-                  className="lg:col-span-2"
-                >
-                  <BentoContent padding="sm">
-                    <div className="flex items-center justify-between h-full">
-                      <div>
-                        <BentoValue>{userStats.watchedIds.size}</BentoValue>
-                        <BentoDescription>Films vus</BentoDescription>
-                      </div>
-                      <BentoIcon color="muted">
-                        <Eye className="w-5 h-5" />
-                      </BentoIcon>
-                    </div>
-                  </BentoContent>
-                </BentoItem>
-
-                {/* Quick Access - Collection */}
-                <BentoItem
-                  size="md"
-                  variant="gradient"
-                  interactive
-                  animationDelay={250}
                   onClick={() => navigate("/collection")}
-                  className="lg:col-span-2 lg:row-span-2"
                 >
                   <BentoContent>
                     <BentoIcon color="primary">
                       <Library className="w-5 h-5" />
                     </BentoIcon>
-                    <div className="mt-auto">
-                      <BentoLabel>Ma collection</BentoLabel>
-                      <BentoValue>{userStats.physicalCount}</BentoValue>
-                      <BentoDescription>Films physiques</BentoDescription>
+                    <BentoLabel className="mt-3">Ma Collection</BentoLabel>
+                    <BentoValue>{userStats?.physical_count || 0}</BentoValue>
+                    <BentoDescription>DVD & Blu-ray</BentoDescription>
+                  </BentoContent>
+                </BentoItem>
+
+                {/* Watched Stats */}
+                <BentoItem size="sm" variant="glass" interactive animationDelay={300}>
+                  <BentoContent padding="sm">
+                    <div className="flex items-center gap-3">
+                      <BentoIcon color="primary">
+                        <Eye className="w-4 h-4" />
+                      </BentoIcon>
+                      <div>
+                        <BentoValue className="text-2xl">{userStats?.watched_count || 0}</BentoValue>
+                        <p className="text-xs text-muted-foreground">Films vus</p>
+                      </div>
                     </div>
                   </BentoContent>
                 </BentoItem>
 
-                {/* Favoris */}
-                <BentoItem size="sm" variant="default" interactive animationDelay={300} className="lg:col-span-2">
+                {/* Favorites Stats */}
+                <BentoItem size="sm" variant="glass" interactive animationDelay={400}>
                   <BentoContent padding="sm">
-                    <div className="flex items-center justify-between h-full">
-                      <div>
-                        <BentoValue>{userStats.favoriteIds.size}</BentoValue>
-                        <BentoDescription>Favoris</BentoDescription>
-                      </div>
-                      <BentoIcon color="muted">
-                        <Heart className="w-5 h-5" />
+                    <div className="flex items-center gap-3">
+                      <BentoIcon color="primary">
+                        <Heart className="w-4 h-4" />
                       </BentoIcon>
+                      <div>
+                        <BentoValue className="text-2xl">{userStats?.favorites_count || 0}</BentoValue>
+                        <p className="text-xs text-muted-foreground">Favoris</p>
+                      </div>
                     </div>
                   </BentoContent>
                 </BentoItem>
 
-                {/* Critiques */}
-                <BentoItem size="sm" variant="default" interactive animationDelay={350} className="lg:col-span-2">
+                {/* Badges Stats */}
+                <BentoItem
+                  size="sm"
+                  variant="glass"
+                  interactive
+                  animationDelay={500}
+                  onClick={() => navigate("/badges")}
+                >
                   <BentoContent padding="sm">
-                    <div className="flex items-center justify-between h-full">
-                      <div>
-                        <BentoValue>{userStats.reviewCount}</BentoValue>
-                        <BentoDescription>Critiques</BentoDescription>
-                      </div>
-                      <BentoIcon color="muted">
-                        <Star className="w-5 h-5" />
+                    <div className="flex items-center gap-3">
+                      <BentoIcon color="primary">
+                        <Trophy className="w-4 h-4" />
                       </BentoIcon>
+                      <div>
+                        <BentoValue className="text-2xl">{unlockedBadges?.length || 0}</BentoValue>
+                        <p className="text-xs text-muted-foreground">Badges</p>
+                      </div>
                     </div>
+                  </BentoContent>
+                </BentoItem>
+
+                {/* Quick Action - Search */}
+                <BentoItem
+                  size="sm"
+                  variant="gradient"
+                  interactive
+                  animationDelay={600}
+                  onClick={() => navigate("/search")}
+                >
+                  <BentoContent padding="sm" className="items-center justify-center text-center">
+                    <TrendingUp className="w-6 h-6 text-primary mb-2" />
+                    <span className="text-sm font-medium">Découvrir</span>
                   </BentoContent>
                 </BentoItem>
               </BentoGrid>
@@ -370,51 +384,70 @@ export default function Index() {
         )}
 
         {/* ========================================
-            MOVIE SECTIONS
+            TOP COLLECTORS — Carrousel des profils
             ======================================== */}
+        <TopCollectorsCarousel />
 
-        {/* Following Section - Only for logged users */}
+        {/* ========================================
+            MOST OWNED MOVIES — Classement
+            ======================================== */}
+        <MostOwnedMovies limit={10} />
+
+        {/* ========================================
+            RARE EDITIONS — Showcase
+            ======================================== */}
+        <RareEditionsSection limit={8} />
+
+        {/* ========================================
+            FOLLOWING MOVIES — Activité abonnements
+            ======================================== */}
         {user && <FollowingMoviesSection />}
 
-        {/* Popular Movies */}
+        {/* ========================================
+            NOW AVAILABLE — Films récents
+            ======================================== */}
         <MovieSection
-          title="Films populaires"
-          label="Tendances"
-          subtitle="Les films qui font parler d'eux"
-          movies={popular}
-          loading={loading}
-          seeMoreLink="/movies/popular"
-          cardSize="lg"
-        />
-
-        {/* Now Available */}
-        <MovieSection
-          title="Disponibles maintenant"
-          label="Sorties récentes"
-          subtitle="À découvrir en streaming ou en salle"
+          title="Actuellement disponibles"
+          subtitle="En salles et en streaming"
           movies={nowAvailable}
           loading={loading}
-          seeMoreLink="/movies/now-available"
-          cardSize="md"
+          linkTo="/movies/now-available"
+          linkLabel="Voir tout"
         />
 
-        {/* Discover More - CTA Section for non-logged users */}
+        {/* ========================================
+            POPULAR MOVIES — Films populaires
+            ======================================== */}
+        <MovieSection
+          title="Films populaires"
+          subtitle="Les plus appréciés du moment"
+          movies={popular}
+          loading={loading}
+          linkTo="/movies/popular"
+          linkLabel="Voir tout"
+        />
+
+        {/* ========================================
+            CTA SECTION — Non-connectés
+            ======================================== */}
         {!user && (
-          <section className="px-4 sm:px-6 py-12 sm:py-16">
+          <section className="px-4 sm:px-6 py-16">
             <div className="container mx-auto">
-              <GlassCard variant="gradient" padding="lg" className="text-center">
-                <div className="max-w-2xl mx-auto">
-                  <span className="section-label">Rejoignez-nous</span>
-                  <h2 className="font-display text-2xl sm:text-3xl font-semibold mt-2">
-                    Prêt à organiser votre cinémathèque ?
-                  </h2>
-                  <p className="text-muted-foreground mt-4">
-                    Créez votre compte gratuit et commencez à explorer, collecter et partager votre passion pour le
-                    cinéma.
-                  </p>
-                  <Button size="lg" className="btn-gold mt-6" onClick={() => navigate("/auth")}>
-                    <Sparkles className="w-5 h-5 mr-2" />
-                    Créer mon compte
+              <GlassCard variant="aurora" padding="xl" className="text-center max-w-2xl mx-auto">
+                <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Disc className="w-8 h-8 text-primary" />
+                </div>
+                <h2 className="font-display text-2xl sm:text-3xl font-semibold mb-4">
+                  Prêt à cataloguer votre collection ?
+                </h2>
+                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                  Rejoignez des milliers de collectionneurs passionnés. Cataloguez vos films, découvrez de nouvelles
+                  pépites et partagez votre passion.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button size="lg" className="btn-gold" onClick={() => navigate("/auth")}>
+                    <UserPlus className="w-5 h-5 mr-2" />
+                    Créer mon compte gratuit
                   </Button>
                 </div>
               </GlassCard>
