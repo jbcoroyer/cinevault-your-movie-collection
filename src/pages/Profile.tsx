@@ -5,7 +5,7 @@ import { useUserMovies } from "@/hooks/useUserMovies";
 import { useUserTopMovies } from "@/hooks/useUserTopMovies";
 import { useFollows } from "@/hooks/useFollows";
 import { supabase } from "@/integrations/supabase/client";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
