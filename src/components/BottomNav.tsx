@@ -1,64 +1,44 @@
 import { Home, Search, Library, Trophy } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 /**
- * BottomNav - Navigation mobile avec effet glass
- *
- * Features:
- * - Glassmorphism avec blur intense
- * - Icônes avec scale au tap
- * - Badge animé sur Collection
- * - Indicateur actif avec glow
+ * BottomNav - Navigation mobile raccord avec Header
+ * - Ligne dorée au-dessus de l'onglet actif
+ * - Collection mis en avant
  */
 
 const navItems = [
-  { to: "/", icon: Home, label: "Accueil" },
+  { to: "/", icon: Home, label: "Accueil", exact: true },
   { to: "/search", icon: Search, label: "Recherche" },
-  { to: "/collection", icon: Library, label: "Collection", showBadge: true },
+  { to: "/collection", icon: Library, label: "Collection", isMain: true },
   { to: "/badges", icon: Trophy, label: "Badges" },
 ];
 
 export const BottomNav: React.FC = () => {
+  const location = useLocation();
   const { user } = useAuth();
   const [collectionCount, setCollectionCount] = useState(0);
 
   useEffect(() => {
-    const fetchCollectionCount = async () => {
-      if (!user) {
-        setCollectionCount(0);
-        return;
-      }
+    if (!user) return setCollectionCount(0);
 
-      const { count, error } = await supabase
+    const fetch = async () => {
+      const { count } = await supabase
         .from("physical_movies")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id);
-
-      if (!error && count !== null) {
-        setCollectionCount(count);
-      }
+      setCollectionCount(count || 0);
     };
 
-    fetchCollectionCount();
+    fetch();
 
     const channel = supabase
-      .channel("collection-count-bottom")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "physical_movies",
-          filter: user ? `user_id=eq.${user.id}` : undefined,
-        },
-        () => {
-          fetchCollectionCount();
-        },
-      )
+      .channel("bottomnav-collection")
+      .on("postgres_changes", { event: "*", schema: "public", table: "physical_movies" }, fetch)
       .subscribe();
 
     return () => {
@@ -66,88 +46,55 @@ export const BottomNav: React.FC = () => {
     };
   }, [user]);
 
+  const isActive = (to: string, exact?: boolean) =>
+    exact ? location.pathname === to : location.pathname.startsWith(to);
+
   return (
-    <nav
-      className={cn(
-        "fixed bottom-0 left-0 right-0 z-50",
-        "nav-glass border-t border-border/50",
-        "safe-area-bottom md:hidden",
-      )}
-    >
-      <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
-        {navItems.map(({ to, icon: Icon, label, showBadge }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              cn(
-                "relative flex flex-col items-center justify-center gap-1",
-                "w-16 h-14 rounded-2xl",
-                "transition-all duration-300",
-                "active:scale-90",
-                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {/* Background glow for active state */}
-                {isActive && (
-                  <span
-                    className={cn("absolute inset-1 rounded-xl", "bg-primary/10", "animate-pulse-glow")}
-                    style={{ animationDuration: "3s" }}
-                  />
-                )}
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border safe-area-bottom md:hidden">
+      <div className="flex justify-around items-center h-16 max-w-md mx-auto">
+        {navItems.map(({ to, icon: Icon, label, exact, isMain }) => {
+          const active = isActive(to, exact);
 
-                {/* Icon container */}
-                <div className="relative z-10">
-                  <Icon
-                    className={cn("w-5 h-5 transition-all duration-300", isActive && "scale-110")}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              className={cn(
+                "relative flex flex-col items-center justify-center gap-1 w-16 h-14",
+                "transition-colors active:scale-95",
+              )}
+            >
+              {/* Indicateur actif */}
+              {active && <span className="absolute top-0 left-3 right-3 h-0.5 bg-amber-500 rounded-full" />}
 
-                  {/* Badge */}
-                  {showBadge && collectionCount > 0 && (
-                    <span
-                      className={cn(
-                        "absolute -top-1.5 -right-2.5",
-                        "min-w-[16px] h-4 px-1",
-                        "flex items-center justify-center",
-                        "text-[10px] font-bold rounded-full",
-                        "bg-primary text-primary-foreground",
-                        "shadow-lg shadow-primary/30",
-                      )}
-                    >
-                      {collectionCount > 99 ? "99+" : collectionCount}
-                    </span>
-                  )}
-                </div>
-
-                {/* Label */}
-                <span
+              {/* Icône */}
+              <div className="relative">
+                <Icon
                   className={cn(
-                    "relative z-10 text-[10px] font-medium",
-                    "transition-all duration-300",
-                    isActive ? "opacity-100" : "opacity-70",
+                    "w-5 h-5",
+                    isMain ? "text-amber-500" : active ? "text-foreground" : "text-muted-foreground",
                   )}
-                >
-                  {label}
-                </span>
-
-                {/* Active dot indicator */}
-                {isActive && (
-                  <span
-                    className={cn(
-                      "absolute -bottom-0.5 w-1 h-1",
-                      "bg-primary rounded-full",
-                      "shadow-lg shadow-primary/50",
-                    )}
-                  />
+                  strokeWidth={active ? 2.5 : 2}
+                />
+                {isMain && collectionCount > 0 && (
+                  <span className="absolute -top-1 -right-2 min-w-[14px] h-[14px] px-1 text-[9px] font-bold rounded-full bg-amber-500 text-white flex items-center justify-center">
+                    {collectionCount > 99 ? "+" : collectionCount}
+                  </span>
                 )}
-              </>
-            )}
-          </NavLink>
-        ))}
+              </div>
+
+              {/* Label */}
+              <span
+                className={cn(
+                  "text-[10px] font-medium",
+                  isMain ? "text-amber-500" : active ? "text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {label}
+              </span>
+            </NavLink>
+          );
+        })}
       </div>
     </nav>
   );
