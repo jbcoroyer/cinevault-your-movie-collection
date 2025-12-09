@@ -8,7 +8,7 @@ import { getPopularMovies, Movie, getImageUrl, MovieDetails } from "../services/
 import { useAuth } from "../contexts/AuthContext";
 import { useBadgeNotification } from "../contexts/BadgeNotificationContext";
 import { getPhysicalMovies, PhysicalMovie } from "../services/physicalMovies";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
 import {
   ChevronRight,
   Trophy,
@@ -26,9 +26,9 @@ import {
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
-import { cn } from "@/lib/utils";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { ShelfView } from "@/components/collection/ShelfView";
+import { cn } from "../lib/utils";
+import { GlassCard } from "../components/ui/GlassCard";
+import { ShelfView } from "../components/collection/ShelfView";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -56,13 +56,19 @@ export default function Index() {
       // Ma collection
       if (user) {
         const collection = await getPhysicalMovies(user.id);
-        setMyCollection(collection.slice(0, 6));
+        // Affiche l'ensemble de la collection (suppression du slice)
+        setMyCollection(collection);
 
         // Détails des films
+        // Attention : charger les détails pour une très grande collection peut être lourd
+        // On le fait ici pour respecter la demande "ensemble de la collection"
         const details: Record<number, MovieDetails> = {};
         await Promise.all(
-          collection.slice(0, 6).map(async (pm) => {
+          collection.map(async (pm) => {
             try {
+              // Vérification si on a déjà les détails pour éviter les appels redondants (optimisation simple)
+              if (details[pm.tmdb_id]) return;
+
               const res = await fetch(
                 `https://api.themoviedb.org/3/movie/${pm.tmdb_id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=fr-FR`,
               );
@@ -251,7 +257,7 @@ export default function Index() {
               <div className="flex items-end justify-between mb-5">
                 <div>
                   <h2 className="text-lg font-semibold">Ma Collection</h2>
-                  <p className="text-sm text-muted-foreground mt-0.5">Vos ajouts récents</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">Votre collection complète</p>
                 </div>
                 <Link
                   to="/collection"
@@ -262,7 +268,7 @@ export default function Index() {
                     "transition-all duration-300",
                   )}
                 >
-                  Voir tout
+                  Gérer
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
