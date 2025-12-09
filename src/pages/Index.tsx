@@ -4,502 +4,385 @@ import { Header } from "../components/Header";
 import { BottomNav } from "../components/BottomNav";
 import { MovieSection } from "../components/MovieSection";
 import { FollowingMoviesSection } from "../components/FollowingMoviesSection";
-import { MovieCardFeatured, MovieCard } from "../components/MovieCard";
-import {
-  BentoGrid,
-  BentoItem,
-  BentoContent,
-  BentoIcon,
-  BentoLabel,
-  BentoTitle,
-  BentoValue,
-  BentoDescription,
-} from "../components/bento/BentoGrid";
-import { GlassCard } from "../components/ui/GlassCard";
-
-// New home components
-import {
-  LiveActivityFeed,
-  CommunityStats,
-  MostOwnedMovies,
-  TopCollectorsCarousel,
-  RareEditionsSection,
-} from "../components/home";
-
-import { getPopularMovies, getNowAvailableMovies, Movie, getImageUrl } from "../services/tmdb";
+import { getPopularMovies, Movie, getImageUrl } from "../services/tmdb";
 import { useAuth } from "../contexts/AuthContext";
 import { useBadgeNotification } from "../contexts/BadgeNotificationContext";
-import {
-  ArrowRight,
-  Film,
-  Trophy,
-  Star,
-  PlayCircle,
-  UserPlus,
-  Zap,
-  MonitorPlay,
-  Library,
-  Heart,
-  Clock,
-  Sparkles,
-  TrendingUp,
-  Eye,
-  Disc,
-  Users,
-} from "lucide-react";
+import { getPhysicalMovies, PhysicalMovie } from "../services/physicalMovies";
+import { supabase } from "@/lib/supabase";
+import { ChevronRight, Trophy, UserPlus, Zap, Library, Heart, Eye, Disc, Users, Sparkles } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 /**
- * Index Page — Landing & Dashboard (Refonte v2)
+ * Page d'accueil - Version épurée
  *
- * @description Page d'accueil repensée avec:
- * - Live Activity Feed (bandeau temps réel)
- * - Compteurs communautaires animés
- * - Collections populaires (carrousel profils)
- * - Films les plus possédés (classement)
- * - Raretés & Collectors (showcase)
- * - Hero cinematique glassmorphism (visiteurs)
- * - Dashboard Bento Grid personnalisé (utilisateurs connectés)
+ * Ordre: Dashboard → Ma Collection → Collections populaires →
+ *        Films collectionnés → Abonnements → Films populaires → Stats
  */
 
 export default function Index() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { currentLevel, currentXp, nextLevelXp, progressPercent, unlockedBadges, userStats } = useBadgeNotification();
-  const [nowAvailable, setNowAvailable] = useState<Movie[]>([]);
+
   const [popular, setPopular] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
+  const [myCollection, setMyCollection] = useState<PhysicalMovie[]>([]);
+  const [movieDetails, setMovieDetails] = useState<Record<number, Movie>>({});
+  const [topCollectors, setTopCollectors] = useState<any[]>([]);
+  const [mostOwned, setMostOwned] = useState<any[]>([]);
+  const [stats, setStats] = useState({ movies: 0, collectors: 0, reviews: 0 });
 
   useEffect(() => {
-    const fetchMovies = async () => {
-      try {
-        const [nowAvailableData, popularData] = await Promise.all([getNowAvailableMovies(), getPopularMovies()]);
-        setNowAvailable(nowAvailableData);
-        setPopular(popularData);
-      } catch (error) {
-        console.error("Error fetching movies:", error);
-      } finally {
-        setLoading(false);
+    loadData();
+  }, [user]);
+
+  const loadData = async () => {
+    try {
+      // Films populaires
+      const popularData = await getPopularMovies();
+      setPopular(popularData);
+
+      // Ma collection
+      if (user) {
+        const collection = await getPhysicalMovies(user.id);
+        setMyCollection(collection.slice(0, 6));
+
+        // Détails des films
+        const details: Record<number, Movie> = {};
+        await Promise.all(
+          collection.slice(0, 6).map(async (pm) => {
+            try {
+              const res = await fetch(
+                `https://api.themoviedb.org/3/movie/${pm.tmdb_id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=fr-FR`,
+              );
+              if (res.ok) details[pm.tmdb_id] = await res.json();
+            } catch {}
+          }),
+        );
+        setMovieDetails(details);
       }
-    };
 
-    fetchMovies();
-  }, []);
+      // Top collectionneurs
+      const { data: pmData } = await supabase.from("physical_movies").select("user_id");
+      if (pmData) {
+        const counts: Record<string, number> = {};
+        pmData.forEach((i) => (counts[i.user_id] = (counts[i.user_id] || 0) + 1));
+        const top = Object.entries(counts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6);
 
-  // Featured movie for hero
-  const featuredMovie = nowAvailable[0] || popular[0];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, username, avatar_url")
+          .in(
+            "id",
+            top.map(([id]) => id),
+          );
 
-  // Extraire les stats correctement depuis userStats (FIXED: using correct property names)
+        setTopCollectors(
+          top.map(([id, count], i) => ({
+            id,
+            count,
+            rank: i + 1,
+            ...profiles?.find((p) => p.id === id),
+          })),
+        );
+      }
+
+      // Films les plus possédés
+      const { data: allPm } = await supabase.from("physical_movies").select("tmdb_id");
+      if (allPm) {
+        const counts: Record<number, number> = {};
+        allPm.forEach((i) => (counts[i.tmdb_id] = (counts[i.tmdb_id] || 0) + 1));
+        const top5 = Object.entries(counts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+
+        const movies = await Promise.all(
+          top5.map(async ([id, count], i) => {
+            try {
+              const res = await fetch(
+                `https://api.themoviedb.org/3/movie/${id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=fr-FR`,
+              );
+              if (res.ok) {
+                const m = await res.json();
+                return { ...m, ownerCount: count, rank: i + 1 };
+              }
+            } catch {}
+            return null;
+          }),
+        );
+        setMostOwned(movies.filter(Boolean));
+      }
+
+      // Stats communauté
+      const [{ count: totalMovies }, { data: users }, { count: totalReviews }] = await Promise.all([
+        supabase.from("physical_movies").select("*", { count: "exact", head: true }),
+        supabase.from("physical_movies").select("user_id"),
+        supabase.from("reviews").select("*", { count: "exact", head: true }),
+      ]);
+      setStats({
+        movies: totalMovies || 0,
+        collectors: new Set(users?.map((u) => u.user_id)).size,
+        reviews: totalReviews || 0,
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const physicalCount = userStats?.physicalCount ?? 0;
   const watchedCount = userStats?.watchedIds?.size ?? 0;
   const favoritesCount = userStats?.favoriteIds?.size ?? 0;
-  const badgesCount = unlockedBadges?.length ?? 0;
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="pb-24 md:pb-8">
-        {/* ========================================
-            HERO SECTION — Non-connectés uniquement
-            ======================================== */}
+      <main className="pb-20 md:pb-8">
+        {/* HERO - Non connectés */}
         {!user && (
-          <section className="relative min-h-[80vh] flex items-center overflow-hidden">
-            {/* Background Image with Ken Burns effect */}
-            <div className="absolute inset-0 z-0">
-              {featuredMovie?.backdrop_path && (
-                <img
-                  src={`https://image.tmdb.org/t/p/original${featuredMovie.backdrop_path}`}
-                  alt=""
-                  className="w-full h-full object-cover scale-105 animate-[kenburns_30s_ease-in-out_infinite_alternate]"
-                />
-              )}
-              {/* Overlays - améliorés pour meilleur contraste */}
-              <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/40" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-background/60" />
-              <div className="absolute inset-0 bg-black/30" />
-            </div>
-
-            {/* Content */}
-            <div className="relative z-10 w-full container mx-auto px-4 sm:px-6">
-              <div className="max-w-3xl">
-                {/* Badge */}
-                <div
-                  className={cn(
-                    "inline-flex items-center gap-2 mb-6",
-                    "px-4 py-2 rounded-full",
-                    "bg-black/40 backdrop-blur-md",
-                    "border border-white/20",
-                    "animate-fade-in-up",
-                  )}
-                >
-                  <Sparkles className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium text-white">La communauté des collectionneurs de films</span>
-                </div>
-
-                {/* Title */}
-                <h1
-                  className={cn(
-                    "font-display text-4xl sm:text-5xl md:text-6xl",
-                    "font-bold text-white leading-[1.1]",
-                    "drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]",
-                    "animate-fade-in-up stagger-1",
-                  )}
-                >
-                  Votre vidéothèque
-                  <br />
-                  <span className="text-gradient-gold">mérite mieux</span>
-                </h1>
-
-                {/* Subtitle */}
-                <p
-                  className={cn(
-                    "mt-6 text-lg sm:text-xl text-white/90",
-                    "max-w-xl leading-relaxed",
-                    "drop-shadow-[0_1px_4px_rgba(0,0,0,0.5)]",
-                    "animate-fade-in-up stagger-2",
-                  )}
-                >
-                  Cataloguez vos DVD et Blu-ray, découvrez les collections des autres passionnés, et trouvez vos
-                  prochaines pépites grâce à la communauté.
-                </p>
-
-                {/* CTA Buttons */}
-                <div className={cn("flex flex-col sm:flex-row gap-4 mt-8", "animate-fade-in-up stagger-3")}>
-                  <Button
-                    size="lg"
-                    className={cn("btn-gold text-base px-8 h-12", "shadow-glow")}
-                    onClick={() => navigate("/auth")}
-                  >
-                    <UserPlus className="w-5 h-5 mr-2" />
-                    Créer ma collection
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className={cn(
-                      "bg-black/30 backdrop-blur-md border-white/30",
-                      "text-white hover:bg-white/20",
-                      "h-12 px-8",
-                    )}
-                    onClick={() => navigate("/search")}
-                  >
-                    <PlayCircle className="w-5 h-5 mr-2" />
-                    Explorer les films
-                  </Button>
-                </div>
-
-                {/* Features Pills */}
-                <div className={cn("flex flex-wrap gap-3 mt-10", "animate-fade-in-up stagger-4")}>
-                  {[
-                    { icon: Disc, label: "Collection physique" },
-                    { icon: Users, label: "Communauté active" },
-                    { icon: Trophy, label: "Gamification" },
-                    { icon: TrendingUp, label: "Découvertes" },
-                  ].map(({ icon: Icon, label }) => (
-                    <div
-                      key={label}
-                      className={cn(
-                        "flex items-center gap-2",
-                        "px-4 py-2 rounded-full",
-                        "bg-black/30 backdrop-blur-sm",
-                        "border border-white/20",
-                        "text-sm text-white/90",
-                      )}
-                    >
-                      <Icon className="w-4 h-4 text-primary" />
-                      <span>{label}</span>
-                    </div>
-                  ))}
-                </div>
+          <section className="px-4 py-16 text-center">
+            <div className="max-w-xl mx-auto">
+              <h1 className="text-3xl sm:text-4xl font-bold mb-4">
+                Votre vidéothèque<span className="text-amber-500"> mérite mieux</span>
+              </h1>
+              <p className="text-muted-foreground mb-8">
+                Cataloguez vos DVD et Blu-ray, découvrez les collections de la communauté.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Button onClick={() => navigate("/auth")} className="bg-amber-500 hover:bg-amber-600">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Créer ma collection
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/search")}>
+                  Explorer
+                </Button>
               </div>
             </div>
-
-            {/* Ken Burns animation */}
-            <style>{`
-              @keyframes kenburns {
-                0% { transform: scale(1.05) translate(0, 0); }
-                100% { transform: scale(1.15) translate(-2%, -2%); }
-              }
-            `}</style>
           </section>
         )}
 
-        {/* ========================================
-            LIVE ACTIVITY FEED — Bandeau temps réel
-            ======================================== */}
-        <LiveActivityFeed className={user ? "mt-0" : ""} />
+        {/* 1. DASHBOARD */}
+        {user && (
+          <section className="px-4 py-6">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-lg font-semibold mb-4">Bonjour, {user.email?.split("@")[0]}</h2>
 
-        {/* ========================================
-            COMMUNITY STATS — Compteurs animés
-            ======================================== */}
-        <CommunityStats />
-
-        {/* ========================================
-            DASHBOARD BENTO — Utilisateurs connectés
-            ======================================== */}
-        {user && !loading && (
-          <section className="relative px-4 sm:px-6 py-6 sm:py-10">
-            <div className="container mx-auto">
-              {/* Section Header */}
-              <div className="mb-5 sm:mb-6">
-                <span className="section-label">Tableau de bord</span>
-                <h2 className="font-display text-xl sm:text-2xl font-semibold mt-1">
-                  Bienvenue, {user.email?.split("@")[0]}
-                </h2>
-              </div>
-
-              {/* Bento Grid - Redesigned for better spacing */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-                {/* Featured Movie - Reduced size with better contrast */}
-                {featuredMovie && (
-                  <div
-                    onClick={() => navigate(`/movie/${featuredMovie.id}`)}
-                    className={cn(
-                      "col-span-2 sm:col-span-4 lg:col-span-3 row-span-2",
-                      "relative overflow-hidden rounded-2xl cursor-pointer",
-                      "bg-card border border-border/50",
-                      "transition-all duration-300 hover:shadow-xl hover:scale-[1.01]",
-                      "group min-h-[200px] sm:min-h-[220px]",
-                    )}
-                  >
-                    {/* Background image */}
-                    <div className="absolute inset-0">
-                      <img
-                        src={`https://image.tmdb.org/t/p/w780${featuredMovie.backdrop_path}`}
-                        alt=""
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      {/* Stronger gradient for better readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/40" />
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
-                    </div>
-
-                    {/* Content */}
-                    <div className="relative z-10 h-full flex flex-col justify-end p-4 sm:p-5">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1.5 self-start",
-                          "px-2.5 py-1 rounded-full mb-2",
-                          "bg-primary/90 text-primary-foreground",
-                          "text-xs font-semibold",
-                        )}
-                      >
-                        <Sparkles className="w-3 h-3" />À l'affiche
-                      </span>
-                      <h3 className="font-display text-base sm:text-lg font-bold text-white line-clamp-2 drop-shadow-lg">
-                        {featuredMovie.title}
-                      </h3>
-                      <p className="text-white/80 text-xs sm:text-sm mt-1 line-clamp-2 max-w-sm">
-                        {featuredMovie.overview}
-                      </p>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="flex items-center gap-1 text-white">
-                          <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                          <span className="font-semibold text-sm">{featuredMovie.vote_average.toFixed(1)}</span>
-                        </span>
-                        <span className="text-white/70 text-xs">{featuredMovie.release_date?.split("-")[0]}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* XP Progress Card */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {/* XP */}
                 <div
                   onClick={() => navigate("/badges")}
-                  className={cn(
-                    "col-span-2 sm:col-span-2 lg:col-span-3",
-                    "relative overflow-hidden rounded-2xl cursor-pointer",
-                    "bg-gradient-to-br from-amber-500/10 via-card to-orange-500/5",
-                    "border border-amber-500/20",
-                    "p-4 sm:p-5",
-                    "transition-all duration-300 hover:shadow-lg hover:border-amber-500/40",
-                  )}
+                  className="col-span-2 sm:col-span-1 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 cursor-pointer hover:bg-amber-500/15"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                      <Zap className="w-5 h-5 text-amber-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
-                        Niveau {currentLevel}
-                      </p>
-                      <p className="font-stats text-2xl sm:text-3xl font-bold text-gradient-gold">{currentXp} XP</p>
-                    </div>
+                  <div className="flex items-center gap-2 text-amber-500 mb-1">
+                    <Zap className="w-4 h-4" />
+                    <span className="text-xs font-medium">Niveau {currentLevel}</span>
                   </div>
-                  <div className="mt-3 space-y-1.5">
-                    <Progress value={progressPercent} className="h-2" />
-                    <p className="text-xs text-muted-foreground">
-                      {nextLevelXp - currentXp} XP pour le niveau {currentLevel + 1}
-                    </p>
-                  </div>
+                  <p className="text-xl font-bold text-amber-500">{currentXp} XP</p>
+                  <Progress value={progressPercent} className="h-1 mt-2" />
                 </div>
 
-                {/* Collection Stats */}
+                {/* Collection */}
                 <div
                   onClick={() => navigate("/collection")}
-                  className={cn(
-                    "col-span-1",
-                    "relative overflow-hidden rounded-2xl cursor-pointer",
-                    "bg-card/80 backdrop-blur-sm border border-border/50",
-                    "p-4",
-                    "transition-all duration-300 hover:shadow-lg hover:bg-card",
-                  )}
+                  className="p-4 rounded-xl bg-card border border-border cursor-pointer hover:border-amber-500/30"
                 >
-                  <div className="flex flex-col h-full">
-                    <div className="w-9 h-9 rounded-xl bg-purple-500/15 flex items-center justify-center mb-2">
-                      <Library className="w-4 h-4 text-purple-500" />
-                    </div>
-                    <p className="font-stats text-2xl sm:text-3xl font-bold">{physicalCount}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Ma Collection</p>
-                  </div>
+                  <Library className="w-4 h-4 text-amber-500 mb-1" />
+                  <p className="text-xl font-bold">{physicalCount}</p>
+                  <p className="text-xs text-muted-foreground">Collection</p>
                 </div>
 
-                {/* Watched Stats */}
-                <div
-                  className={cn(
-                    "col-span-1",
-                    "relative overflow-hidden rounded-2xl",
-                    "bg-card/80 backdrop-blur-sm border border-border/50",
-                    "p-4",
-                    "transition-all duration-300 hover:shadow-lg hover:bg-card",
-                  )}
-                >
-                  <div className="flex flex-col h-full">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center mb-2">
-                      <Eye className="w-4 h-4 text-emerald-500" />
-                    </div>
-                    <p className="font-stats text-2xl sm:text-3xl font-bold">{watchedCount}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Films vus</p>
-                  </div>
+                {/* Vus */}
+                <div className="p-4 rounded-xl bg-card border border-border">
+                  <Eye className="w-4 h-4 text-emerald-500 mb-1" />
+                  <p className="text-xl font-bold">{watchedCount}</p>
+                  <p className="text-xs text-muted-foreground">Vus</p>
                 </div>
 
-                {/* Favorites Stats */}
-                <div
-                  className={cn(
-                    "col-span-1",
-                    "relative overflow-hidden rounded-2xl",
-                    "bg-card/80 backdrop-blur-sm border border-border/50",
-                    "p-4",
-                    "transition-all duration-300 hover:shadow-lg hover:bg-card",
-                  )}
-                >
-                  <div className="flex flex-col h-full">
-                    <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center mb-2">
-                      <Heart className="w-4 h-4 text-red-500" />
-                    </div>
-                    <p className="font-stats text-2xl sm:text-3xl font-bold">{favoritesCount}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Favoris</p>
-                  </div>
+                {/* Favoris */}
+                <div className="p-4 rounded-xl bg-card border border-border">
+                  <Heart className="w-4 h-4 text-red-500 mb-1" />
+                  <p className="text-xl font-bold">{favoritesCount}</p>
+                  <p className="text-xs text-muted-foreground">Favoris</p>
                 </div>
 
-                {/* Badges Stats */}
+                {/* Badges */}
                 <div
                   onClick={() => navigate("/badges")}
-                  className={cn(
-                    "col-span-1",
-                    "relative overflow-hidden rounded-2xl cursor-pointer",
-                    "bg-card/80 backdrop-blur-sm border border-border/50",
-                    "p-4",
-                    "transition-all duration-300 hover:shadow-lg hover:bg-card",
-                  )}
+                  className="p-4 rounded-xl bg-card border border-border cursor-pointer hover:border-amber-500/30"
                 >
-                  <div className="flex flex-col h-full">
-                    <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center mb-2">
-                      <Trophy className="w-4 h-4 text-amber-500" />
-                    </div>
-                    <p className="font-stats text-2xl sm:text-3xl font-bold">{badgesCount}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Badges</p>
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div
-                  onClick={() => navigate("/search")}
-                  className={cn(
-                    "col-span-1",
-                    "relative overflow-hidden rounded-2xl cursor-pointer",
-                    "bg-gradient-to-br from-primary/10 to-primary/5",
-                    "border border-primary/20",
-                    "p-4",
-                    "transition-all duration-300 hover:shadow-lg hover:border-primary/40",
-                    "flex flex-col items-center justify-center text-center",
-                  )}
-                >
-                  <TrendingUp className="w-6 h-6 text-primary mb-2" />
-                  <span className="text-sm font-medium">Découvrir</span>
+                  <Trophy className="w-4 h-4 text-amber-500 mb-1" />
+                  <p className="text-xl font-bold">{unlockedBadges?.length ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Badges</p>
                 </div>
               </div>
             </div>
           </section>
         )}
 
-        {/* ========================================
-            TOP COLLECTORS — Carrousel des profils
-            ======================================== */}
-        <TopCollectorsCarousel />
+        {/* 2. MA COLLECTION */}
+        {user && myCollection.length > 0 && (
+          <section className="px-4 py-6">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Ma Collection</h2>
+                <Link to="/collection" className="text-sm text-amber-500 flex items-center gap-1">
+                  Voir tout <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
 
-        {/* ========================================
-            MOST OWNED MOVIES — Classement
-            ======================================== */}
-        <MostOwnedMovies limit={10} />
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                {myCollection.map((pm) => {
+                  const m = movieDetails[pm.tmdb_id];
+                  return (
+                    <Link key={pm.id} to={`/movie/${pm.tmdb_id}`} className="group">
+                      <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted relative">
+                        {m?.poster_path ? (
+                          <img
+                            src={getImageUrl(m.poster_path, "w300") || ""}
+                            alt={m.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Disc className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[9px] font-medium rounded bg-black/70 text-white uppercase">
+                          {pm.format}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-xs font-medium truncate">{m?.title}</p>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
 
-        {/* ========================================
-            RARE EDITIONS — Showcase
-            ======================================== */}
-        <RareEditionsSection limit={8} />
+        {/* 3. COLLECTIONS POPULAIRES */}
+        {topCollectors.length > 0 && (
+          <section className="px-4 py-6">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="w-5 h-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold">Collections populaires</h2>
+              </div>
 
-        {/* ========================================
-            FOLLOWING MOVIES — Activité abonnements
-            ======================================== */}
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                {topCollectors.map((c) => (
+                  <Link
+                    key={c.id}
+                    to={`/profile/${c.id}`}
+                    className="p-3 rounded-xl bg-card border border-border text-center hover:border-amber-500/30"
+                  >
+                    <Avatar className="w-10 h-10 mx-auto mb-2">
+                      <AvatarImage src={c.avatar_url} />
+                      <AvatarFallback className="text-xs bg-amber-500/10 text-amber-600">
+                        {(c.username || "U").slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <p className="text-xs font-medium truncate">@{c.username || "user"}</p>
+                    <p className="text-[10px] text-muted-foreground">{c.count} films</p>
+                    {c.rank <= 3 && <span className="text-xs">{c.rank === 1 ? "🥇" : c.rank === 2 ? "🥈" : "🥉"}</span>}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 4. FILMS LES PLUS COLLECTIONNÉS */}
+        {mostOwned.length > 0 && (
+          <section className="px-4 py-6">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-lg font-semibold mb-4">Les plus collectionnés</h2>
+
+              <div className="space-y-2">
+                {mostOwned.map((m) => (
+                  <Link
+                    key={m.id}
+                    to={`/movie/${m.id}`}
+                    className="flex items-center gap-3 p-2 rounded-lg bg-card border border-border hover:border-amber-500/30"
+                  >
+                    <span className="w-6 text-center font-bold text-sm">
+                      {m.rank <= 3 ? ["🥇", "🥈", "🥉"][m.rank - 1] : m.rank}
+                    </span>
+                    <div className="w-8 h-12 rounded overflow-hidden bg-muted flex-shrink-0">
+                      {m.poster_path && (
+                        <img
+                          src={getImageUrl(m.poster_path, "w92") || ""}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{m.title}</p>
+                      <p className="text-xs text-muted-foreground">{m.release_date?.slice(0, 4)}</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Users className="w-3 h-3" />
+                      {m.ownerCount}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 5. ABONNEMENTS */}
         {user && <FollowingMoviesSection />}
 
-        {/* ========================================
-            NOW AVAILABLE — Films récents
-            ======================================== */}
-        <MovieSection
-          title="Actuellement disponibles"
-          subtitle="En salles et en streaming"
-          movies={nowAvailable}
-          loading={loading}
-          seeMoreLink="/movies/now-available"
-        />
+        {/* 6. FILMS POPULAIRES */}
+        <div className="max-w-4xl mx-auto">
+          <MovieSection
+            title="Films populaires"
+            movies={popular}
+            loading={loading}
+            linkTo="/movies/popular"
+            linkLabel="Voir tout"
+          />
+        </div>
 
-        {/* ========================================
-            POPULAR MOVIES — Films populaires
-            ======================================== */}
-        <MovieSection
-          title="Films populaires"
-          subtitle="Les plus appréciés du moment"
-          movies={popular}
-          loading={loading}
-          seeMoreLink="/movies/popular"
-        />
+        {/* 7. STATS COMMUNAUTÉ */}
+        <section className="px-4 py-8 mt-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-3 gap-4 p-5 rounded-xl bg-card border border-border text-center">
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-amber-500">{stats.movies.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Films</p>
+              </div>
+              <div className="border-x border-border">
+                <p className="text-xl sm:text-2xl font-bold text-amber-500">{stats.collectors.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Collectionneurs</p>
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-amber-500">{stats.reviews.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Reviews</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        {/* ========================================
-            CTA SECTION — Non-connectés
-            ======================================== */}
+        {/* CTA Non connectés */}
         {!user && (
-          <section className="px-4 sm:px-6 py-12">
-            <div className="container mx-auto">
-              <GlassCard variant="gradient" hover="aurora" padding="lg" className="text-center max-w-2xl mx-auto">
-                <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Disc className="w-7 h-7 text-primary" />
-                </div>
-                <h2 className="font-display text-xl sm:text-2xl font-semibold mb-3">
-                  Prêt à cataloguer votre collection ?
-                </h2>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto text-sm sm:text-base">
-                  Rejoignez des milliers de collectionneurs passionnés. Cataloguez vos films, découvrez de nouvelles
-                  pépites et partagez votre passion.
-                </p>
-                <Button size="lg" className="btn-gold" onClick={() => navigate("/auth")}>
-                  <UserPlus className="w-5 h-5 mr-2" />
-                  Créer mon compte gratuit
-                </Button>
-              </GlassCard>
+          <section className="px-4 py-8">
+            <div className="max-w-md mx-auto text-center p-6 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <Disc className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+              <p className="font-semibold mb-2">Prêt à commencer ?</p>
+              <p className="text-sm text-muted-foreground mb-4">Rejoignez la communauté gratuitement.</p>
+              <Button onClick={() => navigate("/auth")} className="bg-amber-500 hover:bg-amber-600">
+                Créer mon compte
+              </Button>
             </div>
           </section>
         )}
