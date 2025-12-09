@@ -17,18 +17,17 @@ import {
   ArrowRight
 } from "lucide-react";
 
-// Utilisation de chemins relatifs pour éviter les erreurs de build
-import { useAuth } from "../../contexts/AuthContext";
-import { useBadgeNotification } from "../../contexts/BadgeNotificationContext";
-import { getPhysicalMovies, PhysicalMovie, formatLabels } from "../../services/physicalMovies";
-import { useUserMovies } from "../../hooks/useUserMovies";
-import { getMovieDetails, getImageUrl, MovieDetails } from "../../services/tmdb";
-import { supabase } from "../../lib/supabase";
-import { cn } from "../../lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Button } from "../ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
+import { getPhysicalMovies, PhysicalMovie, formatLabels } from "@/services/physicalMovies";
+import { useUserMovies } from "@/hooks/useUserMovies";
+import { getMovieDetails, getImageUrl, MovieDetails } from "@/services/tmdb";
+import { supabase } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isValid } from "date-fns";
 import { fr } from "date-fns/locale";
 
 interface ProfileBentoProps {
@@ -40,9 +39,8 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
   const navigate = useNavigate();
   const { user, profile: myProfile } = useAuth();
   const { currentLevel, currentXp, progressPercent } = useBadgeNotification();
-  const { userMovies } = useUserMovies(); // Tous les films de l'utilisateur courant (si isOwnProfile)
+  const { userMovies } = useUserMovies();
 
-  // États pour les données dynamiques
   const [profileData, setProfileData] = useState<any>(null);
   const [lastWatched, setLastWatched] = useState<{ movie: MovieDetails; date: string; rating?: number } | null>(null);
   const [lastBought, setLastBought] = useState<{ movie: MovieDetails; physical: PhysicalMovie } | null>(null);
@@ -50,7 +48,6 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
   const [stats, setStats] = useState({ movies: 0, watched: 0, hours: 0 });
   const [loading, setLoading] = useState(true);
 
-  // Déterminer l'ID cible
   const targetId = userId || user?.id;
 
   useEffect(() => {
@@ -67,18 +64,21 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
         }
         setProfileData(profile);
 
-        // 2. Charger les films physiques (Dernier achat + Stats)
+        // 2. Charger les films physiques
         const physicalMovies = await getPhysicalMovies(targetId);
         setStats(prev => ({ ...prev, movies: physicalMovies.length }));
 
         if (physicalMovies.length > 0) {
-          const lastOne = physicalMovies[0]; // Déjà trié par date normalement
-          const details = await getMovieDetails(lastOne.tmdb_id);
-          setLastBought({ movie: details, physical: lastOne });
+          const lastOne = physicalMovies[0];
+          try {
+            const details = await getMovieDetails(lastOne.tmdb_id);
+            setLastBought({ movie: details, physical: lastOne });
+          } catch (e) {
+            console.error("Erreur chargement détails film physique", e);
+          }
         }
 
         // 3. Charger les films vus et favoris
-        // Si c'est notre profil, on a déjà userMovies via le hook, sinon il faudrait fetcher
         let watchedList: any[] = [];
         let favoritesList: any[] = [];
 
@@ -97,28 +97,30 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
             }
         }
 
-        // Calcul des stats heures (approximatif: 2h par film vu)
         setStats(prev => ({ ...prev, watched: watchedList.length, hours: watchedList.length * 2 }));
 
         // Dernier vu
         if (watchedList.length > 0) {
-            // Trier par date de visionnage
-            watchedList.sort((a, b) => new Date(b.watched_at || b.created_at).getTime() - new Date(a.watched_at || a.created_at).getTime());
+            watchedList.sort((a, b) => new Date(b.watched_at || b.created_at || 0).getTime() - new Date(a.watched_at || a.created_at || 0).getTime());
             const last = watchedList[0];
-            const details = await getMovieDetails(last.tmdb_id);
-            setLastWatched({ 
-                movie: details, 
-                date: last.watched_at || last.created_at, 
-                rating: last.rating 
-            });
+            try {
+                const details = await getMovieDetails(last.tmdb_id);
+                setLastWatched({ 
+                    movie: details, 
+                    date: last.watched_at || last.created_at || new Date().toISOString(), 
+                    rating: last.rating 
+                });
+            } catch (e) { console.error(e); }
         }
 
         // Dernier favori
         if (favoritesList.length > 0) {
-             favoritesList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+             favoritesList.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
              const last = favoritesList[0];
-             const details = await getMovieDetails(last.tmdb_id);
-             setLastFavorite({ movie: details, date: last.created_at });
+             try {
+                const details = await getMovieDetails(last.tmdb_id);
+                setLastFavorite({ movie: details, date: last.created_at || new Date().toISOString() });
+             } catch (e) { console.error(e); }
         }
 
       } catch (error) {
@@ -135,15 +137,21 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
     return <div className="h-96 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
 
-  const getInitials = (name: string) => name ? name.slice(0, 2).toUpperCase() : "KV";
+  const getInitials = (name: string) => name ? name.slice(0, 2).toUpperCase() : "U";
+
+  // Helper pour formater la date en toute sécurité
+  const safeTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    return isValid(date) 
+      ? formatDistanceToNow(date, { addSuffix: true, locale: fr }) 
+      : "récemment";
+  };
 
   return (
     <div className="w-full font-sans selection:bg-primary selection:text-white mb-10">
-      
-      {/* Grille Bento */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-[minmax(160px,auto)]">
         
-        {/* 1. Carte Profil (Grande case) */}
+        {/* 1. Carte Profil */}
         <div className="col-span-1 md:col-span-2 lg:col-span-2 row-span-2 bg-card rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-sm">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
           
@@ -156,7 +164,6 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
                         <AvatarFallback className="bg-muted text-xl font-bold">{getInitials(profileData?.username)}</AvatarFallback>
                     </Avatar>
                 </div>
-                {/* Level Badge */}
                 <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full border-2 border-background z-20">
                     Niv. {currentLevel}
                 </div>
@@ -214,7 +221,7 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
           </div>
         </div>
 
-        {/* 2. Dernier Visionnage (Moyenne case) */}
+        {/* 2. Dernier Visionnage */}
         {lastWatched ? (
             <Link to={`/movie/${lastWatched.movie.id}`} className="col-span-1 md:col-span-1 lg:col-span-1 row-span-2 bg-zinc-900 rounded-3xl p-0 flex flex-col relative overflow-hidden group border border-border/50 hover:border-primary/50 transition-all duration-300">
             <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
@@ -243,7 +250,7 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
                         )}
                     </div>
                     <span className="text-xs text-zinc-400">
-                        {formatDistanceToNow(new Date(lastWatched.date), { addSuffix: true, locale: fr })}
+                        {safeTimeAgo(lastWatched.date)}
                     </span>
                 </div>
                 </div>
@@ -258,14 +265,14 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
             </div>
         )}
 
-        {/* 3. Statistiques rapides (Petite case) */}
+        {/* 3. Statistiques rapides */}
         <div className="bg-gradient-to-br from-amber-500/10 to-card rounded-3xl p-5 border border-amber-500/20 flex flex-col justify-center items-center hover:bg-amber-500/5 transition-colors cursor-pointer group">
           <Trophy className="w-8 h-8 text-amber-500 mb-2 group-hover:scale-110 transition-transform" />
           <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">Top 10%</span>
           <span className="text-xs text-muted-foreground">Visionneur ce mois</span>
         </div>
 
-         {/* 4. Total Séries/Films (Petite case) */}
+         {/* 4. Total Séries/Films */}
          <div className="bg-card rounded-3xl p-5 border border-border/50 flex flex-col justify-center items-center hover:border-primary/30 transition-colors group">
           <div className="flex gap-2 mb-2">
              <Film className="w-5 h-5 text-purple-400 group-hover:-translate-y-1 transition-transform" />
@@ -275,7 +282,7 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
           <span className="text-xs text-muted-foreground">Titres découverts</span>
         </div>
 
-        {/* 5. Dernier Achat (Grande case horizontale) */}
+        {/* 5. Dernier Achat */}
         {lastBought ? (
              <Link to={`/collection`} className="col-span-1 md:col-span-2 bg-card rounded-3xl p-6 flex gap-6 items-center border border-border/50 relative overflow-hidden group hover:border-orange-500/30 transition-all duration-300">
              <div className="absolute right-0 top-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2 group-hover:bg-orange-500/20 transition-colors"></div>
@@ -286,7 +293,6 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
                  alt={lastBought.movie.title}
                  className="w-full h-full object-cover" 
                />
-               {/* Reflet brillant sur le poster */}
                <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" style={{ transform: 'translateX(-100%)', animation: 'shine 1.5s infinite' }} />
              </div>
              
@@ -319,7 +325,7 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
             </Link>
         )}
 
-        {/* 6. Favoris (Dernier ajout) */}
+        {/* 6. Favoris */}
         {lastFavorite ? (
             <Link to={`/movie/${lastFavorite.movie.id}`} className="col-span-1 md:col-span-1 lg:col-span-2 bg-card rounded-3xl p-6 border border-border/50 flex flex-col relative overflow-hidden hover:border-red-500/30 transition-all duration-300 group">
             <div className="flex justify-between items-start mb-4 z-10">
@@ -337,12 +343,11 @@ export const ProfileBento: React.FC<ProfileBentoProps> = ({ userId, isOwnProfile
                 <div className="min-w-0">
                     <h4 className="font-bold text-lg leading-tight truncate text-foreground group-hover:text-red-500 transition-colors">{lastFavorite.movie.title}</h4>
                     <p className="text-sm text-muted-foreground italic truncate">
-                        Ajouté {formatDistanceToNow(new Date(lastFavorite.date), { addSuffix: true, locale: fr })}
+                        Ajouté {safeTimeAgo(lastFavorite.date)}
                     </p>
                 </div>
             </div>
             
-            {/* Background image effect */}
             <div className="absolute inset-0 z-0">
                 <img 
                     src={getImageUrl(lastFavorite.movie.backdrop_path || lastFavorite.movie.poster_path, 'w780') || ''} 
