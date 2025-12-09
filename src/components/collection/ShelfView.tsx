@@ -9,6 +9,7 @@ interface ShelfViewProps {
   movies: PhysicalMovie[];
   movieDetailsMap: Record<number, MovieDetails>;
   onMovieClick: (physicalMovie: PhysicalMovie, movieDetails: MovieDetails | null) => void;
+  variant?: "default" | "light";
 }
 
 // Configuration des dimensions
@@ -47,12 +48,16 @@ const FormatLogo = ({ format }: { format: PhysicalFormat }) => {
   return <div className="h-[2px] w-6 bg-white/20 mb-3 rounded-full mx-auto opacity-50" />;
 };
 
-export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, onMovieClick }) => {
+export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, onMovieClick, variant = "default" }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const isLight = variant === "light";
+
   // --- GESTION TACTILE ---
   const handleTouchMove = (e: React.TouchEvent) => {
+    // En mode light, on laisse le comportement natif (scroll) si l'utilisateur scroll verticalement
+    // Mais on essaie quand même de détecter l'élément sous le doigt pour l'effet visuel
     const touch = e.touches[0];
     const target = document.elementFromPoint(touch.clientX, touch.clientY);
     const spine = target?.closest("[data-movie-id]");
@@ -71,7 +76,14 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
   return (
     <div
       ref={containerRef}
-      className="w-full bg-[#0a0a0a] border-[12px] border-[#151515] rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden relative touch-none perspective-[2000px]"
+      className={cn(
+        "w-full bg-[#0a0a0a] rounded-xl overflow-hidden relative perspective-[2000px]",
+        // Mode Light : Bordures fines, scroll vertical autorisé (touch-pan-y), hauteur plus compacte
+        // Mode Default : Bordures épaisses, pas de scroll (touch-none), grande hauteur
+        isLight
+          ? "border-[4px] border-[#151515] touch-pan-y min-h-[300px]"
+          : "border-[12px] border-[#151515] shadow-[0_0_50px_rgba(0,0,0,0.8)] touch-none min-h-[450px]",
+      )}
       onTouchStart={handleTouchMove}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -83,7 +95,12 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
       {/* Ombre portée du haut de l'étagère */}
       <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-black to-transparent z-20 pointer-events-none opacity-80"></div>
 
-      <div className="relative z-10 flex flex-wrap items-end content-start p-6 sm:p-10 gap-[1px] sm:gap-[2px] min-h-[450px]">
+      <div
+        className={cn(
+          "relative z-10 flex flex-wrap items-end content-start gap-[1px] sm:gap-[2px]",
+          isLight ? "p-4 sm:p-6 min-h-[300px]" : "p-6 sm:p-10 min-h-[450px]",
+        )}
+      >
         {movies.map((pm, index) => {
           const details = movieDetailsMap[pm.tmdb_id];
           const title = details?.title || "Titre inconnu";
