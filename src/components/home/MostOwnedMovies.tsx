@@ -83,7 +83,7 @@ export const MostOwnedMovies: React.FC<MostOwnedMoviesProps> = ({
         {/* Podium - Top 3 */}
         <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
           {movies.slice(0, 3).map((movie, index) => (
-            <PodiumCard key={movie.tmdbId} movie={movie} position={index + 1} />
+            <PodiumCard key={movie.tmdbId} movie={movie} position={(index + 1) as 1 | 2 | 3} />
           ))}
         </div>
 
