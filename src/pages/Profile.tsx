@@ -12,11 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Edit2, Check, X, UserPlus, UserMinus, Eye, Heart, Library, ListVideo, Trophy, Disc, Star } from "lucide-react";
+import { Edit2, Check, X, UserPlus, UserMinus, Eye, Heart, ListVideo, Trophy, Disc } from "lucide-react";
 import { Top5Section } from "@/components/Top5Section";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { FollowListDialog } from "@/components/FollowListDialog";
-import { BentoGrid, BentoCard } from "@/components/bento/BentoGrid";
 // import { GlassCardStat } from "@/components/ui/GlassCard"; // On utilise un design custom maintenant
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 import { getPhysicalMovies } from "@/services/physicalMovies";
@@ -179,28 +178,25 @@ export default function Profile() {
     );
   }
 
-  // Composant interne pour les stats de style "Index Community"
+  // Composant interne pour les stats - design amélioré
   const StatCardContent = ({
     count,
     label,
-    description,
     icon: Icon,
+    accentColor,
   }: {
     count: number;
     label: string;
-    description: string;
     icon: any;
+    accentColor: string;
   }) => (
-    <div className="flex flex-col h-full justify-between p-1">
-      <div className="flex justify-between items-start">
-        <span className="text-3xl md:text-4xl font-bold font-display text-foreground tracking-tight">{count}</span>
-        <div className="p-2 rounded-full bg-primary/10 text-primary">
-          <Icon className="w-5 h-5" />
-        </div>
+    <div className="flex flex-col h-full p-4 sm:p-5">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-auto ${accentColor}`}>
+        <Icon className="w-5 h-5" />
       </div>
-      <div className="mt-2 space-y-1">
-        <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">{label}</h3>
-        <p className="text-xs text-muted-foreground/80 leading-snug line-clamp-2">{description}</p>
+      <div className="mt-auto">
+        <span className="text-3xl sm:text-4xl font-bold font-display text-foreground tracking-tight block">{count}</span>
+        <h3 className="font-medium text-sm text-muted-foreground mt-1">{label}</h3>
       </div>
     </div>
   );
@@ -337,93 +333,79 @@ export default function Profile() {
           />
         </section>
 
-        {/* --- 3. BENTO GRID STATS (Nouveau Design) --- */}
+        {/* --- 3. BENTO GRID STATS (Nouveau Design Asymétrique) --- */}
         <section className="animate-fade-in pb-8" style={{ animationDelay: "200ms" }}>
-          <BentoGrid cols={6} gap="md" className="auto-rows-[160px]">
-            {/* Collection */}
-            <BentoCard
-              size="md" // Prend 2 colonnes sur desktop si configuré, ou 3 cols
-              className="col-span-3 md:col-span-1 bg-gradient-to-br from-indigo-500/5 via-background to-background border-indigo-500/20 hover:border-indigo-500/40 transition-colors group"
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            {/* Collection - Grande carte */}
+            <div 
+              className="col-span-2 row-span-2 relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500/10 via-background to-background border border-indigo-500/20 hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300 cursor-pointer group"
               onClick={() => navigate(isOwnProfile ? "/collection" : "#")}
             >
-              <StatCardContent
-                count={physicalCount}
-                label="Copies Physiques"
-                description="Votre collection de DVD, Blu-ray et 4K soigneusement cataloguée."
-                icon={Disc}
-              />
-            </BentoCard>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl transform translate-x-10 -translate-y-10 group-hover:scale-150 transition-transform duration-500" />
+              <div className="relative flex flex-col h-full p-5 sm:p-6">
+                <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-auto">
+                  <Disc className="w-6 h-6" />
+                </div>
+                <div className="mt-auto">
+                  <span className="text-4xl sm:text-5xl font-bold font-display text-foreground tracking-tight block">{physicalCount}</span>
+                  <h3 className="font-medium text-base text-muted-foreground mt-1">Collection Physique</h3>
+                  <p className="text-xs text-muted-foreground/70 mt-2 hidden sm:block">DVD, Blu-ray & 4K UHD</p>
+                </div>
+              </div>
+            </div>
 
             {/* Films Vus */}
-            <BentoCard
-              size="md"
-              className="col-span-3 md:col-span-1 bg-gradient-to-br from-emerald-500/5 via-background to-background border-emerald-500/20 hover:border-emerald-500/40 transition-colors group"
+            <div 
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/10 via-background to-background border border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300 cursor-pointer group"
               onClick={() => navigate(isOwnProfile ? "/lists/watched" : "#")}
             >
               <StatCardContent
                 count={watchedCount}
-                label="Films Visionnés"
-                description="L'historique de tous les films que vous avez regardés et notés."
+                label="Films Vus"
                 icon={Eye}
+                accentColor="bg-emerald-500/20 text-emerald-400"
               />
-            </BentoCard>
+            </div>
 
             {/* Favoris */}
-            <BentoCard
-              size="md"
-              className="col-span-3 md:col-span-1 bg-gradient-to-br from-red-500/5 via-background to-background border-red-500/20 hover:border-red-500/40 transition-colors group"
+            <div 
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500/10 via-background to-background border border-rose-500/20 hover:border-rose-500/40 hover:shadow-lg hover:shadow-rose-500/5 transition-all duration-300 cursor-pointer group"
               onClick={() => navigate(isOwnProfile ? "/lists/favorites" : "#")}
             >
               <StatCardContent
                 count={favoritesCount}
-                label="Coups de Cœur"
-                description="Vos films préférés absolus, ceux que vous recommandez sans hésiter."
+                label="Favoris"
                 icon={Heart}
+                accentColor="bg-rose-500/20 text-rose-400"
               />
-            </BentoCard>
+            </div>
 
-            {/* Badges & Trophées - Half width on mobile/tablet */}
-            <BentoCard
-              size="sm"
-              className="col-span-3 sm:col-span-1 md:col-span-1 bg-gradient-to-br from-amber-500/5 via-background to-background border-amber-500/20 hover:border-amber-500/40 transition-colors group"
+            {/* Badges */}
+            <div 
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 via-background to-background border border-amber-500/20 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/5 transition-all duration-300 cursor-pointer group"
               onClick={() => navigate("/badges")}
             >
               <StatCardContent
                 count={unlockedBadges.length}
-                label="Badges & Trophées"
-                description="Récompenses débloquées via votre activité de collectionneur."
+                label="Badges"
                 icon={Trophy}
+                accentColor="bg-amber-500/20 text-amber-400"
               />
-            </BentoCard>
+            </div>
 
-            {/* Listes - Half width on mobile/tablet */}
-            <BentoCard
-              size="sm"
-              className="col-span-3 sm:col-span-1 md:col-span-1 bg-gradient-to-br from-blue-500/5 via-background to-background border-blue-500/20 hover:border-blue-500/40 transition-colors group"
+            {/* Listes */}
+            <div 
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500/10 via-background to-background border border-sky-500/20 hover:border-sky-500/40 hover:shadow-lg hover:shadow-sky-500/5 transition-all duration-300 cursor-pointer group"
               onClick={() => navigate("/lists")}
             >
               <StatCardContent
                 count={listsCount}
-                label="Listes Créées"
-                description="Sélections thématiques pour organiser vos soirées cinéma."
+                label="Listes"
                 icon={ListVideo}
+                accentColor="bg-sky-500/20 text-sky-400"
               />
-            </BentoCard>
-
-            {/* Avis/Critiques (Placeholder pour le moment ou redirection vers reviews) */}
-            <BentoCard
-              size="sm"
-              className="col-span-3 sm:col-span-1 md:col-span-1 bg-gradient-to-br from-purple-500/5 via-background to-background border-purple-500/20 hover:border-purple-500/40 transition-colors group"
-              onClick={() => navigate("#")}
-            >
-              <StatCardContent
-                count={0} // À implémenter : count reviews
-                label="Avis & Critiques"
-                description="Vos opinions sur la qualité des films et des éditions."
-                icon={Star}
-              />
-            </BentoCard>
-          </BentoGrid>
+            </div>
+          </div>
         </section>
       </main>
 
