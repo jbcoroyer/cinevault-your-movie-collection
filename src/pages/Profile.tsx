@@ -55,6 +55,20 @@ export default function Profile() {
   const [followDialogOpen, setFollowDialogOpen] = useState(false);
   const [followDialogType, setFollowDialogType] = useState<"followers" | "following">("followers");
 
+  const openFollowersDialog = () => {
+    setFollowDialogType("followers");
+    setFollowDialogOpen(true);
+  };
+
+  const openFollowingDialog = () => {
+    setFollowDialogType("following");
+    setFollowDialogOpen(true);
+  };
+
+  const handleFollowDialogClose = (open: boolean) => {
+    setFollowDialogOpen(open);
+  };
+
   // Sync state with profile
   useEffect(() => {
     if (myProfile) {
@@ -204,7 +218,7 @@ export default function Profile() {
                 <AvatarUpload
                   currentAvatarUrl={currentAvatarUrl}
                   onUploadComplete={handleAvatarUpload}
-                  size="xl" // Increased size
+                  size="lg"
                   editable={true}
                 />
               </div>
@@ -325,7 +339,7 @@ export default function Profile() {
 
         {/* --- 3. BENTO GRID STATS (Nouveau Design) --- */}
         <section className="animate-fade-in pb-8" style={{ animationDelay: "200ms" }}>
-          <BentoGrid cols={3} gap="md" className="auto-rows-[160px]">
+          <BentoGrid cols={6} gap="md" className="auto-rows-[160px]">
             {/* Collection */}
             <BentoCard
               size="md" // Prend 2 colonnes sur desktop si configuré, ou 3 cols
