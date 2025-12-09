@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
  * Page d'accueil - Version épurée
  *
  * Ordre: Dashboard → Ma Collection → Collections populaires →
- *        Films collectionnés → Abonnements → Films populaires → Stats
+ * Films collectionnés → Abonnements → Films populaires → Stats
  */
 
 export default function Index() {
@@ -340,7 +340,11 @@ export default function Index() {
         )}
 
         {/* 5. ABONNEMENTS */}
-        {user && <FollowingMoviesSection />}
+        {user && (
+          <div className="max-w-4xl mx-auto">
+            <FollowingMoviesSection />
+          </div>
+        )}
 
         {/* 6. FILMS POPULAIRES */}
         <div className="max-w-4xl mx-auto">
