@@ -1,20 +1,24 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, X, Edit2, GripVertical, Check } from 'lucide-react';
-import { getImageUrl, Movie } from '@/services/tmdb';
-import { MovieSearchDialog } from './MovieSearchDialog';
-import { TopMovie } from '@/hooks/useUserTopMovies';
-import { toast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Plus, X, Edit2, GripVertical, Check, Trophy } from "lucide-react";
+import { getImageUrl, Movie } from "../services/tmdb";
+import { MovieSearchDialog } from "./MovieSearchDialog";
+import { TopMovie } from "../hooks/useUserTopMovies";
+import { toast } from "../hooks/use-toast";
+import { Button } from "./ui/button";
+import { cn } from "../lib/utils";
 
 interface Top5SectionProps {
   topMovies: TopMovie[];
-  onSetMovie: (slot: number, movie: { tmdb_id: number; title: string; poster_path: string | null } | null) => Promise<{ error: Error | null }>;
+  onSetMovie: (
+    slot: number,
+    movie: { tmdb_id: number; title: string; poster_path: string | null } | null,
+  ) => Promise<{ error: Error | null }>;
   editable?: boolean;
+  compact?: boolean; // Mode compact pour le header du profil
 }
 
-export function Top5Section({ topMovies, onSetMovie, editable = true }: Top5SectionProps) {
+export function Top5Section({ topMovies, onSetMovie, editable = true, compact = false }: Top5SectionProps) {
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
@@ -27,9 +31,8 @@ export function Top5Section({ topMovies, onSetMovie, editable = true }: Top5Sect
 
   const handleSlotClick = (slot: number) => {
     const movie = getMovieForSlot(slot);
-    
+
     if (isEditMode) {
-      // In edit mode, clicking an empty slot opens the dialog
       if (!movie) {
         setSelectedSlot(slot);
         setDialogOpen(true);
@@ -38,11 +41,9 @@ export function Top5Section({ topMovies, onSetMovie, editable = true }: Top5Sect
     }
 
     if (editable && !movie) {
-      // If empty slot and editable, open dialog
       setSelectedSlot(slot);
       setDialogOpen(true);
     } else if (movie) {
-      // If has movie, navigate to movie details
       navigate(`/movie/${movie.tmdb_id}`);
     }
   };
@@ -58,12 +59,12 @@ export function Top5Section({ topMovies, onSetMovie, editable = true }: Top5Sect
 
     if (error) {
       toast({
-        title: 'Erreur',
-        description: 'Impossible de sauvegarder le film',
-        variant: 'destructive',
+        title: "Erreur",
+        description: "Impossible de sauvegarder le film",
+        variant: "destructive",
       });
     } else {
-      toast({ title: 'Film ajouté à votre Top 5' });
+      toast({ title: "Film ajouté à votre Top 5" });
     }
   };
 
@@ -72,12 +73,12 @@ export function Top5Section({ topMovies, onSetMovie, editable = true }: Top5Sect
 
     if (error) {
       toast({
-        title: 'Erreur',
-        description: 'Impossible de supprimer le film',
-        variant: 'destructive',
+        title: "Erreur",
+        description: "Impossible de supprimer le film",
+        variant: "destructive",
       });
     } else {
-      toast({ title: 'Film retiré de votre Top 5' });
+      toast({ title: "Film retiré de votre Top 5" });
     }
   };
 
@@ -100,7 +101,6 @@ export function Top5Section({ topMovies, onSetMovie, editable = true }: Top5Sect
     const draggedMovie = getMovieForSlot(draggedSlot);
     const targetMovie = getMovieForSlot(targetSlot);
 
-    // Swap movies
     if (draggedMovie) {
       await onSetMovie(targetSlot, {
         tmdb_id: draggedMovie.tmdb_id,
@@ -122,35 +122,42 @@ export function Top5Section({ topMovies, onSetMovie, editable = true }: Top5Sect
     }
 
     setDraggedSlot(null);
-    toast({ title: 'Ordre mis à jour' });
+    toast({ title: "Ordre mis à jour" });
   };
 
   return (
-    <div className="mb-10">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl md:text-2xl font-bold">🏆 Mon Top 5</h3>
-        {editable && (
-          <Button
-            variant={isEditMode ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsEditMode(!isEditMode)}
-          >
-            {isEditMode ? (
-              <>
-                <Check className="w-4 h-4 mr-2" />
-                Terminé
-              </>
-            ) : (
-              <>
-                <Edit2 className="w-4 h-4 mr-2" />
-                Éditer
-              </>
-            )}
-          </Button>
-        )}
-      </div>
+    <div className={cn("w-full", compact ? "mb-0" : "mb-10")}>
+      {!compact && (
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+            <Trophy className="w-6 h-6 text-amber-500" />
+            Mon Top 5
+          </h3>
+          {editable && (
+            <Button variant={isEditMode ? "default" : "outline"} size="sm" onClick={() => setIsEditMode(!isEditMode)}>
+              {isEditMode ? (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  Terminé
+                </>
+              ) : (
+                <>
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  Éditer
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      )}
 
-      <div className="flex justify-center gap-3 md:gap-4 flex-wrap">
+      {/* Grid container: 5 columns fixed even on mobile */}
+      <div
+        className={cn(
+          "grid grid-cols-5 gap-2 sm:gap-4 w-full",
+          compact ? "max-w-md mx-auto" : "justify-center flex-wrap",
+        )}
+      >
         {[1, 2, 3, 4, 5].map((slot) => {
           const movie = getMovieForSlot(slot);
           return (
@@ -161,70 +168,94 @@ export function Top5Section({ topMovies, onSetMovie, editable = true }: Top5Sect
               onDragOver={(e) => handleDragOver(e, slot)}
               onDrop={() => handleDrop(slot)}
               className={cn(
-                "relative group",
+                "relative group aspect-[2/3]",
                 isEditMode && movie && "cursor-grab active:cursor-grabbing",
-                draggedSlot === slot && "opacity-50"
+                draggedSlot === slot && "opacity-50",
               )}
             >
               <button
                 onClick={() => handleSlotClick(slot)}
                 disabled={isEditMode && !!movie}
-                className="relative"
+                className="w-full h-full relative"
               >
-                <div className={cn(
-                  "relative w-24 h-36 md:w-32 md:h-48 lg:w-40 lg:h-60 rounded-lg overflow-hidden border-2 border-dashed border-muted-foreground/30 transition-all duration-200 flex items-center justify-center bg-muted/30",
-                  !isEditMode && "hover:border-primary hover:scale-105",
-                  isEditMode && !movie && "hover:border-primary"
-                )}>
+                <div
+                  className={cn(
+                    "w-full h-full rounded-lg overflow-hidden border border-border/50 transition-all duration-200 flex items-center justify-center bg-muted/30 shadow-sm",
+                    !isEditMode && "hover:border-primary/50 hover:shadow-md",
+                    isEditMode && !movie && "hover:border-primary border-dashed",
+                    compact && "rounded-md",
+                  )}
+                >
                   {movie ? (
                     <>
                       <img
-                        src={getImageUrl(movie.poster_path, 'w300') || '/placeholder.svg'}
+                        src={getImageUrl(movie.poster_path, "w200") || "/placeholder.svg"}
                         alt={movie.title}
                         className="w-full h-full object-cover"
                       />
                       {/* Rank badge */}
-                      <div className="absolute top-2 left-2 w-7 h-7 md:w-8 md:h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm md:text-base shadow-lg">
+                      <div
+                        className={cn(
+                          "absolute top-1 left-1 rounded-full bg-black/60 backdrop-blur-sm text-white flex items-center justify-center font-bold shadow-sm border border-white/10",
+                          compact ? "w-5 h-5 text-[10px]" : "w-7 h-7 text-sm",
+                        )}
+                      >
                         {slot}
                       </div>
-                      
+
                       {/* Edit mode overlay */}
                       {isEditMode && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <GripVertical className="w-8 h-8 text-white" />
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
+                          <GripVertical className="w-6 h-6 text-white" />
                         </div>
                       )}
                     </>
                   ) : (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-muted flex items-center justify-center">
-                        <Plus className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />
+                    <div className="flex flex-col items-center gap-1">
+                      {/* Empty State visual */}
+                      <div
+                        className={cn(
+                          "rounded-full bg-muted flex items-center justify-center",
+                          compact ? "w-6 h-6" : "w-10 h-10",
+                        )}
+                      >
+                        <Plus className={cn("text-muted-foreground", compact ? "w-3 h-3" : "w-5 h-5")} />
                       </div>
-                      <span className="text-xs text-muted-foreground">#{slot}</span>
+                      {!compact && (
+                        <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">#{slot}</span>
+                      )}
                     </div>
                   )}
                 </div>
               </button>
-              
+
               {/* Delete button in edit mode */}
               {isEditMode && movie && (
                 <button
                   onClick={() => handleRemoveMovie(slot)}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-10"
+                  className="absolute -top-2 -right-2 w-5 h-5 sm:w-6 sm:h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-30"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
-              )}
-              
-              {movie && (
-                <p className="mt-2 text-xs md:text-sm font-medium text-center line-clamp-2 max-w-24 md:max-w-32 lg:max-w-40">
-                  {movie.title}
-                </p>
               )}
             </div>
           );
         })}
       </div>
+
+      {/* Edit button specifically for compact mode */}
+      {compact && editable && (
+        <div className="flex justify-center mt-2">
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => setIsEditMode(!isEditMode)}
+            className="text-xs text-muted-foreground h-6 px-2"
+          >
+            {isEditMode ? "Terminé" : "Modifier mon Top 5"}
+          </Button>
+        </div>
+      )}
 
       <MovieSearchDialog
         open={dialogOpen}
