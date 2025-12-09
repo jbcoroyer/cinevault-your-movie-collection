@@ -36,8 +36,11 @@ export default function Profile() {
   const targetUserId = userId || user?.id;
 
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true); // Start true to wait for auth
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [physicalCount, setPhysicalCount] = useState(0);
+  const [lastPhysicalPoster, setLastPhysicalPoster] = useState<string | null>(null);
+  const [lastWatchedPoster, setLastWatchedPoster] = useState<string | null>(null);
+  const [lastFavoritePoster, setLastFavoritePoster] = useState<string | null>(null);
 
   const { userMovies } = useUserMovies();
   // Ne pas appeler useUserTopMovies si targetUserId est indéfini
@@ -97,8 +100,64 @@ export default function Profile() {
           setProfileData(data);
         }
 
+        // Fetch physical movies with posters from TMDB
         const physical = await getPhysicalMovies(targetUserId);
         setPhysicalCount(physical.length);
+        
+        // Get poster for latest physical movie
+        if (physical.length > 0) {
+          const latestPhysical = physical[0]; // Already sorted by created_at desc
+          try {
+            const response = await fetch(`https://api.themoviedb.org/3/movie/${latestPhysical.tmdb_id}?api_key=2218a5f1d1ccce0122e4be6c67cc7a90`);
+            const movieData = await response.json();
+            if (movieData.poster_path) {
+              setLastPhysicalPoster(`https://image.tmdb.org/t/p/w154${movieData.poster_path}`);
+            }
+          } catch (e) {
+            console.error("Error fetching physical movie poster:", e);
+          }
+        }
+
+        // Fetch last watched and favorite movies
+        const { data: watchedData } = await supabase
+          .from("user_movies")
+          .select("tmdb_id")
+          .eq("user_id", targetUserId)
+          .eq("status", "watched")
+          .order("watched_at", { ascending: false })
+          .limit(1);
+        
+        if (watchedData && watchedData.length > 0) {
+          try {
+            const response = await fetch(`https://api.themoviedb.org/3/movie/${watchedData[0].tmdb_id}?api_key=2218a5f1d1ccce0122e4be6c67cc7a90`);
+            const movieData = await response.json();
+            if (movieData.poster_path) {
+              setLastWatchedPoster(`https://image.tmdb.org/t/p/w154${movieData.poster_path}`);
+            }
+          } catch (e) {
+            console.error("Error fetching watched movie poster:", e);
+          }
+        }
+
+        const { data: favoriteData } = await supabase
+          .from("user_movies")
+          .select("tmdb_id")
+          .eq("user_id", targetUserId)
+          .eq("is_favorite", true)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        
+        if (favoriteData && favoriteData.length > 0) {
+          try {
+            const response = await fetch(`https://api.themoviedb.org/3/movie/${favoriteData[0].tmdb_id}?api_key=2218a5f1d1ccce0122e4be6c67cc7a90`);
+            const movieData = await response.json();
+            if (movieData.poster_path) {
+              setLastFavoritePoster(`https://image.tmdb.org/t/p/w154${movieData.poster_path}`);
+            }
+          } catch (e) {
+            console.error("Error fetching favorite movie poster:", e);
+          }
+        }
       } catch (error) {
         console.error("Error fetching profile:", error);
         toast({ title: "Erreur", description: "Impossible de charger le profil", variant: "destructive" });
@@ -178,26 +237,39 @@ export default function Profile() {
     );
   }
 
-  // Composant interne pour les stats - design amélioré
+  // Composant interne pour les stats - design amélioré avec preview
   const StatCardContent = ({
     count,
     label,
     icon: Icon,
     accentColor,
+    posterUrl,
   }: {
     count: number;
     label: string;
     icon: any;
     accentColor: string;
+    posterUrl?: string | null;
   }) => (
-    <div className="flex flex-col h-full p-4 sm:p-5">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-auto ${accentColor}`}>
-        <Icon className="w-5 h-5" />
+    <div className="flex h-full p-4">
+      <div className="flex flex-col flex-1 min-w-0">
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${accentColor}`}>
+          <Icon className="w-4 h-4" />
+        </div>
+        <div className="mt-auto">
+          <span className="text-2xl sm:text-3xl font-bold font-display text-foreground tracking-tight block">{count}</span>
+          <h3 className="font-medium text-xs text-muted-foreground mt-0.5 truncate">{label}</h3>
+        </div>
       </div>
-      <div className="mt-auto">
-        <span className="text-3xl sm:text-4xl font-bold font-display text-foreground tracking-tight block">{count}</span>
-        <h3 className="font-medium text-sm text-muted-foreground mt-1">{label}</h3>
-      </div>
+      {posterUrl && (
+        <div className="w-12 sm:w-14 flex-shrink-0 ml-2">
+          <img 
+            src={posterUrl} 
+            alt="Dernier film" 
+            className="w-full h-full object-cover rounded-lg shadow-md opacity-80 group-hover:opacity-100 transition-opacity"
+          />
+        </div>
+      )}
     </div>
   );
 
@@ -336,25 +408,36 @@ export default function Profile() {
         {/* --- 3. BENTO GRID STATS (Nouveau Design Asymétrique) --- */}
         <section className="animate-fade-in pb-8" style={{ animationDelay: "200ms" }}>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            {/* Collection - Grande carte */}
+            {/* Collection - Grande carte avec preview */}
             <div 
               className="col-span-2 row-span-2 relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500/10 via-background to-background border border-indigo-500/20 hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300 cursor-pointer group"
               onClick={() => navigate(isOwnProfile ? "/collection" : "#")}
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl transform translate-x-10 -translate-y-10 group-hover:scale-150 transition-transform duration-500" />
-              <div className="relative flex flex-col h-full p-5 sm:p-6">
-                <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-auto">
-                  <Disc className="w-6 h-6" />
+              <div className="relative flex h-full p-5 sm:p-6">
+                <div className="flex flex-col flex-1">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                    <Disc className="w-6 h-6" />
+                  </div>
+                  <div className="mt-auto">
+                    <span className="text-4xl sm:text-5xl font-bold font-display text-foreground tracking-tight block">{physicalCount}</span>
+                    <h3 className="font-medium text-base text-muted-foreground mt-1">Collection Physique</h3>
+                    <p className="text-xs text-muted-foreground/70 mt-2 hidden sm:block">DVD, Blu-ray & 4K UHD</p>
+                  </div>
                 </div>
-                <div className="mt-auto">
-                  <span className="text-4xl sm:text-5xl font-bold font-display text-foreground tracking-tight block">{physicalCount}</span>
-                  <h3 className="font-medium text-base text-muted-foreground mt-1">Collection Physique</h3>
-                  <p className="text-xs text-muted-foreground/70 mt-2 hidden sm:block">DVD, Blu-ray & 4K UHD</p>
-                </div>
+                {lastPhysicalPoster && (
+                  <div className="w-20 sm:w-28 flex-shrink-0 ml-4 self-center">
+                    <img 
+                      src={lastPhysicalPoster} 
+                      alt="Dernier ajout" 
+                      className="w-full rounded-lg shadow-xl opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Films Vus */}
+            {/* Films Vus avec preview */}
             <div 
               className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/10 via-background to-background border border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300 cursor-pointer group"
               onClick={() => navigate(isOwnProfile ? "/lists/watched" : "#")}
@@ -364,10 +447,11 @@ export default function Profile() {
                 label="Films Vus"
                 icon={Eye}
                 accentColor="bg-emerald-500/20 text-emerald-400"
+                posterUrl={lastWatchedPoster}
               />
             </div>
 
-            {/* Favoris */}
+            {/* Favoris avec preview */}
             <div 
               className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500/10 via-background to-background border border-rose-500/20 hover:border-rose-500/40 hover:shadow-lg hover:shadow-rose-500/5 transition-all duration-300 cursor-pointer group"
               onClick={() => navigate(isOwnProfile ? "/lists/favorites" : "#")}
@@ -377,6 +461,7 @@ export default function Profile() {
                 label="Favoris"
                 icon={Heart}
                 accentColor="bg-rose-500/20 text-rose-400"
+                posterUrl={lastFavoritePoster}
               />
             </div>
 
