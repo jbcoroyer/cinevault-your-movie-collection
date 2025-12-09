@@ -1,7 +1,7 @@
 import { useNavigate, NavLink, useLocation } from "react-router-dom";
 import { Home, Search, Library, Trophy, ListVideo } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ProfileMenu } from "./ProfileMenu";
+import ProfileMenu from "./ProfileMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
