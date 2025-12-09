@@ -20,7 +20,7 @@ const navItems = [
   { to: "/badges", icon: Trophy, label: "Badges" },
 ];
 
-export const Header: React.FC = () => {
+const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();

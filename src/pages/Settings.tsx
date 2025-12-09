@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../integrations/supabase/client";
-import { Header } from "../components/Header";
+import Header from "../components/Header";
 import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";

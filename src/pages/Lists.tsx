@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Header } from "../components/Header";
+import Header from "../components/Header";
 import { BottomNav } from "../components/BottomNav";
 import { MovieCard, MovieCardSkeleton } from "../components/MovieCard";
 import { Button } from "../components/ui/button";

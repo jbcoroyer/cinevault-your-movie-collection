@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPersonDetails, getImageUrl, PersonDetails } from '@/services/tmdb';
 import { MovieCard, MovieCardSkeleton } from '@/components/MovieCard';
-import { Header } from '@/components/Header';
+import Header from '@/components/Header';
 import { BottomNav } from '@/components/BottomNav';
 import { ArrowLeft, Calendar, MapPin } from 'lucide-react';
 
