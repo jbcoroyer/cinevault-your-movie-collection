@@ -21,7 +21,6 @@ import {
   Users,
   ArrowRight,
   Activity,
-  Film,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
@@ -151,20 +150,24 @@ export default function Index() {
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Header />
 
-      <main className="md:pb-8">
-        {/* LOGO MOBILE UNIQUEMENT */}
-        <div className="md:hidden pt-6 pb-2 px-4 flex justify-center items-center">
-          <div className="flex items-center gap-2">
-            <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/20">
-              <Disc className="w-5 h-5 text-white animate-spin-slow" />
-              <div className="absolute inset-0 rounded-lg ring-1 ring-white/20" />
-            </div>
-            <span className="text-xl font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80">
-              CineVault
-            </span>
+      {/* HEADER MOBILE STICKY 
+        - sticky top-0 : colle l'élément en haut
+        - z-40 : s'assure qu'il est au-dessus du contenu mais sous d'autres éléments d'interface critiques
+        - bg-background/80 + backdrop-blur-lg : effet de verre dépoli
+      */}
+      <div className="md:hidden sticky top-0 z-40 pt-safe pb-3 px-4 bg-background/85 backdrop-blur-xl border-b border-white/5 flex justify-center items-center shadow-sm transition-all duration-300">
+        <div className="flex items-center gap-2.5 mt-2">
+          <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/20">
+            <Disc className="w-5 h-5 text-white animate-spin-slow" />
+            <div className="absolute inset-0 rounded-lg ring-1 ring-white/20" />
           </div>
+          <span className="text-xl font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80">
+            CineVault
+          </span>
         </div>
+      </div>
 
+      <main className="md:pb-8">
         {/* HERO - Non connectés */}
         {!user && (
           <section className="px-4 py-10 md:py-16 text-center">
