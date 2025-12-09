@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
 import { getImageUrl } from "@/services/tmdb";
 import { useFollowingMovies } from "@/hooks/useFollowingMovies";
-import { ArrowRight, Users, Film } from "lucide-react";
+import { ArrowRight, Users, Film, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { GlassCard } from "./ui/GlassCard";
+import { useRef, useState, useEffect } from "react";
 
 /**
  * FollowingMoviesSection — Activité des abonnements
@@ -16,6 +17,39 @@ import { GlassCard } from "./ui/GlassCard";
 
 export const FollowingMoviesSection: React.FC = () => {
   const { movies, loading } = useFollowingMovies();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  // Check scroll position
+  const checkScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+    setCanScrollLeft(scrollLeft > 10);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+  };
+
+  useEffect(() => {
+    checkScroll();
+    const scrollEl = scrollRef.current;
+    if (scrollEl) {
+      scrollEl.addEventListener("scroll", checkScroll);
+      window.addEventListener("resize", checkScroll);
+      return () => {
+        scrollEl.removeEventListener("scroll", checkScroll);
+        window.removeEventListener("resize", checkScroll);
+      };
+    }
+  }, [movies]);
+
+  const scroll = (direction: "left" | "right") => {
+    if (!scrollRef.current) return;
+    const scrollAmount = scrollRef.current.clientWidth * 0.75;
+    scrollRef.current.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  };
 
   // Loading State
   if (loading) {
@@ -29,7 +63,7 @@ export const FollowingMoviesSection: React.FC = () => {
         </div>
         <div className="flex gap-4 overflow-x-auto px-4 sm:px-6 pb-4 scrollbar-hide">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-[160px] sm:w-[180px]">
+            <div key={i} className="flex-shrink-0 w-[140px] sm:w-[160px]">
               <div className="aspect-poster rounded-xl bg-muted animate-shimmer" />
               <div className="mt-3 space-y-2">
                 <div className="h-4 bg-muted rounded animate-shimmer w-3/4" />
@@ -46,9 +80,12 @@ export const FollowingMoviesSection: React.FC = () => {
   if (movies.length === 0) {
     return (
       <section className="mb-10 sm:mb-14 px-4 sm:px-6">
-        <div className="mb-5 sm:mb-6 space-y-1">
-          <span className="section-label">Activité</span>
-          <h2 className="font-display text-2xl sm:text-3xl font-semibold">Vos abonnements</h2>
+        <div className="flex items-end justify-between mb-5 sm:mb-6">
+          <div>
+            <p className="section-label mb-1">Activité</p>
+            <h2 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight">Vos abonnements</h2>
+            <p className="text-sm text-muted-foreground mt-1">Films vus par les personnes que vous suivez</p>
+          </div>
         </div>
 
         <GlassCard variant="subtle" padding="lg" className="text-center">
@@ -78,31 +115,97 @@ export const FollowingMoviesSection: React.FC = () => {
 
   // Main Content
   return (
-    <section className="mb-10 sm:mb-14 w-full overflow-hidden">
+    <section className="mb-10 sm:mb-14 w-full">
       {/* Header */}
       <div className="flex items-end justify-between px-4 sm:px-6 mb-5 sm:mb-6">
-        <div className="space-y-1">
-          <span className="section-label">Activité</span>
-          <h2 className="font-display text-2xl sm:text-3xl font-semibold">Vos abonnements</h2>
-          <p className="text-sm text-muted-foreground">Films vus par les personnes que vous suivez</p>
+        <div>
+          <p className="section-label mb-1">Activité</p>
+          <h2 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight">Vos abonnements</h2>
+          <p className="text-sm text-muted-foreground mt-1">Films vus par les personnes que vous suivez</p>
         </div>
+
+        <Link
+          to="/feed"
+          className={cn(
+            "flex items-center gap-1.5 px-4 py-2 rounded-full",
+            "text-sm font-medium",
+            "glass hover:bg-primary/10 hover:text-primary",
+            "transition-all duration-300",
+          )}
+        >
+          Voir tout
+          <ArrowRight className="w-4 h-4" />
+        </Link>
       </div>
 
       {/* Scroll Container */}
-      <div className="relative">
-        {/* Fade Edges */}
-        <div className="absolute left-0 top-0 bottom-0 w-4 sm:w-6 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-4 sm:w-6 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+      <div className="relative group">
+        {/* Left fade + button */}
+        <div
+          className={cn(
+            "absolute left-0 top-0 bottom-4 w-16 z-10",
+            "bg-gradient-to-r from-background to-transparent",
+            "pointer-events-none transition-opacity duration-300",
+            canScrollLeft ? "opacity-100" : "opacity-0",
+          )}
+        />
+        {canScrollLeft && (
+          <button
+            onClick={() => scroll("left")}
+            className={cn(
+              "absolute left-2 top-1/2 -translate-y-1/2 z-20",
+              "w-10 h-10 rounded-full glass",
+              "flex items-center justify-center",
+              "text-foreground hover:bg-primary/10 hover:text-primary",
+              "transition-all duration-300",
+              "opacity-0 group-hover:opacity-100",
+              "shadow-lg",
+            )}
+            aria-label="Défiler vers la gauche"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Right fade + button */}
+        <div
+          className={cn(
+            "absolute right-0 top-0 bottom-4 w-16 z-10",
+            "bg-gradient-to-l from-background to-transparent",
+            "pointer-events-none transition-opacity duration-300",
+            canScrollRight ? "opacity-100" : "opacity-0",
+          )}
+        />
+        {canScrollRight && (
+          <button
+            onClick={() => scroll("right")}
+            className={cn(
+              "absolute right-2 top-1/2 -translate-y-1/2 z-20",
+              "w-10 h-10 rounded-full glass",
+              "flex items-center justify-center",
+              "text-foreground hover:bg-primary/10 hover:text-primary",
+              "transition-all duration-300",
+              "opacity-0 group-hover:opacity-100",
+              "shadow-lg",
+            )}
+            aria-label="Défiler vers la droite"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        )}
 
         {/* Movies */}
-        <div className="flex gap-4 sm:gap-5 overflow-x-auto px-4 sm:px-6 pb-4 scrollbar-hide">
+        <div
+          ref={scrollRef}
+          className="flex gap-4 sm:gap-5 overflow-x-auto px-4 sm:px-6 pb-4 scrollbar-hide scroll-smooth"
+        >
           {movies.map((item, index) => (
             <Link
               key={item.movie.id}
               to={`/movie/${item.movie.id}`}
-              className={cn("flex-shrink-0 w-[160px] sm:w-[180px] group", "opacity-0 animate-fade-in-up")}
+              className={cn("flex-shrink-0 w-[140px] sm:w-[160px] group", "opacity-0 animate-fade-in-up")}
               style={{
-                animationDelay: `${index * 60}ms`,
+                animationDelay: `${index * 50}ms`,
                 animationFillMode: "forwards",
               }}
             >
@@ -187,21 +290,15 @@ export const FollowingMoviesSection: React.FC = () => {
 
               {/* Info */}
               <div className="mt-3 space-y-1">
-                <h3
-                  className={cn(
-                    "font-medium line-clamp-2 leading-tight",
-                    "text-sm sm:text-base",
-                    "transition-colors duration-300",
-                    "group-hover:text-primary",
-                  )}
-                >
+                <h3 className={cn("font-medium line-clamp-1 group-hover:text-primary transition-colors text-sm")}>
                   {item.movie.title}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {item.watchedBy[0]?.watchedAt && formatDistanceToNow(new Date(item.watchedBy[0].watchedAt), {
-                    addSuffix: true,
-                    locale: fr,
-                  })}
+                  {item.watchedBy[0]?.watchedAt &&
+                    formatDistanceToNow(new Date(item.watchedBy[0].watchedAt), {
+                      addSuffix: true,
+                      locale: fr,
+                    })}
                 </p>
               </div>
             </Link>
