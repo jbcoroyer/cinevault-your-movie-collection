@@ -151,11 +151,17 @@ export function Top5Section({ topMovies, onSetMovie, editable = true, compact = 
         </div>
       )}
 
-      {/* Grid container: 5 columns fixed even on mobile */}
+      {/* Grid container: 
+         - Mobile: 5 columns tight (gap-2), restricted width (max-w-md mx-auto) ONLY if explicitly needed, 
+           but here we want it to match parent width on desktop.
+         - Desktop (md): full width, bigger gaps.
+      */}
       <div
         className={cn(
-          "grid grid-cols-5 gap-2 sm:gap-4 w-full",
-          compact ? "max-w-md mx-auto" : "justify-center flex-wrap",
+          "grid grid-cols-5 gap-2 md:gap-4 w-full",
+          compact
+            ? "max-w-md mx-auto md:max-w-none md:w-full" // Mobile: compact / Desktop: full width
+            : "justify-center flex-wrap",
         )}
       >
         {[1, 2, 3, 4, 5].map((slot) => {
@@ -181,7 +187,7 @@ export function Top5Section({ topMovies, onSetMovie, editable = true, compact = 
                 <div
                   className={cn(
                     "w-full h-full rounded-lg overflow-hidden border border-border/50 transition-all duration-200 flex items-center justify-center bg-muted/30 shadow-sm",
-                    !isEditMode && "hover:border-primary/50 hover:shadow-md",
+                    !isEditMode && "hover:border-primary/50 hover:shadow-md hover:scale-[1.02]",
                     isEditMode && !movie && "hover:border-primary border-dashed",
                     compact && "rounded-md",
                   )}
@@ -189,7 +195,7 @@ export function Top5Section({ topMovies, onSetMovie, editable = true, compact = 
                   {movie ? (
                     <>
                       <img
-                        src={getImageUrl(movie.poster_path, "w200") || "/placeholder.svg"}
+                        src={getImageUrl(movie.poster_path, "w300") || "/placeholder.svg"} // Increased resolution for desktop
                         alt={movie.title}
                         className="w-full h-full object-cover"
                       />
@@ -197,7 +203,7 @@ export function Top5Section({ topMovies, onSetMovie, editable = true, compact = 
                       <div
                         className={cn(
                           "absolute top-1 left-1 rounded-full bg-black/60 backdrop-blur-sm text-white flex items-center justify-center font-bold shadow-sm border border-white/10",
-                          compact ? "w-5 h-5 text-[10px]" : "w-7 h-7 text-sm",
+                          compact ? "w-5 h-5 text-[10px] md:w-7 md:h-7 md:text-sm" : "w-7 h-7 text-sm",
                         )}
                       >
                         {slot}
@@ -216,10 +222,10 @@ export function Top5Section({ topMovies, onSetMovie, editable = true, compact = 
                       <div
                         className={cn(
                           "rounded-full bg-muted flex items-center justify-center",
-                          compact ? "w-6 h-6" : "w-10 h-10",
+                          compact ? "w-6 h-6 md:w-10 md:h-10" : "w-10 h-10",
                         )}
                       >
-                        <Plus className={cn("text-muted-foreground", compact ? "w-3 h-3" : "w-5 h-5")} />
+                        <Plus className={cn("text-muted-foreground", compact ? "w-3 h-3 md:w-5 md:h-5" : "w-5 h-5")} />
                       </div>
                       {!compact && (
                         <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">#{slot}</span>
@@ -245,12 +251,12 @@ export function Top5Section({ topMovies, onSetMovie, editable = true, compact = 
 
       {/* Edit button specifically for compact mode */}
       {compact && editable && (
-        <div className="flex justify-center mt-2">
+        <div className="flex justify-center mt-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsEditMode(!isEditMode)}
-            className="text-xs text-muted-foreground h-6 px-2"
+            className="text-xs text-muted-foreground h-7 px-3 hover:bg-muted/50"
           >
             {isEditMode ? "Terminé" : "Modifier mon Top 5"}
           </Button>
