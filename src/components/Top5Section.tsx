@@ -248,7 +248,7 @@ export function Top5Section({ topMovies, onSetMovie, editable = true, compact = 
         <div className="flex justify-center mt-2">
           <Button
             variant="ghost"
-            size="xs"
+            size="sm"
             onClick={() => setIsEditMode(!isEditMode)}
             className="text-xs text-muted-foreground h-6 px-2"
           >
