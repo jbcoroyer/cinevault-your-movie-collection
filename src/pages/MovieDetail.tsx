@@ -21,7 +21,7 @@ import { StarRating } from "@/components/StarRating";
 import { WatchedDialog } from "@/components/WatchedDialog";
 import { AddToListDialog } from "@/components/AddToListDialog";
 import { MovieReviewSection } from "@/components/MovieReviewSection";
-import Header from "@/components/Header";
+import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

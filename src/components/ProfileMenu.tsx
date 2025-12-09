@@ -1,75 +1,108 @@
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, LogIn } from "lucide-react";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/dropdown-menu';
+import { User, Settings, LogOut, Info, ExternalLink } from 'lucide-react';
 
-const ProfileMenu = () => {
+export const ProfileMenu: React.FC = () => {
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
-  const { user, profile, signOut, loading } = useAuth();
 
   const getInitials = () => {
-    if (profile?.username) return profile.username.slice(0, 2).toUpperCase();
-    if (user?.email) return user.email.slice(0, 2).toUpperCase();
-    return "U";
+    if (profile?.username) {
+      return profile.username.slice(0, 2).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.slice(0, 2).toUpperCase();
+    }
+    return 'U';
+  };
+
+  const getAvatarUrl = () => {
+    return profile?.avatar_url || null;
   };
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/");
+    navigate('/auth');
   };
-
-  if (loading) {
-    return (
-      <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
-    );
-  }
-
-  if (!user) {
-    return (
-      <Button variant="outline" size="sm" onClick={() => navigate("/auth")}>
-        <LogIn className="w-4 h-4 mr-2" />
-        Connexion
-      </Button>
-    );
-  }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <Avatar className="w-8 h-8 border-2 border-border">
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
-              {getInitials()}
-            </AvatarFallback>
-          </Avatar>
+        <button className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold transition-transform hover:scale-105 overflow-hidden">
+          {getAvatarUrl() ? (
+            <img 
+              src={getAvatarUrl()!} 
+              alt="Avatar" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            getInitials()
+          )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={() => navigate("/profile")}>
-          <User className="w-4 h-4 mr-2" />
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium">{profile?.username || 'Utilisateur'}</p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        
+        <DropdownMenuItem onClick={() => navigate(`/profile/${user?.id}`)}>
+          <User className="mr-2 h-4 w-4" />
           Mon Profil
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate("/settings")}>
-          <Settings className="w-4 h-4 mr-2" />
+        
+        <DropdownMenuItem onClick={() => navigate('/settings')}>
+          <Settings className="mr-2 h-4 w-4" />
           Paramètres
         </DropdownMenuItem>
+        
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-          <LogOut className="w-4 h-4 mr-2" />
-          Déconnexion
+        
+        <DropdownMenuLabel className="text-xs text-muted-foreground">Liens</DropdownMenuLabel>
+        
+        <DropdownMenuItem asChild>
+          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Twitter / X
+          </a>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem asChild>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Instagram
+          </a>
+        </DropdownMenuItem>
+        
+        <DropdownMenuSeparator />
+        
+        <DropdownMenuItem onClick={() => navigate('/about')}>
+          <Info className="mr-2 h-4 w-4" />
+          À propos
+        </DropdownMenuItem>
+        
+        <DropdownMenuSeparator />
+        
+        <DropdownMenuItem 
+          onClick={handleSignOut}
+          className="text-destructive focus:text-destructive"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Se déconnecter
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 };
-
-export default ProfileMenu;

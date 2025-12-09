@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import Header from "@/components/Header";
+import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { ReviewCard } from "@/components/ReviewCard";
 import { EditReviewDialog } from "@/components/EditReviewDialog";
