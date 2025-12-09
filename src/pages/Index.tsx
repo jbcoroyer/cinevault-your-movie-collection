@@ -396,7 +396,8 @@ export default function Index() {
             title="Films populaires"
             movies={popular}
             loading={loading}
-            seeMoreLink="/movies/popular"
+            linkTo="/movies/popular"
+            linkLabel="Voir tout"
           />
         </div>
 
