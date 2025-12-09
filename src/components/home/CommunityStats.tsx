@@ -6,7 +6,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 
 /**
  * CommunityStats — Compteurs communautaires animés
- * 
+ *
  * Affiche les statistiques globales avec animation de comptage
  * style Stripe/Linear
  */
@@ -63,13 +63,21 @@ export const CommunityStats: React.FC<CommunityStatsProps> = ({ className }) => 
 
   if (loading) {
     return (
-      <section className={cn("px-4 sm:px-6 py-8", className)}>
+      <section className={cn("px-4 sm:px-6 py-6", className)}>
         <div className="container mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Header skeleton */}
+          <div className="flex items-center gap-2 mb-5">
+            <div className="w-9 h-9 rounded-xl bg-muted animate-pulse" />
+            <div className="space-y-1.5">
+              <div className="h-5 w-48 bg-muted rounded animate-pulse" />
+              <div className="h-3 w-32 bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div 
-                key={i} 
-                className="h-32 rounded-2xl bg-muted animate-pulse"
+              <div
+                key={i}
+                className="h-28 sm:h-32 rounded-2xl bg-muted/50 animate-pulse"
                 style={{ animationDelay: `${i * 100}ms` }}
               />
             ))}
@@ -80,27 +88,23 @@ export const CommunityStats: React.FC<CommunityStatsProps> = ({ className }) => 
   }
 
   return (
-    <section className={cn("px-4 sm:px-6 py-8", className)}>
+    <section className={cn("px-4 sm:px-6 py-6", className)}>
       <div className="container mx-auto">
         {/* Section header */}
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center gap-2 mb-5">
           <div className="p-2 rounded-xl bg-primary/10">
             <Sparkles className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h2 className="font-display text-xl font-semibold">La Communauté CineVault</h2>
-            <p className="text-sm text-muted-foreground">Statistiques en temps réel</p>
+            <h2 className="font-display text-lg sm:text-xl font-semibold">La Communauté CineVault</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">Statistiques en temps réel</p>
           </div>
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           {statsConfig.map((stat, index) => (
-            <StatCard
-              key={stat.key}
-              {...stat}
-              delay={index * 100}
-            />
+            <StatCard key={stat.key} {...stat} delay={index * 100} />
           ))}
         </div>
       </div>
@@ -120,16 +124,7 @@ interface StatCardProps {
   delay: number;
 }
 
-const StatCard: React.FC<StatCardProps> = ({
-  value,
-  label,
-  sublabel,
-  icon: Icon,
-  color,
-  bgColor,
-  gradient,
-  delay,
-}) => {
+const StatCard: React.FC<StatCardProps> = ({ value, label, sublabel, icon: Icon, color, bgColor, gradient, delay }) => {
   const [displayValue, setDisplayValue] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -142,7 +137,7 @@ const StatCard: React.FC<StatCardProps> = ({
           setIsVisible(true);
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
 
     if (cardRef.current) {
@@ -165,10 +160,10 @@ const StatCard: React.FC<StatCardProps> = ({
       const now = Date.now();
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
+
       // Easing function (ease-out-expo)
       const easeOutExpo = 1 - Math.pow(2, -10 * progress);
-      
+
       const currentValue = Math.floor(startValue + (endValue - startValue) * easeOutExpo);
       setDisplayValue(currentValue);
 
@@ -205,7 +200,7 @@ const StatCard: React.FC<StatCardProps> = ({
         "border border-white/10 dark:border-white/5",
         "transition-all duration-500",
         "hover:scale-[1.02] hover:shadow-xl",
-        "group"
+        "group",
       )}
       style={{
         opacity: isVisible ? 1 : 0,
@@ -214,18 +209,12 @@ const StatCard: React.FC<StatCardProps> = ({
       }}
     >
       {/* Gradient background */}
-      <div className={cn(
-        "absolute inset-0 bg-gradient-to-br opacity-50",
-        gradient
-      )} />
+      <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50", gradient)} />
 
       {/* Content */}
       <div className="relative z-10">
         {/* Icon */}
-        <div className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center mb-3",
-          bgColor
-        )}>
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3", bgColor)}>
           <Icon className={cn("w-5 h-5", color)} />
         </div>
 
@@ -240,12 +229,14 @@ const StatCard: React.FC<StatCardProps> = ({
       </div>
 
       {/* Hover glow effect */}
-      <div className={cn(
-        "absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100",
-        "bg-gradient-to-r from-primary/20 via-transparent to-primary/20",
-        "transition-opacity duration-500",
-        "pointer-events-none"
-      )} />
+      <div
+        className={cn(
+          "absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100",
+          "bg-gradient-to-r from-primary/20 via-transparent to-primary/20",
+          "transition-opacity duration-500",
+          "pointer-events-none",
+        )}
+      />
     </div>
   );
 };
