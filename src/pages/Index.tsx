@@ -4,7 +4,7 @@ import { Header } from "../components/Header";
 import { BottomNav } from "../components/BottomNav";
 import { MovieSection } from "../components/MovieSection";
 import { FollowingMoviesSection } from "../components/FollowingMoviesSection";
-import { getPopularMovies, Movie, getImageUrl } from "../services/tmdb";
+import { getPopularMovies, Movie, getImageUrl, MovieDetails } from "../services/tmdb";
 import { useAuth } from "../contexts/AuthContext";
 import { useBadgeNotification } from "../contexts/BadgeNotificationContext";
 import { getPhysicalMovies, PhysicalMovie } from "../services/physicalMovies";
@@ -21,12 +21,14 @@ import {
   Users,
   ArrowRight,
   Activity,
+  Coins,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { ShelfView } from "@/components/collection/ShelfView";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -36,7 +38,7 @@ export default function Index() {
   const [popular, setPopular] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [myCollection, setMyCollection] = useState<PhysicalMovie[]>([]);
-  const [movieDetails, setMovieDetails] = useState<Record<number, Movie>>({});
+  const [movieDetails, setMovieDetails] = useState<Record<number, MovieDetails>>({});
   const [topCollectors, setTopCollectors] = useState<any[]>([]);
   const [mostOwned, setMostOwned] = useState<any[]>([]);
   const [stats, setStats] = useState({ movies: 0, collectors: 0, reviews: 0 });
@@ -57,7 +59,7 @@ export default function Index() {
         setMyCollection(collection.slice(0, 6));
 
         // Détails des films
-        const details: Record<number, Movie> = {};
+        const details: Record<number, MovieDetails> = {};
         await Promise.all(
           collection.slice(0, 6).map(async (pm) => {
             try {
@@ -72,10 +74,17 @@ export default function Index() {
       }
 
       // Top collectionneurs
-      const { data: pmData } = await supabase.from("physical_movies").select("user_id");
+      // On récupère aussi le prix pour calculer la valeur de la collection
+      const { data: pmData } = await supabase.from("physical_movies").select("user_id, price");
       if (pmData) {
         const counts: Record<string, number> = {};
-        pmData.forEach((i) => (counts[i.user_id] = (counts[i.user_id] || 0) + 1));
+        const values: Record<string, number> = {};
+
+        pmData.forEach((i) => {
+          counts[i.user_id] = (counts[i.user_id] || 0) + 1;
+          values[i.user_id] = (values[i.user_id] || 0) + (i.price || 0);
+        });
+
         const top = Object.entries(counts)
           .sort((a, b) => b[1] - a[1])
           .slice(0, 6);
@@ -92,6 +101,7 @@ export default function Index() {
           top.map(([id, count], i) => ({
             id,
             count,
+            totalValue: values[id],
             rank: i + 1,
             ...profiles?.find((p) => p.id === id),
           })),
@@ -257,34 +267,13 @@ export default function Index() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                {myCollection.map((pm) => {
-                  const m = movieDetails[pm.tmdb_id];
-                  return (
-                    <Link key={pm.id} to={`/movie/${pm.tmdb_id}`} className="group">
-                      <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted relative shadow-sm hover:shadow-md transition-all duration-300">
-                        {m?.poster_path ? (
-                          <img
-                            src={getImageUrl(m.poster_path, "w300") || ""}
-                            alt={m.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Disc className="w-6 h-6 text-muted-foreground" />
-                          </div>
-                        )}
-                        <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[9px] font-medium rounded bg-black/70 text-white uppercase backdrop-blur-sm">
-                          {pm.format}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-xs font-medium truncate group-hover:text-amber-500 transition-colors">
-                        {m?.title}
-                      </p>
-                    </Link>
-                  );
-                })}
-              </div>
+              {/* Remplacement de la grille par la vue Étagère en mode "light" */}
+              <ShelfView
+                movies={myCollection}
+                movieDetailsMap={movieDetails}
+                onMovieClick={(pm) => navigate(`/movie/${pm.tmdb_id}`)}
+                variant="light"
+              />
             </div>
           </section>
         )}
@@ -299,23 +288,38 @@ export default function Index() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                 {topCollectors.map((c) => (
                   <Link
                     key={c.id}
                     to={`/profile/${c.id}`}
-                    className="p-3 rounded-xl bg-card border border-border text-center hover:border-amber-500/30 transition-colors group"
+                    className="p-3 rounded-xl bg-card border border-border text-center hover:border-amber-500/30 transition-colors group flex flex-col items-center justify-between min-h-[140px]"
                   >
-                    <Avatar className="w-10 h-10 mx-auto mb-2 group-hover:scale-110 transition-transform">
-                      <AvatarImage src={c.avatar_url} />
-                      <AvatarFallback className="text-xs bg-amber-500/10 text-amber-600">
-                        {(c.username || "U").slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <p className="text-xs font-medium truncate group-hover:text-amber-500 transition-colors">
-                      @{c.username || "user"}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">{c.count} films</p>
+                    <div className="flex flex-col items-center w-full">
+                      <Avatar className="w-12 h-12 mb-3 group-hover:scale-110 transition-transform ring-2 ring-transparent group-hover:ring-amber-500/20">
+                        <AvatarImage src={c.avatar_url} />
+                        <AvatarFallback className="text-xs bg-amber-500/10 text-amber-600 font-bold">
+                          {(c.username || "U").slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <p className="text-sm font-medium truncate w-full group-hover:text-amber-500 transition-colors">
+                        @{c.username || "user"}
+                      </p>
+                    </div>
+
+                    <div className="w-full mt-3 space-y-1">
+                      <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-md py-1">
+                        <Disc className="w-3 h-3" />
+                        <span>{c.count} films</span>
+                      </div>
+
+                      {c.totalValue > 0 && (
+                        <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-amber-600/90 bg-amber-500/10 rounded-md py-1">
+                          <Coins className="w-3 h-3" />
+                          <span>~{Math.round(c.totalValue)} €</span>
+                        </div>
+                      )}
+                    </div>
                   </Link>
                 ))}
               </div>
