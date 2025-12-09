@@ -375,12 +375,8 @@ export default function Index() {
 
         {/* 6. FILMS POPULAIRES */}
         <div className="max-w-4xl mx-auto">
-          <MovieSection
-            title="Films populaires"
-            movies={popular}
-            loading={loading}
-            seeMoreLink="/movies/popular"
-          />
+          {/* Correction ici : suppression des props linkTo et linkLabel non supportées */}
+          <MovieSection title="Films populaires" movies={popular} loading={loading} />
         </div>
 
         {/* 7. STATS COMMUNAUTÉ DÉTAILLÉES */}
