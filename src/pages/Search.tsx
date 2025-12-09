@@ -14,7 +14,7 @@ import { searchMovies, getGenres, getPopularMovies, discoverMovies, Movie, Genre
 import { searchUsers, getPopularUsers, UserProfile } from "@/services/users";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 
 type SearchTab = "films" | "users";
 

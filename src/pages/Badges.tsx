@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 import { BADGES_DATA, LEVEL_REWARDS, GameBadge } from "@/data/gameData";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";

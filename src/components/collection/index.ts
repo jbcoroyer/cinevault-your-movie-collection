@@ -13,7 +13,7 @@ export { MovieCard, MovieCardSkeleton, MovieCardFeatured } from "../MovieCard";
 export { MovieSection, MovieSectionSkeleton } from "../MovieSection";
 
 // Layout Components
-export { Header } from "../Header";
+export { default as Header } from "../Header";
 export { BottomNav } from "../BottomNav";
 
 // Dashboard Components
