@@ -304,12 +304,12 @@ export default function Index() {
                   animationDelay={200}
                   onClick={() => navigate("/collection")}
                 >
-                  <BentoContent>
+                <BentoContent>
                     <BentoIcon color="primary">
                       <Library className="w-5 h-5" />
                     </BentoIcon>
                     <BentoLabel className="mt-3">Ma Collection</BentoLabel>
-                    <BentoValue>{userStats?.physical_count || 0}</BentoValue>
+                    <BentoValue>{userStats?.physicalCount || 0}</BentoValue>
                     <BentoDescription>DVD & Blu-ray</BentoDescription>
                   </BentoContent>
                 </BentoItem>
@@ -322,7 +322,7 @@ export default function Index() {
                         <Eye className="w-4 h-4" />
                       </BentoIcon>
                       <div>
-                        <BentoValue className="text-2xl">{userStats?.watched_count || 0}</BentoValue>
+                        <BentoValue className="text-2xl">{userStats?.watchedIds.size || 0}</BentoValue>
                         <p className="text-xs text-muted-foreground">Films vus</p>
                       </div>
                     </div>
@@ -337,7 +337,7 @@ export default function Index() {
                         <Heart className="w-4 h-4" />
                       </BentoIcon>
                       <div>
-                        <BentoValue className="text-2xl">{userStats?.favorites_count || 0}</BentoValue>
+                        <BentoValue className="text-2xl">{userStats?.favoriteIds.size || 0}</BentoValue>
                         <p className="text-xs text-muted-foreground">Favoris</p>
                       </div>
                     </div>
@@ -411,8 +411,7 @@ export default function Index() {
           subtitle="En salles et en streaming"
           movies={nowAvailable}
           loading={loading}
-          linkTo="/movies/now-available"
-          linkLabel="Voir tout"
+          seeMoreLink="/movies/now-available"
         />
 
         {/* ========================================
@@ -423,8 +422,7 @@ export default function Index() {
           subtitle="Les plus appréciés du moment"
           movies={popular}
           loading={loading}
-          linkTo="/movies/popular"
-          linkLabel="Voir tout"
+          seeMoreLink="/movies/popular"
         />
 
         {/* ========================================
@@ -433,7 +431,7 @@ export default function Index() {
         {!user && (
           <section className="px-4 sm:px-6 py-16">
             <div className="container mx-auto">
-              <GlassCard variant="aurora" padding="xl" className="text-center max-w-2xl mx-auto">
+              <GlassCard variant="gradient" hover="aurora" padding="lg" className="text-center max-w-2xl mx-auto">
                 <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
                   <Disc className="w-8 h-8 text-primary" />
                 </div>
