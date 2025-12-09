@@ -1,103 +1,80 @@
-import { Home, Search, Library, Trophy } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { Home, Search, Library, Trophy, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 
-/**
- * BottomNav - Navigation mobile raccord avec Header
- * - Ligne dorée au-dessus de l'onglet actif
- * - Collection mis en avant
- */
-
-const navItems = [
-  { to: "/", icon: Home, label: "Accueil", exact: true },
-  { to: "/search", icon: Search, label: "Recherche" },
-  { to: "/collection", icon: Library, label: "Collection", isMain: true },
-  { to: "/badges", icon: Trophy, label: "Badges" },
-];
-
-export const BottomNav: React.FC = () => {
-  const location = useLocation();
+export const BottomNav = () => {
+  const { pathname } = useLocation();
   const { user } = useAuth();
-  const [collectionCount, setCollectionCount] = useState(0);
 
-  useEffect(() => {
-    if (!user) return setCollectionCount(0);
-
-    const fetch = async () => {
-      const { count } = await supabase
-        .from("physical_movies")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
-      setCollectionCount(count || 0);
-    };
-
-    fetch();
-
-    const channel = supabase
-      .channel("bottomnav-collection")
-      .on("postgres_changes", { event: "*", schema: "public", table: "physical_movies" }, fetch)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
-  const isActive = (to: string, exact?: boolean) =>
-    exact ? location.pathname === to : location.pathname.startsWith(to);
+  // Structure demandée : Accueil | Recherche | Collection | Badges | Profil
+  const navItems = [
+    {
+      icon: Home,
+      label: "Accueil",
+      path: "/",
+    },
+    {
+      icon: Search,
+      label: "Recherche",
+      path: "/search",
+    },
+    {
+      icon: Library,
+      label: "Collection",
+      path: "/collection",
+    },
+    {
+      icon: Trophy,
+      label: "Badges",
+      path: "/badges",
+    },
+    {
+      icon: User,
+      label: "Profil",
+      path: user ? `/profile/${user.id}` : "/auth",
+    },
+  ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border safe-area-bottom md:hidden">
-      <div className="flex justify-around items-center h-16 max-w-md mx-auto">
-        {navItems.map(({ to, icon: Icon, label, exact, isMain }) => {
-          const active = isActive(to, exact);
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-t border-white/10" />
+
+      <div className="relative flex justify-around items-center h-16 px-2">
+        {navItems.map((item) => {
+          const isActive = item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);
 
           return (
-            <NavLink
-              key={to}
-              to={to}
+            <Link
+              key={item.label}
+              to={item.path}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-1 w-16 h-14",
-                "transition-colors active:scale-95",
+                "flex flex-col items-center justify-center w-full h-full gap-1",
+                "transition-all duration-200 active:scale-95",
+                isActive ? "text-amber-500" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {/* Indicateur actif */}
-              {active && <span className="absolute top-0 left-3 right-3 h-0.5 bg-amber-500 rounded-full" />}
-
-              {/* Icône */}
-              <div className="relative">
-                <Icon
-                  className={cn(
-                    "w-5 h-5",
-                    isMain ? "text-amber-500" : active ? "text-foreground" : "text-muted-foreground",
-                  )}
-                  strokeWidth={active ? 2.5 : 2}
-                />
-                {isMain && collectionCount > 0 && (
-                  <span className="absolute -top-1 -right-2 min-w-[14px] h-[14px] px-1 text-[9px] font-bold rounded-full bg-amber-500 text-white flex items-center justify-center">
-                    {collectionCount > 99 ? "+" : collectionCount}
-                  </span>
-                )}
-              </div>
-
-              {/* Label */}
+              <item.icon
+                className={cn("w-5 h-5 transition-all duration-300", isActive && "fill-current scale-110")}
+                strokeWidth={isActive ? 2.5 : 2}
+              />
               <span
                 className={cn(
-                  "text-[10px] font-medium",
-                  isMain ? "text-amber-500" : active ? "text-foreground" : "text-muted-foreground",
+                  "text-[10px] font-medium transition-all duration-200",
+                  isActive ? "opacity-100 font-semibold" : "opacity-70",
                 )}
               >
-                {label}
+                {item.label}
               </span>
-            </NavLink>
+
+              {/* Indicateur actif */}
+              {isActive && (
+                <span className="absolute top-0 w-8 h-0.5 bg-amber-500 rounded-b-full shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+              )}
+            </Link>
           );
         })}
       </div>
     </nav>
   );
 };
-
-export default BottomNav;
