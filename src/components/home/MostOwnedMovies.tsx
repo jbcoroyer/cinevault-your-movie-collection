@@ -8,7 +8,7 @@ import { Trophy, Users, Star, ArrowRight, Crown } from "lucide-react";
 
 /**
  * MostOwnedMovies — Classement des films les plus possédés
- * 
+ *
  * Affiche le top 10 des films les plus présents dans les collections
  * avec badges de rareté et compteurs de propriétaires
  */
@@ -18,26 +18,20 @@ interface MostOwnedMoviesProps {
   limit?: number;
 }
 
-export const MostOwnedMovies: React.FC<MostOwnedMoviesProps> = ({ 
-  className,
-  limit = 10 
-}) => {
+export const MostOwnedMovies: React.FC<MostOwnedMoviesProps> = ({ className, limit = 10 }) => {
   const { movies, loading } = useMostOwnedMovies({ limit });
 
   if (loading) {
     return (
-      <section className={cn("px-4 sm:px-6 py-8", className)}>
+      <section className={cn("px-4 sm:px-6 py-6", className)}>
         <div className="container mx-auto">
-          <div className="mb-6">
-            <div className="h-6 w-48 bg-muted rounded animate-pulse mb-2" />
-            <div className="h-4 w-64 bg-muted rounded animate-pulse" />
+          <div className="mb-5">
+            <div className="h-5 w-48 bg-muted rounded animate-pulse mb-2" />
+            <div className="h-3 w-64 bg-muted rounded animate-pulse" />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="space-y-3">
-                <div className="aspect-poster rounded-xl bg-muted animate-pulse" />
-                <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
-              </div>
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="aspect-poster rounded-xl bg-muted/50 animate-pulse" />
             ))}
           </div>
         </div>
@@ -50,30 +44,22 @@ export const MostOwnedMovies: React.FC<MostOwnedMoviesProps> = ({
   }
 
   return (
-    <section className={cn("px-4 sm:px-6 py-8", className)}>
+    <section className={cn("px-4 sm:px-6 py-6", className)}>
       <div className="container mx-auto">
         {/* Section header */}
-        <div className="flex items-end justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/10">
-              <Trophy className="w-6 h-6 text-amber-500" />
+        <div className="flex items-end justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-amber-500/10">
+              <Trophy className="w-5 h-5 text-amber-500" />
             </div>
             <div>
-              <h2 className="font-display text-xl sm:text-2xl font-semibold">
-                Films les Plus Collectionnés
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Le classement de la communauté CineVault
-              </p>
+              <h2 className="font-display text-lg sm:text-xl font-semibold">Films les Plus Collectionnés</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">Le classement de la communauté CineVault</p>
             </div>
           </div>
           <Link
             to="/search"
-            className={cn(
-              "hidden sm:flex items-center gap-1.5",
-              "text-sm font-medium text-primary",
-              "hover:underline"
-            )}
+            className={cn("hidden sm:flex items-center gap-1.5", "text-sm font-medium text-primary", "hover:underline")}
           >
             Explorer plus
             <ArrowRight className="w-4 h-4" />
@@ -81,9 +67,9 @@ export const MostOwnedMovies: React.FC<MostOwnedMoviesProps> = ({
         </div>
 
         {/* Podium - Top 3 */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
           {movies.slice(0, 3).map((movie, index) => (
-            <PodiumCard key={movie.tmdbId} movie={movie} position={(index + 1) as 1 | 2 | 3} />
+            <PodiumCard key={movie.tmdbId} movie={movie} position={index + 1} />
           ))}
         </div>
 
@@ -146,14 +132,11 @@ const PodiumCard: React.FC<PodiumCardProps> = ({ movie, position }) => {
         config.scale,
         "transition-all duration-500",
         "hover:shadow-xl hover:-translate-y-1",
-        config.glow
+        config.glow,
       )}
     >
       {/* Gradient overlay */}
-      <div className={cn(
-        "absolute inset-0 bg-gradient-to-t opacity-60",
-        config.gradient
-      )} />
+      <div className={cn("absolute inset-0 bg-gradient-to-t opacity-60", config.gradient)} />
 
       {/* Position badge */}
       <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/60 backdrop-blur-md">
@@ -186,9 +169,7 @@ const PodiumCard: React.FC<PodiumCardProps> = ({ movie, position }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-white/80">
               <Users className="w-3.5 h-3.5" />
-              <span className="text-xs sm:text-sm font-medium">
-                {movie.ownerCount} propriétaires
-              </span>
+              <span className="text-xs sm:text-sm font-medium">{movie.ownerCount} propriétaires</span>
             </div>
           </div>
         </div>
@@ -214,14 +195,12 @@ const RankingRow: React.FC<RankingRowProps> = ({ movie }) => {
         "border border-border/50",
         "transition-all duration-300",
         "hover:bg-card hover:border-border hover:shadow-md",
-        "group"
+        "group",
       )}
     >
       {/* Rank number */}
       <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-        <span className="font-stats text-lg font-bold text-muted-foreground">
-          {movie.rank}
-        </span>
+        <span className="font-stats text-lg font-bold text-muted-foreground">{movie.rank}</span>
       </div>
 
       {/* Poster thumbnail */}
@@ -260,11 +239,13 @@ const RankingRow: React.FC<RankingRowProps> = ({ movie }) => {
 
       {/* Owner count & rarity badge */}
       <div className="flex items-center gap-3 flex-shrink-0">
-        <div className={cn(
-          "hidden sm:flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-          rarity.bgColor,
-          rarity.color
-        )}>
+        <div
+          className={cn(
+            "hidden sm:flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+            rarity.bgColor,
+            rarity.color,
+          )}
+        >
           <span>{rarity.icon}</span>
           <span>{rarity.label}</span>
         </div>
