@@ -150,24 +150,9 @@ export default function Index() {
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Header />
 
-      {/* HEADER MOBILE FIXED
-        - fixed top-0 left-0 w-full : Garantit que l'élément reste accroché en haut de l'écran.
-        - bg-background/80 : Fond semi-transparent adaptatif (blanc en light, noir en dark).
-        - text-foreground : Couleur de texte adaptative (noir en light, blanc en dark) pour le contraste.
-        - z-50 : Au-dessus de tout le contenu.
-      */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 pt-safe h-14 px-4 bg-background/80 backdrop-blur-xl border-b border-border/40 flex justify-center items-center transition-all duration-300">
-        <div className="flex items-center gap-2.5">
-          <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/20">
-            <Disc className="w-5 h-5 text-white animate-spin-slow" />
-            <div className="absolute inset-0 rounded-lg ring-1 ring-white/20" />
-          </div>
-          <span className="text-xl font-display font-bold tracking-tight text-foreground">CineVault</span>
-        </div>
-      </div>
+      {/* Le header mobile est maintenant géré globalement dans App.tsx */}
 
-      {/* Ajout de pt-16 sur mobile pour compenser la hauteur du header fixe */}
-      <main className="pt-16 md:pt-8 md:pb-8">
+      <main className="md:pt-8 md:pb-8">
         {/* HERO - Non connectés */}
         {!user && (
           <section className="px-4 py-10 md:py-16 text-center">
