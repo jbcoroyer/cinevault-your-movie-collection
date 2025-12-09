@@ -8,7 +8,7 @@ import { fr } from "date-fns/locale";
 
 /**
  * LiveActivityFeed — Bandeau d'activité en temps réel
- * 
+ *
  * Affiche un ticker défilant avec les dernières actions de la communauté:
  * - Films ajoutés aux collections
  * - Notes attribuées
@@ -20,10 +20,7 @@ interface LiveActivityFeedProps {
   speed?: "slow" | "normal" | "fast";
 }
 
-export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({ 
-  className,
-  speed = "normal" 
-}) => {
+export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({ className, speed = "normal" }) => {
   const { activities, loading } = useCommunityActivity({ limit: 15 });
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -36,17 +33,19 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
 
   if (loading) {
     return (
-      <div className={cn(
-        "w-full overflow-hidden py-3",
-        "bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5",
-        "border-y border-border/50",
-        className
-      )}>
+      <div
+        className={cn(
+          "w-full overflow-hidden py-2.5",
+          "bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5",
+          "border-y border-border/30",
+          className,
+        )}
+      >
         <div className="flex gap-8 px-4">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 animate-pulse">
-              <div className="w-6 h-6 rounded-full bg-muted" />
-              <div className="w-32 h-4 rounded bg-muted" />
+            <div key={i} className="flex items-center gap-2 animate-pulse">
+              <div className="w-5 h-5 rounded-full bg-muted" />
+              <div className="w-28 h-3 rounded bg-muted" />
             </div>
           ))}
         </div>
@@ -59,13 +58,13 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
   }
 
   return (
-    <div 
+    <div
       className={cn(
-        "w-full overflow-hidden py-3",
+        "w-full overflow-hidden py-2.5",
         "bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5",
-        "border-y border-border/50",
+        "border-y border-border/30",
         "relative",
-        className
+        className,
       )}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -82,7 +81,7 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
       </div>
 
       {/* Scrolling content */}
-      <div 
+      <div
         ref={scrollRef}
         className="flex whitespace-nowrap"
         style={{
@@ -116,32 +115,32 @@ const ActivityItem: React.FC<{ activity: CommunityActivity }> = ({ activity }) =
   const getIcon = () => {
     switch (activity.type) {
       case "physical_added":
-        return <Disc className="w-4 h-4 text-purple-500" />;
+        return <Disc className="w-3 h-3 text-purple-500" />;
       case "rated":
-        return <Star className="w-4 h-4 text-amber-500 fill-amber-500" />;
+        return <Star className="w-3 h-3 text-amber-500 fill-amber-500" />;
       case "reviewed":
-        return <MessageSquare className="w-4 h-4 text-blue-500" />;
+        return <MessageSquare className="w-3 h-3 text-blue-500" />;
       case "favorite":
-        return <Heart className="w-4 h-4 text-red-500 fill-red-500" />;
+        return <Heart className="w-3 h-3 text-red-500 fill-red-500" />;
       case "watched":
-        return <Eye className="w-4 h-4 text-emerald-500" />;
+        return <Eye className="w-3 h-3 text-emerald-500" />;
       default:
-        return <Sparkles className="w-4 h-4 text-primary" />;
+        return <Sparkles className="w-3 h-3 text-primary" />;
     }
   };
 
   const getActionText = () => {
     const action = activityLabels[activity.type];
-    
+
     if (activity.type === "physical_added" && activity.metadata.format) {
       const format = formatLabels[activity.metadata.format] || activity.metadata.format;
       return `${action} en ${format}`;
     }
-    
+
     if (activity.type === "rated" && activity.metadata.rating) {
       return `${action} ${"★".repeat(activity.metadata.rating)}`;
     }
-    
+
     return action;
   };
 
@@ -151,38 +150,34 @@ const ActivityItem: React.FC<{ activity: CommunityActivity }> = ({ activity }) =
   });
 
   return (
-    <div className="inline-flex items-center gap-3 px-6 py-1 group">
+    <div className="inline-flex items-center gap-2 px-5 py-0.5 group">
       {/* Icon */}
-      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-card flex items-center justify-center border border-border/50">
+      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-card flex items-center justify-center border border-border/50">
         {getIcon()}
       </div>
 
       {/* Content */}
-      <div className="flex items-center gap-2 text-sm">
-        <Link 
+      <div className="flex items-center gap-1.5 text-xs">
+        <Link
           to={`/profile/${activity.userId}`}
           className="font-semibold text-foreground hover:text-primary transition-colors"
         >
           @{activity.username}
         </Link>
-        <span className="text-muted-foreground">
-          {getActionText()}
-        </span>
+        <span className="text-muted-foreground">{getActionText()}</span>
         {activity.movieTitle && (
           <Link
             to={`/movie/${activity.tmdbId}`}
-            className="font-medium text-foreground hover:text-primary transition-colors max-w-[200px] truncate"
+            className="font-medium text-foreground hover:text-primary transition-colors max-w-[180px] truncate"
           >
             {activity.movieTitle}
           </Link>
         )}
-        <span className="text-xs text-muted-foreground/60">
-          · {timeAgo}
-        </span>
+        <span className="text-[10px] text-muted-foreground/60">· {timeAgo}</span>
       </div>
 
       {/* Separator */}
-      <div className="w-1 h-1 rounded-full bg-border/50 ml-2" />
+      <div className="w-1 h-1 rounded-full bg-border/50 ml-1" />
     </div>
   );
 };
