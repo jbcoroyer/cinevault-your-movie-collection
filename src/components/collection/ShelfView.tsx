@@ -1,8 +1,8 @@
 import React, { useState, useRef } from "react";
-import { PhysicalMovie, PhysicalFormat, formatLabels } from "@/services/physicalMovies";
-import { MovieDetails, getImageUrl } from "@/services/tmdb";
-import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { PhysicalMovie, PhysicalFormat, formatLabels } from "../../services/physicalMovies";
+import { MovieDetails, getImageUrl } from "../../services/tmdb";
+import { cn } from "../../lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { Disc } from "lucide-react";
 
 interface ShelfViewProps {
@@ -78,10 +78,13 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
       ref={containerRef}
       className={cn(
         "w-full bg-[#0a0a0a] rounded-xl overflow-hidden relative perspective-[2000px]",
-        // Mode Light : Bordures fines, scroll vertical autorisé (touch-pan-y), hauteur plus compacte
-        // Mode Default : Bordures épaisses, pas de scroll (touch-none), grande hauteur
+        // Mode Light :
+        // - Bordures fines
+        // - Scroll vertical autorisé (touch-pan-y)
+        // - Hauteur : Limitée sur mobile (290px pour un étage), illimitée sur Desktop (h-auto)
+        // Mode Default : Bordures épaisses, pas de scroll (touch-none), grande hauteur fixe
         isLight
-          ? "border-[4px] border-[#151515] touch-pan-y min-h-[300px]"
+          ? "border-[4px] border-[#151515] touch-pan-y max-h-[290px] md:max-h-none h-auto"
           : "border-[12px] border-[#151515] shadow-[0_0_50px_rgba(0,0,0,0.8)] touch-none min-h-[450px]",
       )}
       onTouchStart={handleTouchMove}
@@ -98,7 +101,7 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
       <div
         className={cn(
           "relative z-10 flex flex-wrap items-end content-start gap-[1px] sm:gap-[2px]",
-          isLight ? "p-4 sm:p-6 min-h-[300px]" : "p-6 sm:p-10 min-h-[450px]",
+          isLight ? "p-4 sm:p-6" : "p-6 sm:p-10 min-h-[450px]",
         )}
       >
         {movies.map((pm, index) => {
