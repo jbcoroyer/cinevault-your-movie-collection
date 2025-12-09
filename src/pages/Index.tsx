@@ -464,8 +464,7 @@ export default function Index() {
           subtitle="En salles et en streaming"
           movies={nowAvailable}
           loading={loading}
-          linkTo="/movies/now-available"
-          linkLabel="Voir tout"
+          seeMoreLink="/movies/now-available"
         />
 
         {/* ========================================
@@ -476,8 +475,7 @@ export default function Index() {
           subtitle="Les plus appréciés du moment"
           movies={popular}
           loading={loading}
-          linkTo="/movies/popular"
-          linkLabel="Voir tout"
+          seeMoreLink="/movies/popular"
         />
 
         {/* ========================================
@@ -486,7 +484,7 @@ export default function Index() {
         {!user && (
           <section className="px-4 sm:px-6 py-12">
             <div className="container mx-auto">
-              <GlassCard variant="aurora" padding="xl" className="text-center max-w-2xl mx-auto">
+              <GlassCard variant="gradient" hover="aurora" padding="lg" className="text-center max-w-2xl mx-auto">
                 <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-primary/10 flex items-center justify-center">
                   <Disc className="w-7 h-7 text-primary" />
                 </div>
