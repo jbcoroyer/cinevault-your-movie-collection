@@ -395,4 +395,5 @@ export const CollectionPreview: React.FC<CollectionPreviewProps> = ({ className 
   );
 };
 
+export { CollectionPreview as LandingHero };
 export default CollectionPreview;
