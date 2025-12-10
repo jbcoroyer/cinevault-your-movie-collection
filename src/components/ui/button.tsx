@@ -12,11 +12,15 @@ const buttonVariants = cva(
         default:
           "bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm",
-        outline: "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm",
-        ghost: "hover:bg-accent hover:text-accent-foreground active:scale-90",
+        // FIXED: outline hover utilise maintenant muted au lieu de accent pour éviter le blanc sur blanc
+        outline: "border border-input bg-background text-foreground shadow-sm hover:bg-muted hover:border-primary/50",
+        // FIXED: secondary a maintenant un hover plus marqué avec une teinte plus sombre
+        secondary:
+          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary-foreground/10 hover:text-foreground",
+        // FIXED: ghost utilise muted au lieu de accent pour un meilleur contraste
+        ghost: "text-muted-foreground hover:bg-muted hover:text-foreground active:scale-90",
         link: "text-primary underline-offset-4 hover:underline",
-        // Nouveau variant pour les actions principales "Glass"
+        // Glass variant inchangé (fonctionne sur fonds sombres)
         glass: "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 shadow-lg",
       },
       size: {
