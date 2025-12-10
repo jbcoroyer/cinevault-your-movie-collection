@@ -5,6 +5,7 @@ import { BottomNav } from "../components/BottomNav";
 import { LandingHero } from "../components/LandingHero";
 import { MovieSection } from "../components/MovieSection";
 import { FollowingMoviesSection } from "../components/FollowingMoviesSection";
+import { WelcomeSection } from "../components/home/WelcomeSection";
 import { getPopularMovies, Movie, getImageUrl, MovieDetails, getMovieDetails } from "../services/tmdb";
 import { useAuth } from "../contexts/AuthContext";
 import { useBadgeNotification } from "../contexts/BadgeNotificationContext";
@@ -33,7 +34,7 @@ import { ShelfView } from "../components/collection/ShelfView";
 
 export default function Index() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const { currentLevel, currentXp, progressPercent, unlockedBadges, userStats } = useBadgeNotification();
 
   const [popular, setPopular] = useState<Movie[]>([]);
@@ -61,7 +62,7 @@ export default function Index() {
         const collectionSlice = collection.slice(0, 8);
         setMyCollection(collectionSlice);
 
-        // FIXED: Charger les détails des films pour le ShelfView
+        // Charger les détails des films pour le ShelfView
         const detailsMap: Record<number, MovieDetails> = {};
         await Promise.all(
           collectionSlice.map(async (pm) => {
@@ -128,57 +129,10 @@ export default function Index() {
       <Header />
 
       <main className="pt-14 md:pt-0 container mx-auto px-4 py-6 space-y-8">
-        {/* Section Bienvenue */}
-        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 via-background to-background border border-amber-500/20 p-6">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        {/* Section Bienvenue - Nouveau composant engageant */}
+        <WelcomeSection username={profile?.username} />
 
-          <div className="relative flex items-center justify-between">
-            <div>
-              <h1 className="font-display text-2xl md:text-3xl font-bold mb-2">Bienvenue sur CineVault 👋</h1>
-              <p className="text-muted-foreground">
-                Votre collection vous attend. Que souhaitez-vous faire aujourd'hui ?
-              </p>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:border-amber-500/50 hover:bg-amber-500/5"
-              onClick={() => navigate("/collection")}
-            >
-              <Library className="w-5 h-5 text-amber-500" />
-              <span className="text-sm">Ma collection</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:border-amber-500/50 hover:bg-amber-500/5"
-              onClick={() => navigate("/search")}
-            >
-              <UserPlus className="w-5 h-5 text-blue-500" />
-              <span className="text-sm">Découvrir</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:border-amber-500/50 hover:bg-amber-500/5"
-              onClick={() => navigate("/badges")}
-            >
-              <Trophy className="w-5 h-5 text-purple-500" />
-              <span className="text-sm">Mes badges</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:border-amber-500/50 hover:bg-amber-500/5"
-              onClick={() => navigate("/lists")}
-            >
-              <Heart className="w-5 h-5 text-red-500" />
-              <span className="text-sm">Mes listes</span>
-            </Button>
-          </div>
-        </section>
-
-        {/* Ma Collection - FIXED: Passe maintenant movieDetailsMap */}
+        {/* Ma Collection - Avec ShelfView */}
         {myCollection.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-4">
