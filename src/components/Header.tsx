@@ -1,15 +1,17 @@
-import { useNavigate, NavLink, useLocation } from "react-router-dom";
-import { Home, Search, Library, Trophy, ListVideo } from "lucide-react";
+import { useNavigate, NavLink, useLocation, Link } from "react-router-dom";
+import { Home, Search, Library, Trophy, ListVideo, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProfileMenu } from "./ProfileMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { Button } from "./ui/button";
 
 /**
  * Header - Navigation desktop épurée
  * - Ligne dorée sous l'onglet actif
  * - Collection mis en avant avec fond ambre
+ * - Bouton "Se connecter" quand non authentifié
  */
 
 const navItems = [
@@ -23,7 +25,7 @@ const navItems = [
 export const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [collectionCount, setCollectionCount] = useState(0);
 
   useEffect(() => {
@@ -111,7 +113,30 @@ export const Header: React.FC = () => {
           })}
         </nav>
 
-        <ProfileMenu />
+        {/* Auth Section */}
+        {!loading &&
+          (user ? (
+            <ProfileMenu />
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/auth")}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Se connecter
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => navigate("/auth?mode=signup")}
+                className="bg-amber-500 hover:bg-amber-600 text-white"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Créer un compte
+              </Button>
+            </div>
+          ))}
       </div>
     </header>
   );
