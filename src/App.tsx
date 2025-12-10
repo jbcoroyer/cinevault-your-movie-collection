@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { BadgeNotificationProvider } from "./contexts/BadgeNotificationContext";
+import { ThemeProvider } from "./components/ThemeProvider";
 import { MobileHeader } from "./components/MobileHeader";
 import OnboardingWizard from "./components/OnboardingWizard";
 
@@ -54,44 +55,46 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <BadgeNotificationProvider>
-            {/* Wrapper de l'application qui intercepte pour l'Onboarding */}
-            <AppLayout>
-              <MobileHeader />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <BadgeNotificationProvider>
+              {/* Wrapper de l'application qui intercepte pour l'Onboarding */}
+              <AppLayout>
+                <MobileHeader />
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
 
-                {/* Routes Films & Personnes */}
-                <Route path="/movies" element={<MovieList />} />
-                <Route path="/movie/:id" element={<MovieDetail />} />
-                <Route path="/person/:id" element={<PersonDetail />} />
-                <Route path="/search" element={<Search />} />
+                  {/* Routes Films & Personnes */}
+                  <Route path="/movies" element={<MovieList />} />
+                  <Route path="/movie/:id" element={<MovieDetail />} />
+                  <Route path="/person/:id" element={<PersonDetail />} />
+                  <Route path="/search" element={<Search />} />
 
-                {/* Routes Utilisateur & Social */}
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/profile/:userId" element={<Profile />} />
-                <Route path="/collection" element={<Collection />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/badges" element={<Badges />} />
-                <Route path="/lists" element={<Lists />} />
-                <Route path="/lists/:id" element={<ListDetail />} />
-                <Route path="/feed" element={<Feed />} />
+                  {/* Routes Utilisateur & Social */}
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/profile/:userId" element={<Profile />} />
+                  <Route path="/collection" element={<Collection />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/badges" element={<Badges />} />
+                  <Route path="/lists" element={<Lists />} />
+                  <Route path="/lists/:id" element={<ListDetail />} />
+                  <Route path="/feed" element={<Feed />} />
 
-                {/* Fallback */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </AppLayout>
-          </BadgeNotificationProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+                  {/* Fallback */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AppLayout>
+            </BadgeNotificationProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
