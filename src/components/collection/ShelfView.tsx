@@ -56,8 +56,6 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
 
   // --- GESTION TACTILE ---
   const handleTouchMove = (e: React.TouchEvent) => {
-    // En mode light, on laisse le comportement natif (scroll) si l'utilisateur scroll verticalement
-    // Mais on essaie quand même de détecter l'élément sous le doigt pour l'effet visuel
     const touch = e.touches[0];
     const target = document.elementFromPoint(touch.clientX, touch.clientY);
     const spine = target?.closest("[data-movie-id]");
@@ -78,11 +76,6 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
       ref={containerRef}
       className={cn(
         "w-full bg-[#0a0a0a] rounded-xl overflow-hidden relative perspective-[2000px]",
-        // Mode Light :
-        // - Bordures fines
-        // - Scroll vertical autorisé (touch-pan-y)
-        // - Hauteur : Limitée sur mobile (290px pour un étage), illimitée sur Desktop (h-auto)
-        // Mode Default : Bordures épaisses, pas de scroll (touch-none), grande hauteur fixe
         isLight
           ? "border-[4px] border-[#151515] touch-pan-y max-h-[290px] md:max-h-none h-auto"
           : "border-[12px] border-[#151515] shadow-[0_0_50px_rgba(0,0,0,0.8)] touch-none min-h-[450px]",
@@ -137,8 +130,6 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                     isActive
                       ? [
                           "z-50 scale-110 -translate-y-4 brightness-110",
-                          // L'astuce du volume : Une ombre portée dure (#000) décalée à droite (4px) simule l'épaisseur (le côté du boîtier)
-                          // + une grande ombre diffuse pour la lévitation
                           "shadow-[4px_0_0_#080808,8px_20px_30px_rgba(0,0,0,0.8)]",
                         ]
                       : [
@@ -156,7 +147,6 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                   <div
                     className={cn(
                       "absolute inset-0 z-0 bg-cover bg-center transition-all duration-500 saturate-[0.8]",
-                      // On réduit le flou au survol pour révéler le détail de la "texture"
                       isActive
                         ? "blur-[0.5px] opacity-50"
                         : "blur-[2px] opacity-30 group-hover:blur-[0.5px] group-hover:opacity-50",
@@ -173,10 +163,8 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                     className={cn(
                       "absolute inset-0 z-10 pointer-events-none bg-gradient-to-r",
                       isSteelbook
-                        ? // Métal : Reflet large qui bouge
-                          "from-transparent via-white/30 to-transparent bg-[length:200%_100%] bg-left group-hover:bg-right transition-[background-position] duration-700 ease-in-out mix-blend-overlay opacity-70"
-                        : // Plastique : Reflet cylindrique (lumière sur les bords, ombre au centre)
-                          "from-white/20 via-transparent to-black/60 opacity-80",
+                        ? "from-transparent via-white/30 to-transparent bg-[length:200%_100%] bg-left group-hover:bg-right transition-[background-position] duration-700 ease-in-out mix-blend-overlay opacity-70"
+                        : "from-white/20 via-transparent to-black/60 opacity-80",
                     )}
                   />
 
@@ -203,7 +191,6 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                           maxWidth: "85%",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          // Ombre portée sous le texte pour le détacher du fond (effet embossé)
                           textShadow: "0 2px 4px rgba(0,0,0,0.8)",
                         }}
                       >
@@ -227,43 +214,42 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                 </div>
               </TooltipTrigger>
 
-              {/* Preview Poster au survol */}
+              {/* FIXED: Preview Poster au survol - maintenant 100% SOLIDE sans transparence */}
               <TooltipContent
                 side="right"
                 sideOffset={30}
-                className="p-0 border-none bg-transparent shadow-none pointer-events-none overflow-visible"
+                className="p-0 border-none shadow-2xl pointer-events-none overflow-visible bg-zinc-900 rounded-lg"
               >
-                {/* Lueur d'ambiance derrière le poster */}
-                <div className="absolute inset-0 bg-black/60 blur-[40px] scale-110 z-[-1] rounded-full"></div>
-
-                <div className="relative w-56 sm:w-64 rounded-[8px] overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.9)] border border-white/10 animate-in fade-in slide-in-from-left-4 duration-300 ease-out">
+                <div className="relative w-56 sm:w-64 rounded-lg overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.9)] border border-zinc-700 animate-in fade-in slide-in-from-left-4 duration-300 ease-out">
                   {poster ? (
                     <img src={poster} alt={title} className="w-full h-auto object-cover aspect-[2/3]" />
                   ) : (
-                    <div className="w-full aspect-[2/3] bg-zinc-900 flex items-center justify-center text-zinc-500">
-                      <Disc className="w-16 h-16 opacity-20" />
+                    <div className="w-full aspect-[2/3] bg-zinc-800 flex items-center justify-center text-zinc-500">
+                      <Disc className="w-16 h-16 opacity-40" />
                     </div>
                   )}
 
+                  {/* Badge format - SOLIDE */}
                   <div
                     className={cn(
-                      "absolute top-3 right-3 px-2.5 py-1 backdrop-blur-md rounded text-[10px] font-bold uppercase tracking-wider text-white border shadow-lg",
-                      isSteelbook ? "bg-slate-800/70 border-slate-400/30" : "bg-black/70 border-white/10",
+                      "absolute top-3 right-3 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider text-white border shadow-lg",
+                      isSteelbook ? "bg-slate-700 border-slate-500" : "bg-zinc-800 border-zinc-600",
                     )}
                   >
                     {formatLabels[pm.format]}
                   </div>
 
-                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/90 to-transparent p-5 pt-20 text-left">
+                  {/* Infos en bas - fond SOLIDE */}
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/95 to-black/80 p-5 pt-20 text-left">
                     <h4 className="text-white font-sans font-bold text-xl leading-tight line-clamp-2 drop-shadow-sm">
                       {title}
                     </h4>
                     <div className="flex items-center gap-3 mt-2">
-                      <span className="text-white/60 text-xs font-medium">
-                        {new Date(details?.release_date || "").getFullYear() || "N/A"}
+                      <span className="text-white/70 text-xs font-medium">
+                        {details?.release_date ? new Date(details.release_date).getFullYear() : "N/A"}
                       </span>
                       {pm.price && (
-                        <span className="text-primary font-bold text-sm bg-primary/10 px-2 py-0.5 rounded-sm">
+                        <span className="text-primary font-bold text-sm bg-primary/20 px-2 py-0.5 rounded-sm">
                           {pm.price} €
                         </span>
                       )}

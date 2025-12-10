@@ -5,7 +5,7 @@ import { BottomNav } from "../components/BottomNav";
 import { LandingHero } from "../components/LandingHero";
 import { MovieSection } from "../components/MovieSection";
 import { FollowingMoviesSection } from "../components/FollowingMoviesSection";
-import { getPopularMovies, Movie, getImageUrl, MovieDetails } from "../services/tmdb";
+import { getPopularMovies, Movie, getImageUrl, MovieDetails, getMovieDetails } from "../services/tmdb";
 import { useAuth } from "../contexts/AuthContext";
 import { useBadgeNotification } from "../contexts/BadgeNotificationContext";
 import { getPhysicalMovies, PhysicalMovie } from "../services/physicalMovies";
@@ -39,7 +39,7 @@ export default function Index() {
   const [popular, setPopular] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [myCollection, setMyCollection] = useState<PhysicalMovie[]>([]);
-  const [movieDetails, setMovieDetails] = useState<Record<number, MovieDetails>>({});
+  const [movieDetailsMap, setMovieDetailsMap] = useState<Record<number, MovieDetails>>({});
   const [topCollectors, setTopCollectors] = useState<any[]>([]);
   const [mostOwned, setMostOwned] = useState<any[]>([]);
   const [stats, setStats] = useState({ movies: 0, collectors: 0, reviews: 0 });
@@ -58,7 +58,24 @@ export default function Index() {
       // Charger ma collection si connecté
       if (user) {
         const collection = await getPhysicalMovies(user.id);
-        setMyCollection(collection.slice(0, 8));
+        const collectionSlice = collection.slice(0, 8);
+        setMyCollection(collectionSlice);
+
+        // FIXED: Charger les détails des films pour le ShelfView
+        const detailsMap: Record<number, MovieDetails> = {};
+        await Promise.all(
+          collectionSlice.map(async (pm) => {
+            try {
+              const details = await getMovieDetails(pm.tmdb_id);
+              if (details) {
+                detailsMap[pm.tmdb_id] = details;
+              }
+            } catch (error) {
+              console.error(`Error loading details for movie ${pm.tmdb_id}:`, error);
+            }
+          }),
+        );
+        setMovieDetailsMap(detailsMap);
       }
 
       // Charger les stats globales
@@ -122,32 +139,10 @@ export default function Index() {
                 Votre collection vous attend. Que souhaitez-vous faire aujourd'hui ?
               </p>
             </div>
-
-            {/* XP Progress */}
-            <div className="hidden md:flex items-center gap-4">
-              <div className="text-right">
-                <div className="flex items-center gap-2 mb-1">
-                  <Trophy className="w-4 h-4 text-amber-500" />
-                  <span className="font-semibold">Niveau {currentLevel}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Progress value={progressPercent} className="w-32 h-2" />
-                  <span className="text-xs text-muted-foreground">{currentXp} XP</span>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Quick Actions */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-            <Button
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:border-amber-500/50 hover:bg-amber-500/5"
-              onClick={() => navigate("/search")}
-            >
-              <Disc className="w-5 h-5 text-amber-500" />
-              <span className="text-sm">Ajouter un film</span>
-            </Button>
             <Button
               variant="outline"
               className="h-auto py-4 flex flex-col items-center gap-2 hover:border-amber-500/50 hover:bg-amber-500/5"
@@ -159,10 +154,10 @@ export default function Index() {
             <Button
               variant="outline"
               className="h-auto py-4 flex flex-col items-center gap-2 hover:border-amber-500/50 hover:bg-amber-500/5"
-              onClick={() => navigate("/lists")}
+              onClick={() => navigate("/search")}
             >
-              <Heart className="w-5 h-5 text-rose-500" />
-              <span className="text-sm">Mes listes</span>
+              <UserPlus className="w-5 h-5 text-blue-500" />
+              <span className="text-sm">Découvrir</span>
             </Button>
             <Button
               variant="outline"
@@ -172,10 +167,18 @@ export default function Index() {
               <Trophy className="w-5 h-5 text-purple-500" />
               <span className="text-sm">Mes badges</span>
             </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col items-center gap-2 hover:border-amber-500/50 hover:bg-amber-500/5"
+              onClick={() => navigate("/lists")}
+            >
+              <Heart className="w-5 h-5 text-red-500" />
+              <span className="text-sm">Mes listes</span>
+            </Button>
           </div>
         </section>
 
-        {/* Ma Collection */}
+        {/* Ma Collection - FIXED: Passe maintenant movieDetailsMap */}
         {myCollection.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-4">
@@ -188,7 +191,12 @@ export default function Index() {
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
-            <ShelfView movies={myCollection.slice(0, 8)} movieDetailsMap={{}} onMovieClick={(movie) => navigate(`/movie/${movie.tmdb_id}`)} />
+            <ShelfView
+              movies={myCollection}
+              movieDetailsMap={movieDetailsMap}
+              onMovieClick={(movie) => navigate(`/movie/${movie.tmdb_id}`)}
+              variant="light"
+            />
           </section>
         )}
 
@@ -212,34 +220,23 @@ export default function Index() {
                 <Users className="w-5 h-5 text-amber-500" />
               </div>
               <div>
-                <h2 className="font-display text-lg font-bold">La Communauté CineVault</h2>
-                <p className="text-sm text-muted-foreground">Rejoignez des passionnés de cinéma</p>
+                <h2 className="font-display text-lg font-bold">Communauté CineVault</h2>
+                <p className="text-sm text-muted-foreground">Statistiques en temps réel</p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 rounded-xl bg-white/5 border border-white/5">
-                <div className="w-10 h-10 mx-auto rounded-full bg-amber-500/20 flex items-center justify-center mb-2">
-                  <Disc className="w-5 h-5 text-amber-500" />
-                </div>
-                <span className="text-2xl font-bold">{stats.movies.toLocaleString()}</span>
-                <p className="text-xs text-muted-foreground mt-1">Films catalogués</p>
+              <div className="text-center">
+                <div className="text-2xl md:text-3xl font-bold text-amber-500">{stats.movies.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Films collectionnés</div>
               </div>
-
-              <div className="text-center p-4 rounded-xl bg-white/5 border border-white/5">
-                <div className="w-10 h-10 mx-auto rounded-full bg-blue-500/20 flex items-center justify-center mb-2">
-                  <Users className="w-5 h-5 text-blue-500" />
-                </div>
-                <span className="text-2xl font-bold">{stats.collectors.toLocaleString()}</span>
-                <p className="text-xs text-muted-foreground mt-1">Collectionneurs</p>
+              <div className="text-center">
+                <div className="text-2xl md:text-3xl font-bold text-blue-500">{stats.collectors.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Collectionneurs</div>
               </div>
-
-              <div className="text-center p-4 rounded-xl bg-white/5 border border-white/5">
-                <div className="w-10 h-10 mx-auto rounded-full bg-emerald-500/20 flex items-center justify-center mb-2">
-                  <Activity className="w-5 h-5 text-emerald-500" />
-                </div>
-                <span className="text-2xl font-bold">{stats.reviews.toLocaleString()}</span>
-                <p className="text-xs text-muted-foreground mt-1">Avis & Critiques</p>
+              <div className="text-center">
+                <div className="text-2xl md:text-3xl font-bold text-purple-500">{stats.reviews.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Avis partagés</div>
               </div>
             </div>
           </GlassCard>
