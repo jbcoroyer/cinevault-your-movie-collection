@@ -13,6 +13,7 @@ import { useRef, useState, useEffect } from "react";
  *
  * @description Section montrant les films vus par les utilisateurs
  * que l'on suit, avec avatars et timestamps.
+ * FIXED: Padding ajusté pour éviter que les hover effects coupent les affiches
  */
 
 export const FollowingMoviesSection: React.FC = () => {
@@ -54,14 +55,14 @@ export const FollowingMoviesSection: React.FC = () => {
   // Loading State
   if (loading) {
     return (
-      <section className="mb-10 sm:mb-14 w-full overflow-hidden">
-        <div className="flex items-end justify-between px-4 sm:px-6 mb-5 sm:mb-6">
+      <section className="mb-8 sm:mb-10 w-full overflow-hidden">
+        <div className="flex items-end justify-between px-4 sm:px-6 mb-4 sm:mb-5">
           <div className="space-y-1">
             <span className="section-label">Activité</span>
             <h2 className="font-display text-2xl sm:text-3xl font-semibold">Vos abonnements</h2>
           </div>
         </div>
-        <div className="flex gap-4 overflow-x-auto px-4 sm:px-6 pb-4 scrollbar-hide">
+        <div className="flex gap-4 overflow-x-auto px-4 sm:px-6 pt-2 pb-6 scrollbar-hide">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex-shrink-0 w-[140px] sm:w-[160px]">
               <div className="aspect-poster rounded-xl bg-muted animate-shimmer" />
@@ -79,8 +80,8 @@ export const FollowingMoviesSection: React.FC = () => {
   // Empty State
   if (movies.length === 0) {
     return (
-      <section className="mb-10 sm:mb-14 px-4 sm:px-6">
-        <div className="flex items-end justify-between mb-5 sm:mb-6">
+      <section className="mb-8 sm:mb-10 px-4 sm:px-6">
+        <div className="flex items-end justify-between mb-4 sm:mb-5">
           <div>
             <p className="section-label mb-1">Activité</p>
             <h2 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight">Vos abonnements</h2>
@@ -115,9 +116,9 @@ export const FollowingMoviesSection: React.FC = () => {
 
   // Main Content
   return (
-    <section className="mb-10 sm:mb-14 w-full">
+    <section className="mb-8 sm:mb-10 w-full">
       {/* Header */}
-      <div className="flex items-end justify-between px-4 sm:px-6 mb-5 sm:mb-6">
+      <div className="flex items-end justify-between px-4 sm:px-6 mb-4 sm:mb-5">
         <div>
           <p className="section-label mb-1">Activité</p>
           <h2 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight">Vos abonnements</h2>
@@ -143,7 +144,7 @@ export const FollowingMoviesSection: React.FC = () => {
         {/* Left fade + button */}
         <div
           className={cn(
-            "absolute left-0 top-0 bottom-4 w-16 z-10",
+            "absolute left-0 top-0 bottom-0 w-16 z-10",
             "bg-gradient-to-r from-background to-transparent",
             "pointer-events-none transition-opacity duration-300",
             canScrollLeft ? "opacity-100" : "opacity-0",
@@ -170,7 +171,7 @@ export const FollowingMoviesSection: React.FC = () => {
         {/* Right fade + button */}
         <div
           className={cn(
-            "absolute right-0 top-0 bottom-4 w-16 z-10",
+            "absolute right-0 top-0 bottom-0 w-16 z-10",
             "bg-gradient-to-l from-background to-transparent",
             "pointer-events-none transition-opacity duration-300",
             canScrollRight ? "opacity-100" : "opacity-0",
@@ -194,16 +195,16 @@ export const FollowingMoviesSection: React.FC = () => {
           </button>
         )}
 
-        {/* Movies */}
+        {/* Movies - FIXED: Added pt-2 and pb-6 for hover effects space */}
         <div
           ref={scrollRef}
-          className="flex gap-4 sm:gap-5 overflow-x-auto px-4 sm:px-6 pb-4 scrollbar-hide scroll-smooth"
+          className="flex gap-4 sm:gap-5 overflow-x-auto px-4 sm:px-6 pt-2 pb-6 scrollbar-hide scroll-smooth"
         >
           {movies.map((item, index) => (
             <Link
               key={item.movie.id}
               to={`/movie/${item.movie.id}`}
-              className={cn("flex-shrink-0 w-[140px] sm:w-[160px] group", "opacity-0 animate-fade-in-up")}
+              className={cn("flex-shrink-0 w-[140px] sm:w-[160px] group/card", "opacity-0 animate-fade-in-up")}
               style={{
                 animationDelay: `${index * 50}ms`,
                 animationFillMode: "forwards",
@@ -216,9 +217,9 @@ export const FollowingMoviesSection: React.FC = () => {
                   "bg-muted",
                   "transition-all duration-500 ease-out",
                   "shadow-[0_4px_20px_rgba(0,0,0,0.1)]",
-                  "group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.2)]",
-                  "group-hover:translate-y-[-6px]",
-                  "ring-1 ring-white/10 group-hover:ring-primary/30",
+                  "group-hover/card:shadow-[0_12px_40px_rgba(0,0,0,0.2)]",
+                  "group-hover/card:translate-y-[-6px]",
+                  "ring-1 ring-white/10 group-hover/card:ring-primary/30",
                 )}
               >
                 {item.movie.poster_path ? (
@@ -228,7 +229,7 @@ export const FollowingMoviesSection: React.FC = () => {
                     className={cn(
                       "w-full h-full object-cover",
                       "transition-transform duration-700",
-                      "group-hover:scale-110",
+                      "group-hover/card:scale-110",
                     )}
                     loading="lazy"
                   />
@@ -243,7 +244,7 @@ export const FollowingMoviesSection: React.FC = () => {
                   className={cn(
                     "absolute inset-0",
                     "bg-gradient-to-t from-black/80 via-transparent to-transparent",
-                    "opacity-60 group-hover:opacity-100",
+                    "opacity-60 group-hover/card:opacity-100",
                     "transition-opacity duration-500",
                   )}
                 />
@@ -260,7 +261,7 @@ export const FollowingMoviesSection: React.FC = () => {
                           "bg-primary flex items-center justify-center",
                           "text-[10px] font-bold text-primary-foreground",
                           "transition-transform duration-300",
-                          "group-hover:scale-110",
+                          "group-hover/card:scale-110",
                         )}
                         style={{ zIndex: 3 - i }}
                         title={watcher.username}
@@ -278,7 +279,7 @@ export const FollowingMoviesSection: React.FC = () => {
                           "w-7 h-7 rounded-full",
                           "border-2 border-background",
                           "bg-muted flex items-center justify-center",
-                          "text-[10px] font-semibold text-muted-foreground",
+                          "text-[10px] font-bold text-muted-foreground",
                         )}
                       >
                         +{item.watchedBy.length - 3}
@@ -290,15 +291,14 @@ export const FollowingMoviesSection: React.FC = () => {
 
               {/* Info */}
               <div className="mt-3 space-y-1">
-                <h3 className={cn("font-medium line-clamp-1 group-hover:text-primary transition-colors text-sm")}>
+                <h3 className="font-medium text-sm line-clamp-1 group-hover/card:text-primary transition-colors">
                   {item.movie.title}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {item.watchedBy[0]?.watchedAt &&
-                    formatDistanceToNow(new Date(item.watchedBy[0].watchedAt), {
-                      addSuffix: true,
-                      locale: fr,
-                    })}
+                  {formatDistanceToNow(new Date(item.lastWatched), {
+                    addSuffix: true,
+                    locale: fr,
+                  })}
                 </p>
               </div>
             </Link>
@@ -308,3 +308,5 @@ export const FollowingMoviesSection: React.FC = () => {
     </section>
   );
 };
+
+export default FollowingMoviesSection;

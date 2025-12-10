@@ -128,13 +128,13 @@ export default function Index() {
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Header />
 
-      <main className="pt-14 md:pt-0 container mx-auto px-4 py-6 space-y-8">
+      <main className="pt-14 md:pt-0 container mx-auto px-4 py-8 space-y-6">
         {/* Section Bienvenue - Nouveau composant engageant */}
-        <WelcomeSection username={profile?.username} />
+        <WelcomeSection username={profile?.username} className="mt-2" />
 
         {/* Ma Collection - Avec ShelfView */}
         {myCollection.length > 0 && (
-          <section>
+          <section className="mt-8">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="font-display text-xl font-bold">Ma Collection</h2>

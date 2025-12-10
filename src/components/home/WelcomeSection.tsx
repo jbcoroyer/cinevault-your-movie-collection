@@ -1,20 +1,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Library, 
-  Compass, 
-  Trophy, 
-  ListVideo, 
-  Plus,
-  Sparkles,
-  Users,
-  Film
-} from "lucide-react";
+import { Library, Compass, Trophy, ListVideo, Plus, Sparkles, Users, Film } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
  * WelcomeSection — Section d'accueil engageante
- * 
+ *
  * 4 actions rapides avec le CTA principal "Ma Collection" au centre
  * Animations CSS fluides et design premium cinéma
  */
@@ -38,7 +29,7 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
   cta,
   onClick,
   variant,
-  delay = 0
+  delay = 0,
 }) => {
   const variants = {
     primary: {
@@ -49,7 +40,7 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
       glow: "group-hover:shadow-amber-500/30",
       ring: "ring-amber-500/20",
       ctaBg: "bg-amber-500 hover:bg-amber-400 text-black font-semibold",
-      pulse: true
+      pulse: true,
     },
     discover: {
       gradient: "from-blue-500/15 via-cyan-500/10 to-teal-500/5",
@@ -59,7 +50,7 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
       glow: "group-hover:shadow-blue-500/20",
       ring: "ring-blue-500/20",
       ctaBg: "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30",
-      pulse: false
+      pulse: false,
     },
     badges: {
       gradient: "from-purple-500/15 via-violet-500/10 to-fuchsia-500/5",
@@ -69,7 +60,7 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
       glow: "group-hover:shadow-purple-500/20",
       ring: "ring-purple-500/20",
       ctaBg: "bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30",
-      pulse: false
+      pulse: false,
     },
     lists: {
       gradient: "from-rose-500/15 via-pink-500/10 to-red-500/5",
@@ -79,8 +70,8 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
       glow: "group-hover:shadow-rose-500/20",
       ring: "ring-rose-500/20",
       ctaBg: "bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30",
-      pulse: false
-    }
+      pulse: false,
+    },
   };
 
   const style = variants[variant];
@@ -100,42 +91,38 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
         "hover:shadow-xl",
         style.glow,
         "animate-fade-in",
-        isPrimary && "md:col-span-2 md:row-span-2"
+        isPrimary && "md:col-span-2 md:row-span-2",
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
       {/* Fond animé */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-        <div className={cn(
-          "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl",
-          variant === "primary" && "bg-amber-500/20",
-          variant === "discover" && "bg-blue-500/20",
-          variant === "badges" && "bg-purple-500/20",
-          variant === "lists" && "bg-rose-500/20"
-        )} />
+        <div
+          className={cn(
+            "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl",
+            variant === "primary" && "bg-amber-500/20",
+            variant === "discover" && "bg-blue-500/20",
+            variant === "badges" && "bg-purple-500/20",
+            variant === "lists" && "bg-rose-500/20",
+          )}
+        />
       </div>
 
       {/* Pulse ring pour le CTA principal */}
-      {style.pulse && (
-        <div className="absolute inset-0 rounded-2xl animate-pulse-ring opacity-50" />
-      )}
+      {style.pulse && <div className="absolute inset-0 rounded-2xl animate-pulse-ring opacity-50" />}
 
-      <div className={cn(
-        "relative p-5",
-        isPrimary && "md:p-8"
-      )}>
+      <div className={cn("relative p-5", isPrimary && "md:p-8")}>
         {/* En-tête avec icône */}
         <div className="flex items-start gap-4 mb-4">
-          <div className={cn(
-            "relative flex-shrink-0 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3",
-            style.iconBg,
-            isPrimary ? "w-14 h-14" : "w-11 h-11"
-          )}>
-            <Icon className={cn(
-              style.iconColor,
-              isPrimary ? "w-7 h-7" : "w-5 h-5"
-            )} />
-            
+          <div
+            className={cn(
+              "relative flex-shrink-0 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3",
+              style.iconBg,
+              isPrimary ? "w-14 h-14" : "w-11 h-11",
+            )}
+          >
+            <Icon className={cn(style.iconColor, isPrimary ? "w-7 h-7" : "w-5 h-5")} />
+
             {/* Badge "+" pour collection */}
             {isPrimary && (
               <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-lg animate-bounce-subtle">
@@ -143,18 +130,22 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
               </div>
             )}
           </div>
-          
+
           <div className="flex-1 min-w-0">
-            <h3 className={cn(
-              "font-display font-bold text-foreground mb-1 transition-colors",
-              isPrimary ? "text-xl md:text-2xl" : "text-base"
-            )}>
+            <h3
+              className={cn(
+                "font-display font-bold text-foreground mb-1 transition-colors",
+                isPrimary ? "text-xl md:text-2xl" : "text-base",
+              )}
+            >
               {title}
             </h3>
-            <p className={cn(
-              "text-muted-foreground leading-relaxed",
-              isPrimary ? "text-sm md:text-base" : "text-xs line-clamp-2"
-            )}>
+            <p
+              className={cn(
+                "text-muted-foreground leading-relaxed",
+                isPrimary ? "text-sm md:text-base" : "text-xs line-clamp-2",
+              )}
+            >
               {description}
             </p>
           </div>
@@ -168,9 +159,9 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
                 <div
                   key={i}
                   className="w-8 h-12 rounded bg-gradient-to-b from-gray-700 to-gray-800 border border-gray-600 shadow-lg transform transition-transform hover:scale-110 hover:-translate-y-1"
-                  style={{ 
+                  style={{
                     animationDelay: `${i * 100}ms`,
-                    transform: `rotate(${(i - 2) * 5}deg)`
+                    transform: `rotate(${(i - 2) * 5}deg)`,
                   }}
                 />
               ))}
@@ -184,16 +175,18 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
         )}
 
         {/* CTA Button */}
-        <div className={cn(
-          "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all duration-300",
-          style.ctaBg,
-          isPrimary && "px-6 py-3 text-base"
-        )}>
+        <div
+          className={cn(
+            "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all duration-300",
+            style.ctaBg,
+            isPrimary && "px-6 py-3 text-base",
+          )}
+        >
           <span>{cta}</span>
-          <svg 
-            className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" 
-            fill="none" 
-            viewBox="0 0 24 24" 
+          <svg
+            className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
+            fill="none"
+            viewBox="0 0 24 24"
             stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -216,14 +209,11 @@ interface WelcomeSectionProps {
   className?: string;
 }
 
-export const WelcomeSection: React.FC<WelcomeSectionProps> = ({ 
-  username,
-  className 
-}) => {
+export const WelcomeSection: React.FC<WelcomeSectionProps> = ({ username, className }) => {
   const navigate = useNavigate();
 
   return (
-    <section className={cn("relative", className)}>
+    <section className={cn("relative pt-4 md:pt-6", className)}>
       {/* Background ambiance */}
       <div className="absolute inset-0 -z-10 overflow-hidden rounded-3xl">
         <div className="absolute top-0 left-1/4 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl animate-float" />
@@ -237,12 +227,10 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
           <span className="text-xs font-medium text-amber-500">En ligne</span>
         </div>
         <h1 className="font-display text-2xl md:text-3xl font-bold mb-2">
-          {username ? `Salut ${username} !` : "Bienvenue sur CineVault"} 
+          {username ? `Salut ${username} !` : "Bienvenue sur CineVault"}
           <span className="inline-block ml-2 animate-wave">👋</span>
         </h1>
-        <p className="text-muted-foreground text-sm md:text-base">
-          Que souhaitez-vous faire aujourd'hui ?
-        </p>
+        <p className="text-muted-foreground text-sm md:text-base">Que souhaitez-vous faire aujourd'hui ?</p>
       </div>
 
       {/* Grille Bento des actions */}

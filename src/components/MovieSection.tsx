@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
  * - Scroll horizontal avec fade edges
  * - Boutons de navigation au hover
  * - Animation stagger sur les cards
+ * - Padding suffisant pour les hover effects
  */
 
 interface MovieSectionProps {
@@ -69,12 +70,12 @@ export const MovieSection: React.FC<MovieSectionProps> = ({
 
   return (
     <section
-      className="mb-10 sm:mb-14 w-full"
+      className="mb-8 sm:mb-10 w-full"
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
       {/* Header */}
-      <div className="flex items-end justify-between px-4 sm:px-6 mb-5 sm:mb-6">
+      <div className="flex items-end justify-between px-4 sm:px-6 mb-4 sm:mb-5">
         <div>
           <p className="section-label mb-1">{label}</p>
           <h2 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight">{title}</h2>
@@ -102,7 +103,7 @@ export const MovieSection: React.FC<MovieSectionProps> = ({
         {/* Left fade + button */}
         <div
           className={cn(
-            "absolute left-0 top-0 bottom-4 w-16 z-10",
+            "absolute left-0 top-0 bottom-0 w-16 z-10",
             "bg-gradient-to-r from-background to-transparent",
             "pointer-events-none transition-opacity duration-300",
             canScrollLeft ? "opacity-100" : "opacity-0",
@@ -129,7 +130,7 @@ export const MovieSection: React.FC<MovieSectionProps> = ({
         {/* Right fade + button */}
         <div
           className={cn(
-            "absolute right-0 top-0 bottom-4 w-16 z-10",
+            "absolute right-0 top-0 bottom-0 w-16 z-10",
             "bg-gradient-to-l from-background to-transparent",
             "pointer-events-none transition-opacity duration-300",
             canScrollRight ? "opacity-100" : "opacity-0",
@@ -153,10 +154,10 @@ export const MovieSection: React.FC<MovieSectionProps> = ({
           </button>
         )}
 
-        {/* Movies scroll */}
+        {/* Movies scroll - FIXED: Added pt-2 and pb-6 for hover effects space */}
         <div
           ref={scrollRef}
-          className="flex gap-4 sm:gap-5 overflow-x-auto px-4 sm:px-6 pb-4 scrollbar-hide scroll-smooth"
+          className="flex gap-4 sm:gap-5 overflow-x-auto px-4 sm:px-6 pt-2 pb-6 scrollbar-hide scroll-smooth"
         >
           {loading
             ? Array.from({ length: 8 }).map((_, i) => <MovieCardSkeleton key={i} size={cardSize} />)
@@ -182,12 +183,12 @@ export const MovieSection: React.FC<MovieSectionProps> = ({
  * MovieSectionSkeleton - Placeholder pour la section
  */
 export const MovieSectionSkeleton: React.FC<{ cardSize?: "sm" | "md" | "lg" }> = ({ cardSize = "md" }) => (
-  <section className="mb-10 sm:mb-14 w-full">
-    <div className="px-4 sm:px-6 mb-5 sm:mb-6">
+  <section className="mb-8 sm:mb-10 w-full">
+    <div className="px-4 sm:px-6 mb-4 sm:mb-5">
       <div className="h-3 w-20 rounded animate-shimmer mb-2" />
       <div className="h-8 w-48 rounded animate-shimmer" />
     </div>
-    <div className="flex gap-4 sm:gap-5 overflow-hidden px-4 sm:px-6">
+    <div className="flex gap-4 sm:gap-5 overflow-hidden px-4 sm:px-6 pt-2 pb-6">
       {Array.from({ length: 8 }).map((_, i) => (
         <MovieCardSkeleton key={i} size={cardSize} />
       ))}
