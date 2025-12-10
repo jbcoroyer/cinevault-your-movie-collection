@@ -20,37 +20,36 @@
     --card-foreground: 220 25% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 220 25% 10%;
-    --primary: 245 58% 51%;
+    
+    /* Amber/Gold accent - like the "Vault" logo */
+    --primary: 38 92% 50%;
     --primary-foreground: 0 0% 100%;
 
-    /* FIXED: secondary plus contrasté pour meilleur hover */
     --secondary: 220 14% 92%;
     --secondary-foreground: 220 25% 15%;
 
-    /* FIXED: muted légèrement plus sombre pour meilleur contraste hover */
     --muted: 220 14% 90%;
     --muted-foreground: 220 10% 40%;
 
-    --accent: 245 58% 51%;
+    --accent: 38 92% 50%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* FIXED: border plus visible */
     --border: 220 13% 88%;
     --input: 220 13% 88%;
-    --ring: 245 58% 51%;
+    --ring: 38 92% 50%;
     --radius: 1rem;
 
     /* Glass Tokens */
-    --glass-bg: rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-bg: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.5;
     --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 
     /* Aurora Colors */
-    --aurora-1: 245 100% 70%;
-    --aurora-2: 280 100% 70%;
-    --aurora-3: 200 100% 70%;
+    --aurora-1: 38 100% 60%;
+    --aurora-2: 25 100% 55%;
+    --aurora-3: 45 100% 65%;
 
     /* Gold */
     --gold: 45 93% 47%;
@@ -63,29 +62,28 @@
     --card-foreground: 0 0% 95%;
     --popover: 220 20% 10%;
     --popover-foreground: 0 0% 95%;
-    --primary: 245 70% 65%;
+    
+    /* Amber/Gold accent - slightly brighter for dark mode */
+    --primary: 38 92% 55%;
     --primary-foreground: 220 20% 6%;
 
-    /* FIXED: secondary avec meilleur contraste en dark mode */
     --secondary: 220 15% 18%;
     --secondary-foreground: 0 0% 90%;
 
-    /* FIXED: muted ajusté pour meilleur contraste hover */
     --muted: 220 15% 20%;
     --muted-foreground: 220 10% 60%;
 
-    --accent: 245 70% 65%;
+    --accent: 38 92% 55%;
     --accent-foreground: 220 20% 6%;
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    /* FIXED: border plus visible en dark mode */
     --border: 220 15% 22%;
     --input: 220 15% 22%;
-    --ring: 245 70% 65%;
+    --ring: 38 92% 55%;
 
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-bg: 0 0% 100% / 0.03;
+    --glass-border: 0 0% 100% / 0.08;
     --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   }
 }
