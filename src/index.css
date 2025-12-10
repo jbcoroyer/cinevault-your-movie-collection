@@ -22,16 +22,23 @@
     --popover-foreground: 220 25% 10%;
     --primary: 245 58% 51%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 25% 10%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 10% 46%;
+
+    /* FIXED: secondary plus contrasté pour meilleur hover */
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 220 25% 15%;
+
+    /* FIXED: muted légèrement plus sombre pour meilleur contraste hover */
+    --muted: 220 14% 90%;
+    --muted-foreground: 220 10% 40%;
+
     --accent: 245 58% 51%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
+
+    /* FIXED: border plus visible */
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
     --ring: 245 58% 51%;
     --radius: 1rem;
 
@@ -58,16 +65,23 @@
     --popover-foreground: 0 0% 95%;
     --primary: 245 70% 65%;
     --primary-foreground: 220 20% 6%;
-    --secondary: 220 15% 15%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 220 15% 15%;
-    --muted-foreground: 220 10% 55%;
+
+    /* FIXED: secondary avec meilleur contraste en dark mode */
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 0 0% 90%;
+
+    /* FIXED: muted ajusté pour meilleur contraste hover */
+    --muted: 220 15% 20%;
+    --muted-foreground: 220 10% 60%;
+
     --accent: 245 70% 65%;
     --accent-foreground: 220 20% 6%;
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 18%;
-    --input: 220 15% 18%;
+
+    /* FIXED: border plus visible en dark mode */
+    --border: 220 15% 22%;
+    --input: 220 15% 22%;
     --ring: 245 70% 65%;
 
     --glass-bg: rgba(255, 255, 255, 0.03);
