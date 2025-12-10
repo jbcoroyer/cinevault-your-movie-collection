@@ -18,7 +18,7 @@ export type Profile = {
   bio: string | null;
   avatar_url: string | null;
   created_at: string;
-  updated_at: string;
+  streaming_services?: string[] | null;
 };
 
 export type UserMovie = {
