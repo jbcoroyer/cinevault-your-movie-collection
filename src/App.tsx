@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { BadgeNotificationProvider } from "./contexts/BadgeNotificationContext";
-import MobileHeader from "./components/MobileHeader";
+import { MobileHeader } from "./components/MobileHeader";
 import OnboardingWizard from "./components/OnboardingWizard";
 
 // Pages
