@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search as SearchIcon, X, Film, Users, SlidersHorizontal, Calendar, Clock, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ export default function Search() {
   const [activeTab, setActiveTab] = useState<SearchTab>("films");
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 300);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Films state
   const [movieResults, setMovieResults] = useState<Movie[]>([]);
@@ -56,6 +57,18 @@ export default function Search() {
   const [popularUsers, setPopularUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchedUsers, setSearchedUsers] = useState(false);
+
+  // Keyboard shortcut: "/" to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "/" && document.activeElement?.tagName !== "INPUT") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Fetch genres and popular movies on mount
   useEffect(() => {
@@ -249,19 +262,24 @@ export default function Search() {
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
+                ref={inputRef}
                 type="text"
                 placeholder={activeTab === "films" ? "Rechercher un film..." : "Rechercher un utilisateur..."}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="pl-10 pr-10 h-11 bg-muted/30 border-transparent focus:border-primary/50 focus:bg-background transition-all"
+                className="pl-10 pr-16 h-11 bg-muted/30 border-transparent focus:border-primary/50 focus:bg-background transition-all"
               />
-              {query && (
+              {query ? (
                 <button
                   onClick={clearSearch}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                 >
                   <X className="w-4 h-4" />
                 </button>
+              ) : (
+                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center justify-center w-6 h-6 text-xs font-medium text-muted-foreground bg-muted rounded border border-border">
+                  /
+                </kbd>
               )}
             </div>
 
