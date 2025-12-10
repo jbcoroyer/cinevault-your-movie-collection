@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, Library, Trophy, User } from "lucide-react";
+import { Home, Search, Library, Trophy, User, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -7,7 +7,7 @@ export const BottomNav = () => {
   const { pathname } = useLocation();
   const { user } = useAuth();
 
-  // Structure demandée : Accueil | Recherche | Collection | Badges | Profil
+  // Structure : Accueil | Recherche | Collection | Badges | Profil/Connexion
   const navItems = [
     {
       icon: Home,
@@ -30,8 +30,8 @@ export const BottomNav = () => {
       path: "/badges",
     },
     {
-      icon: User,
-      label: "Profil",
+      icon: user ? User : LogIn,
+      label: user ? "Profil" : "Connexion",
       path: user ? `/profile/${user.id}` : "/auth",
     },
   ];
@@ -43,6 +43,7 @@ export const BottomNav = () => {
       <div className="relative flex justify-around items-center h-16 px-2">
         {navItems.map((item) => {
           const isActive = item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);
+          const isAuthLink = item.path === "/auth";
 
           return (
             <Link
@@ -51,17 +52,26 @@ export const BottomNav = () => {
               className={cn(
                 "flex flex-col items-center justify-center w-full h-full gap-1",
                 "transition-all duration-200 active:scale-95",
-                isActive ? "text-amber-500" : "text-muted-foreground hover:text-foreground",
+                isActive
+                  ? "text-amber-500"
+                  : isAuthLink
+                    ? "text-amber-500/70 hover:text-amber-500"
+                    : "text-muted-foreground hover:text-foreground",
               )}
             >
               <item.icon
-                className={cn("w-5 h-5 transition-all duration-300", isActive && "fill-current scale-110")}
+                className={cn(
+                  "w-5 h-5 transition-all duration-300",
+                  isActive && "fill-current scale-110",
+                  isAuthLink && !isActive && "text-amber-500",
+                )}
                 strokeWidth={isActive ? 2.5 : 2}
               />
               <span
                 className={cn(
                   "text-[10px] font-medium transition-all duration-200",
                   isActive ? "opacity-100 font-semibold" : "opacity-70",
+                  isAuthLink && !isActive && "text-amber-500 opacity-100",
                 )}
               >
                 {item.label}
