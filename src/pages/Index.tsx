@@ -188,7 +188,7 @@ export default function Index() {
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
-            <ShelfView movies={myCollection} maxDisplay={8} />
+            <ShelfView movies={myCollection.slice(0, 8)} movieDetailsMap={{}} onMovieClick={(movie) => navigate(`/movie/${movie.tmdb_id}`)} />
           </section>
         )}
 
