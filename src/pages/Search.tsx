@@ -786,4 +786,103 @@ export default function Search() {
               )}
               {filters.runtimeMax < 300 && (
                 <button
-                  onClick
+                  onClick={() => removeFilter("runtimeMax")}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground animate-fade-in flex-shrink-0 group"
+                >
+                  <Clock className="w-3 h-3" />
+                  {Math.floor(filters.runtimeMax / 60)}h max
+                  <X className="w-3 h-3 opacity-70 group-hover:opacity-100 ml-1" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="p-4 sm:p-6">
+          {activeTab === "films" ? (
+            <div className="max-w-7xl mx-auto">
+              {/* AI Search Title */}
+              {aiSearchTitle && (
+                <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                  <p className="text-sm text-primary flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    Recherche IA : "{aiSearchTitle}"
+                  </p>
+                </div>
+              )}
+
+              {/* Section Title */}
+              <h2 className="text-lg font-semibold mb-4">
+                {availableForMeEnabled
+                  ? debouncedQuery.trim() || activeFiltersCount > 0
+                    ? "Résultats disponibles"
+                    : "Films disponibles pour moi"
+                  : searchedMovies || activeFiltersCount > 0
+                    ? "Résultats"
+                    : "Films populaires"}
+              </h2>
+
+              {/* Results */}
+              {loadingMovies || loadingAvailable ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <MovieCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : displayedMovies.length === 0 ? (
+                <EmptyState
+                  icon={Film}
+                  title={availableForMeEnabled ? "Aucun film disponible" : "Aucun résultat"}
+                  description={
+                    availableForMeEnabled
+                      ? "Essayez d'ajuster vos filtres ou d'ajouter des plateformes de streaming dans vos paramètres."
+                      : "Essayez une autre recherche ou modifiez vos filtres."
+                  }
+                />
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {displayedMovies.map((movie) => (
+                    <MovieCard
+                      key={movie.id}
+                      movie={movie}
+                      availability={getAvailabilityForMovie(movie.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-lg font-semibold mb-4">
+                {searchedUsers ? "Résultats" : "Utilisateurs populaires"}
+              </h2>
+
+              {loadingUsers ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <UserCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : (searchedUsers ? userResults : popularUsers).length === 0 ? (
+                <EmptyState
+                  icon={Users}
+                  title="Aucun utilisateur trouvé"
+                  description="Essayez une autre recherche."
+                />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(searchedUsers ? userResults : popularUsers).map((userProfile) => (
+                    <UserCard key={userProfile.id} user={userProfile} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <BottomNav />
+      </div>
+    </>
+  );
+}
