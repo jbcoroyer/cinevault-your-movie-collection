@@ -14,6 +14,7 @@ export interface List {
   // Champs calculés pour l'affichage
   last_poster_path?: string | null;
   item_count?: number;
+  posters?: string[];
 }
 
 export interface ListItem {
@@ -68,6 +69,11 @@ export function useUserLists() {
         const items = list.list_items || [];
         // Trier par date d'ajout pour trouver le plus récent
         const sortedItems = [...items].sort((a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime());
+        // Extract posters (up to 10 most recent)
+        const posters = sortedItems
+          .slice(0, 10)
+          .map((item: any) => item.poster_path)
+          .filter((path: string | null) => path !== null && path !== undefined);
 
         return {
           id: list.id,
@@ -79,6 +85,7 @@ export function useUserLists() {
           updated_at: list.updated_at,
           item_count: items.length,
           last_poster_path: sortedItems.length > 0 ? sortedItems[0].poster_path : null,
+          posters,
         };
       });
 
@@ -120,6 +127,7 @@ export function useUserLists() {
         ...data,
         item_count: 0,
         last_poster_path: null,
+        posters: [],
       };
 
       setLists((prev) => [newList, ...prev]);
@@ -240,10 +248,14 @@ export function useUserLists() {
       setLists((prev) =>
         prev.map((list) => {
           if (list.id === listId) {
+            const newPosters = movie.poster_path 
+              ? [movie.poster_path, ...(list.posters || [])].slice(0, 10)
+              : list.posters || [];
             return {
               ...list,
               item_count: (list.item_count || 0) + 1,
               last_poster_path: movie.poster_path, // Update with latest added
+              posters: newPosters,
               updated_at: new Date().toISOString(),
             };
           }
