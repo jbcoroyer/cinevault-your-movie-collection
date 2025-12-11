@@ -47,7 +47,7 @@ export default function Profile() {
   const { userMovies } = useUserMovies();
   const { topMovies, setTopMovie } = useUserTopMovies(targetUserId);
   const { isFollowing, stats, loading: followLoading, toggleFollow } = useFollows(targetUserId);
-  const { unlockedBadges } = useBadgeNotification();
+  const { currentLevel } = useBadgeNotification();
 
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState("");
@@ -374,7 +374,7 @@ export default function Profile() {
                   <div className="p-2 bg-amber-500/20 rounded-lg text-amber-400">
                     <Trophy className="w-5 h-5" />
                   </div>
-                  <span className="text-3xl font-bold font-display">{unlockedBadges.length}</span>
+                  <span className="text-3xl font-bold font-display">0</span>
                 </div>
                 <p className="text-sm text-muted-foreground font-medium">Badges</p>
               </div>
