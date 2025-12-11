@@ -11,7 +11,10 @@ import { cn } from "@/lib/utils";
 import { GlassCard } from "@/components/ui/GlassCard";
 
 const emailSchema = z.string().email("Email invalide");
-const passwordSchema = z.string().min(6, "Minimum 6 caractères");
+const passwordSchema = z.string()
+  .min(8, "Minimum 8 caractères")
+  .regex(/[A-Z]/, "Doit contenir une majuscule")
+  .regex(/[0-9]/, "Doit contenir un chiffre");
 
 export default function Auth() {
   const location = useLocation();
