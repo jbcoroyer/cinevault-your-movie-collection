@@ -158,6 +158,10 @@ export default function PersonDetail() {
                     release_date: movie.release_date || '',
                     vote_average: movie.vote_average || 0,
                     vote_count: 0,
+                    genre_ids: [],
+                    popularity: 0,
+                    adult: false,
+                    original_language: '',
                   }}
                   size="sm"
                 />
@@ -184,6 +188,10 @@ export default function PersonDetail() {
                     release_date: movie.release_date || '',
                     vote_average: movie.vote_average || 0,
                     vote_count: 0,
+                    genre_ids: [],
+                    popularity: 0,
+                    adult: false,
+                    original_language: '',
                   }}
                   size="sm"
                 />

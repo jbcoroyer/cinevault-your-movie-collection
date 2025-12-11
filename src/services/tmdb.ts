@@ -93,7 +93,6 @@ export interface MovieDetails extends Movie {
   production_companies?: { id: number; name: string; logo_path: string | null }[];
   production_countries?: { iso_3166_1: string; name: string }[];
   spoken_languages?: { iso_639_1: string; name: string; english_name: string }[];
-  original_language?: string;
   imdb_id?: string;
   credits?: {
     cast: CastMember[];
