@@ -79,8 +79,8 @@ const PreviewShelf: React.FC<PreviewShelfProps> = ({ movies, onMovieClick }) => 
   const longPressActiveRef = useRef<boolean>(false);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
-  const LONG_PRESS_DELAY = 400;
-  const MOVE_THRESHOLD = 10;
+  const LONG_PRESS_DELAY = 150; // ms - réduit pour plus de fluidité
+  const MOVE_THRESHOLD = 8;
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
@@ -154,7 +154,8 @@ const PreviewShelf: React.FC<PreviewShelfProps> = ({ movies, onMovieClick }) => 
       className={cn(
         "w-full bg-[#0a0a0a] rounded-xl overflow-hidden relative perspective-[2000px]",
         "border-[6px] border-[#151515] shadow-[0_0_50px_rgba(0,0,0,0.8)]",
-        "min-h-[380px] md:min-h-[450px]",
+        // Hauteur réduite pour max 2 étages
+        "min-h-[320px] md:min-h-[380px] max-h-[420px] md:max-h-[480px]",
         "touch-pan-y",
       )}
       onTouchStart={handleTouchStart}
@@ -169,7 +170,7 @@ const PreviewShelf: React.FC<PreviewShelfProps> = ({ movies, onMovieClick }) => 
       {/* Ombre portée du haut de l'étagère */}
       <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-black to-transparent z-20 pointer-events-none opacity-80"></div>
 
-      <div className="relative z-10 flex flex-wrap items-end content-start gap-[1px] sm:gap-[2px] p-6 sm:p-8 min-h-[380px] md:min-h-[450px]">
+      <div className="relative z-10 flex flex-wrap items-end content-start gap-[1px] sm:gap-[2px] p-6 sm:p-8 min-h-[320px] md:min-h-[380px]">
         {movies.map((movie, index) => {
           const format = getFormat(index);
           const poster = movie.poster_path ? getImageUrl(movie.poster_path, "w500") : null;
@@ -373,7 +374,8 @@ export const CollectionPreview: React.FC<CollectionPreviewProps> = ({ className 
         ]);
 
         const allMovies = pages.flatMap((page) => page.results as Movie[]);
-        setMovies(allMovies.slice(0, 40));
+        // Limiter à 25 films pour maximum 2 étages
+        setMovies(allMovies.slice(0, 25));
       } catch (err) {
         console.error("Error fetching top rated movies:", err);
         setError("Impossible de charger les films");
@@ -396,7 +398,7 @@ export const CollectionPreview: React.FC<CollectionPreviewProps> = ({ className 
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
           {loading ? (
-            <div className="w-full h-[380px] md:h-[450px] bg-[#0a0a0a] rounded-xl border-[6px] border-[#151515] flex items-center justify-center">
+            <div className="w-full h-[320px] md:h-[380px] bg-[#0a0a0a] rounded-xl border-[6px] border-[#151515] flex items-center justify-center">
               <div className="flex flex-col items-center gap-4">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500" />
                 <span className="text-sm text-muted-foreground">Chargement de la collection...</span>
