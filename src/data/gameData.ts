@@ -328,3 +328,47 @@ export const BADGES_DATA: GameBadge[] = [
     ]
   },
 ];
+
+// --- DESTINIES (Catégories pour l'affichage des badges) ---
+export const DESTINIES = [
+  { id: "auteur", title: "Auteur", icon: Clapperboard },
+  { id: "collector", title: "Collectionneur", icon: Disc },
+  { id: "explorer", title: "Explorateur", icon: Globe },
+  { id: "critic", title: "Critique", icon: Star },
+];
+
+// --- STATIC_BADGES (Format simplifié pour le service) ---
+export interface StaticBadge {
+  id: string;
+  title: string;
+  description: string;
+  icon: any;
+  destinyId: string;
+  baseRarity: "common" | "rare" | "epic" | "legendary";
+  criteria: {
+    type: string;
+    value?: string;
+    count?: number;
+  };
+}
+
+export const STATIC_BADGES: StaticBadge[] = [
+  // Auteur destiny
+  { id: "dir_nolan", title: "Nolaniste", description: "Maîtrisez l'œuvre de Christopher Nolan", icon: Hourglass, destinyId: "auteur", baseRarity: "rare", criteria: { type: "director", value: "nolan", count: 5 } },
+  { id: "dir_tarantino", title: "Tarantinophile", description: "Maîtrisez l'œuvre de Quentin Tarantino", icon: Swords, destinyId: "auteur", baseRarity: "rare", criteria: { type: "director", value: "tarantino", count: 5 } },
+  { id: "dir_scorsese", title: "Scorsesien", description: "Maîtrisez l'œuvre de Martin Scorsese", icon: Clapperboard, destinyId: "auteur", baseRarity: "rare", criteria: { type: "director", value: "scorsese", count: 5 } },
+  { id: "dir_miyazaki", title: "Ghibliphile", description: "Maîtrisez l'œuvre du Studio Ghibli", icon: Ghost, destinyId: "auteur", baseRarity: "epic", criteria: { type: "director", value: "miyazaki", count: 5 } },
+  
+  // Collector destiny
+  { id: "steelbook_collector", title: "Steelbook Addict", description: "Collectionnez des steelbooks", icon: Disc, destinyId: "collector", baseRarity: "epic", criteria: { type: "format", value: "steelbook", count: 10 } },
+  { id: "physical_count", title: "Matérialiste", description: "Possédez des films physiques", icon: Disc, destinyId: "collector", baseRarity: "common", criteria: { type: "physical", count: 50 } },
+  
+  // Explorer destiny
+  { id: "genre_horror", title: "Chasseur de Frissons", description: "Explorez les classiques de l'horreur", icon: Skull, destinyId: "explorer", baseRarity: "rare", criteria: { type: "genre", value: "horror", count: 8 } },
+  { id: "genre_scifi", title: "Voyageur Spatial", description: "Explorez les chefs-d'œuvre de la SF", icon: Rocket, destinyId: "explorer", baseRarity: "rare", criteria: { type: "genre", value: "scifi", count: 8 } },
+  { id: "saga_starwars", title: "Maître Jedi", description: "Complétez la saga Star Wars", icon: Rocket, destinyId: "explorer", baseRarity: "legendary", criteria: { type: "saga", value: "starwars", count: 6 } },
+  
+  // Critic destiny
+  { id: "reviews_count", title: "Plume d'Or", description: "Rédigez des critiques", icon: Star, destinyId: "critic", baseRarity: "common", criteria: { type: "reviews", count: 50 } },
+  { id: "total_watched", title: "Encyclopédie Vivante", description: "Visionnez un grand nombre de films", icon: Film, destinyId: "critic", baseRarity: "legendary", criteria: { type: "watched", count: 500 } },
+];
