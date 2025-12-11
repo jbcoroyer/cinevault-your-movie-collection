@@ -147,13 +147,11 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
   );
 
   // NOUVEAU : Fonction pour filtrer une liste de films selon la disponibilité
-  // Cette fonction est utilisée par la recherche standard pour appliquer le filtre "Disponible pour moi"
+  // Cette fonction préserve l'ordre des résultats (essentiel pour la recherche)
   const filterMoviesByAvailability = useCallback(
     async (candidates: Movie[]): Promise<AvailableMovieResult[]> => {
-      const results: AvailableMovieResult[] = [];
-
-      // On traite les films en parallèle pour vérifier le streaming (la partie physique est instantanée)
-      await Promise.all(
+      // On utilise Promise.all avec map pour traiter en parallèle tout en gardant l'ordre initial
+      const resultsWithNulls = await Promise.all(
         candidates.map(async (movie) => {
           // 1. Vérif physique (Synchrone et rapide)
           const physicalAvail = getPhysicalAvailability(movie.id);
@@ -168,15 +166,17 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
           // Si le film est disponible quelque part, on le garde
           if (totalAvailability.length > 0) {
-            results.push({
+            return {
               movie,
               availability: totalAvailability,
-            });
+            };
           }
+          return null;
         }),
       );
 
-      return results;
+      // On filtre les nulls (films non disponibles)
+      return resultsWithNulls.filter((r): r is AvailableMovieResult => r !== null);
     },
     [getPhysicalAvailability, checkPlatformAvailability, userPlatforms],
   );
@@ -184,7 +184,6 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
   // Charger les films disponibles (Mode découverte par défaut, sans recherche texte)
   const fetchAvailableMovies = useCallback(async () => {
     if (!enabled || !user) {
-      // Si désactivé, on vide la liste pour éviter les effets de bord
       if (!enabled) setMovies([]);
       return;
     }
@@ -260,14 +259,17 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
           if (seenIds.has(movie.id)) continue;
           seenIds.add(movie.id);
 
-          // On revérifie spécifiquement pour construire l'objet availability complet
           const platformAvailability = await checkPlatformAvailability(movie.id);
           const physicalAvailability = getPhysicalAvailability(movie.id);
+          // On ne rajoute que ceux qui sont confirmés disponibles (physique ou stream)
+          const avail = [...physicalAvailability, ...platformAvailability];
 
-          allResults.push({
-            movie,
-            availability: [...physicalAvailability, ...platformAvailability],
-          });
+          if (avail.length > 0) {
+            allResults.push({
+              movie,
+              availability: avail,
+            });
+          }
         }
       }
 
@@ -304,7 +306,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     fetchAvailableMovies();
   }, [fetchAvailableMovies]);
 
-  // Helper pour enrichir n'importe quel film avec ses infos de disponibilité (utilisé par les cartes individuelles)
+  // Helper pour enrichir n'importe quel film avec ses infos de disponibilité
   const getMovieAvailability = useCallback(
     async (movie: Movie): Promise<AvailabilityInfo[]> => {
       const physical = getPhysicalAvailability(movie.id);
@@ -315,7 +317,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
   );
 
   return {
-    movies, // Liste par défaut (populaires + collection)
+    movies, // Liste par défaut (populaires disponibles + collection)
     loading,
     error,
     region,
@@ -327,6 +329,6 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     refresh: fetchAvailableMovies,
     getMovieAvailability,
     getPhysicalAvailability,
-    filterMoviesByAvailability, // Nouvelle fonction exportée
+    filterMoviesByAvailability,
   };
 }
