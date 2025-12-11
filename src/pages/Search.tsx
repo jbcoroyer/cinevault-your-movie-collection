@@ -47,7 +47,6 @@ import { toast } from "@/hooks/use-toast";
 
 type SearchTab = "films" | "users";
 
-// Liste des plateformes de streaming (même que dans l'onboarding)
 const STREAMING_SERVICES = [
   { id: "netflix", name: "Netflix", color: "bg-red-600" },
   { id: "prime", name: "Prime Video", color: "bg-blue-500" },
@@ -59,7 +58,6 @@ const STREAMING_SERVICES = [
   { id: "crunchyroll", name: "Crunchyroll", color: "bg-orange-500" },
 ];
 
-// Régions disponibles
 const REGIONS = [
   { code: "FR", name: "France" },
   { code: "US", name: "États-Unis" },
@@ -128,15 +126,16 @@ export default function Search() {
 
   // Hook pour les films disponibles
   const {
-    movies: availableMovies,
+    movies: availableMoviesDefault,
     loading: loadingAvailable,
     userPlatforms,
     hasSubscriptions,
     hasCollection,
     physicalMoviesCount,
     getPhysicalAvailability,
+    filterMoviesByAvailability,
   } = useAvailableMovies({
-    enabled: availableForMeEnabled,
+    enabled: availableForMeEnabled, // Sert à pré-charger la liste "par défaut" si activé
     additionalFilters: filters.genre ? { with_genres: filters.genre.toString() } : {},
   });
 
@@ -229,11 +228,15 @@ export default function Search() {
     enrichMovies();
   }, [availableForMeEnabled, user, movieResults, popularMovies, searchedMovies, getPhysicalAvailability]);
 
-  // Search/filter movies (désactivé si "Disponible pour moi" est actif)
+  // Main Search Logic
   useEffect(() => {
     if (activeTab !== "films") return;
-    if (availableForMeEnabled) {
-      setLoadingMovies(false);
+
+    // Si on est en mode "Disponible pour moi" ET qu'il n'y a pas de recherche texte
+    // on laisse le hook useAvailableMovies gérer le chargement initial (populaires disponibles)
+    if (availableForMeEnabled && !debouncedQuery.trim() && activeFiltersCount === 0) {
+      // On s'assure juste que le loading est cohérent
+      setLoadingMovies(loadingAvailable);
       return;
     }
 
@@ -243,8 +246,11 @@ export default function Search() {
 
       try {
         let results: Movie[] = [];
+        let isSearch = false;
 
+        // 1. Récupération des résultats bruts (soit par recherche, soit filtres, soit populaires)
         if (debouncedQuery.trim()) {
+          isSearch = true;
           if (aiSearchEnabled) {
             // AI Search
             setAiSearching(true);
@@ -268,32 +274,21 @@ export default function Search() {
           } else {
             results = await searchMovies(debouncedQuery);
           }
-          setSearchedMovies(true);
         } else if (activeFiltersCount > 0 || filters.genre || filters.platforms.length > 0) {
+          isSearch = true;
           const params: Record<string, string> = {
             sort_by: "popularity.desc",
             "vote_count.gte": "50",
           };
 
-          if (filters.genre) {
-            params.with_genres = filters.genre.toString();
-          }
-          if (filters.yearMin > 1900) {
-            params["primary_release_date.gte"] = `${filters.yearMin}-01-01`;
-          }
-          if (filters.yearMax < currentYear) {
-            params["primary_release_date.lte"] = `${filters.yearMax}-12-31`;
-          }
-          if (filters.ratingMin > 0) {
-            params["vote_average.gte"] = filters.ratingMin.toString();
-          }
-          if (filters.runtimeMax < 300) {
-            params["with_runtime.lte"] = filters.runtimeMax.toString();
-          }
+          if (filters.genre) params.with_genres = filters.genre.toString();
+          if (filters.yearMin > 1900) params["primary_release_date.gte"] = `${filters.yearMin}-01-01`;
+          if (filters.yearMax < currentYear) params["primary_release_date.lte"] = `${filters.yearMax}-12-31`;
+          if (filters.ratingMin > 0) params["vote_average.gte"] = filters.ratingMin.toString();
+          if (filters.runtimeMax < 300) params["with_runtime.lte"] = filters.runtimeMax.toString();
 
           if (filters.platforms.length > 0) {
             const providerIds = filters.platforms.map((p) => STREAMING_PROVIDER_IDS[p]).filter(Boolean);
-
             if (providerIds.length > 0) {
               params.watch_region = filters.region;
               params.with_watch_providers = providerIds.join("|");
@@ -302,10 +297,30 @@ export default function Search() {
           }
 
           results = await discoverMovies(params);
+        } else {
+          // Fallback aux populaires si rien n'est demandé
+          results = popularMovies;
+        }
+
+        // 2. Filtrage "Disponible pour moi" si activé
+        if (availableForMeEnabled) {
+          const filteredResultsWithAvailability = await filterMoviesByAvailability(results);
+
+          // Mettre à jour la map de disponibilité pour l'affichage des badges
+          const newMap = new Map(availabilityMap);
+          filteredResultsWithAvailability.forEach((item) => {
+            newMap.set(item.movie.id, item.availability);
+          });
+          setAvailabilityMap(newMap);
+
+          // Garder uniquement les films
+          results = filteredResultsWithAvailability.map((item) => item.movie);
+
+          // Si on est en mode "Disponible pour moi", on considère toujours que c'est une "recherche" filtrée
+          // sauf si c'est la vue par défaut gérée ailleurs
           setSearchedMovies(true);
         } else {
-          results = popularMovies;
-          setSearchedMovies(false);
+          setSearchedMovies(isSearch);
         }
 
         setMovieResults(results);
@@ -317,7 +332,16 @@ export default function Search() {
     };
 
     searchAndFilter();
-  }, [debouncedQuery, filters, activeTab, popularMovies, activeFiltersCount, aiSearchEnabled, availableForMeEnabled]);
+  }, [
+    debouncedQuery,
+    filters,
+    activeTab,
+    popularMovies,
+    activeFiltersCount,
+    aiSearchEnabled,
+    availableForMeEnabled,
+    loadingAvailable, // Important pour re-trigger quand le hook a fini de charger ses données initiales
+  ]);
 
   // Search users
   useEffect(() => {
@@ -395,21 +419,38 @@ export default function Search() {
   // Déterminer les films à afficher
   const displayedMovies = useMemo(() => {
     if (availableForMeEnabled) {
-      return availableMovies.map((am) => am.movie);
+      // Si une recherche ou des filtres sont actifs, on utilise les résultats filtrés
+      if (debouncedQuery.trim() || activeFiltersCount > 0) {
+        return movieResults;
+      }
+      // Sinon on affiche la liste par défaut (populaires disponibles) chargée par le hook
+      return availableMoviesDefault.map((am) => am.movie);
     }
     return searchedMovies || activeFiltersCount > 0 ? movieResults : popularMovies;
-  }, [availableForMeEnabled, availableMovies, searchedMovies, activeFiltersCount, movieResults, popularMovies]);
+  }, [
+    availableForMeEnabled,
+    availableMoviesDefault,
+    searchedMovies,
+    activeFiltersCount,
+    movieResults,
+    popularMovies,
+    debouncedQuery,
+  ]);
 
   // Obtenir les infos de disponibilité pour un film
   const getAvailabilityForMovie = (movieId: number): AvailabilityInfo[] | undefined => {
     if (!availableForMeEnabled) return undefined;
 
-    // D'abord chercher dans les résultats "Disponible pour moi"
-    const available = availableMovies.find((am) => am.movie.id === movieId);
+    // 1. Chercher dans la map locale (prioritaire pour les résultats de recherche)
+    if (availabilityMap.has(movieId)) {
+      return availabilityMap.get(movieId);
+    }
+
+    // 2. Chercher dans les résultats par défaut
+    const available = availableMoviesDefault.find((am) => am.movie.id === movieId);
     if (available) return available.availability;
 
-    // Sinon chercher dans le map local
-    return availabilityMap.get(movieId);
+    return undefined;
   };
 
   // Vérifier si l'utilisateur peut utiliser "Disponible pour moi"
@@ -469,9 +510,7 @@ export default function Search() {
                     return;
                   }
                   setAvailableForMeEnabled(!availableForMeEnabled);
-                  if (!availableForMeEnabled) {
-                    clearSearch();
-                  }
+                  // On ne vide plus la recherche ici pour permettre de filtrer les résultats existants
                 }}
                 className={cn(
                   "w-full flex items-center justify-between gap-3 p-4 rounded-xl border-2 transition-all duration-300",
@@ -524,80 +563,83 @@ export default function Search() {
             </div>
           )}
 
-          {/* Search bar - Masqué si "Disponible pour moi" est actif */}
-          {!availableForMeEnabled && (
-            <div className="flex gap-2 max-w-2xl mx-auto">
-              <div className="relative flex-1">
-                {aiSearching ? (
-                  <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />
-                ) : aiSearchEnabled ? (
-                  <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
-                ) : (
-                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                )}
-                <Input
-                  ref={inputRef}
-                  type="text"
-                  placeholder={
-                    activeTab === "films"
-                      ? aiSearchEnabled
-                        ? "Décrivez le film que vous cherchez..."
-                        : "Rechercher un film..."
-                      : "Rechercher un utilisateur..."
-                  }
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className={cn(
-                    "pl-11 pr-10 h-12 bg-card border-border/50 focus:border-primary/50 transition-all",
-                    aiSearchEnabled && "border-primary/30 bg-primary/5",
-                  )}
-                />
-                {query && (
-                  <button
-                    onClick={clearSearch}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* AI Search Toggle (Films only) */}
-              {activeTab === "films" && (
-                <Button
-                  variant={aiSearchEnabled ? "default" : "outline"}
-                  size="icon"
-                  className={cn("h-12 w-12 shrink-0", aiSearchEnabled && "bg-primary text-primary-foreground")}
-                  onClick={() => setAiSearchEnabled(!aiSearchEnabled)}
-                  title={aiSearchEnabled ? "Désactiver la recherche IA" : "Activer la recherche IA"}
-                >
-                  <Sparkles className="w-5 h-5" />
-                </Button>
+          {/* Search bar - Toujours visible maintenant */}
+          <div className="flex gap-2 max-w-2xl mx-auto">
+            <div className="relative flex-1">
+              {aiSearching ? (
+                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />
+              ) : aiSearchEnabled ? (
+                <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+              ) : (
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               )}
+              <Input
+                ref={inputRef}
+                type="text"
+                placeholder={
+                  activeTab === "films"
+                    ? aiSearchEnabled
+                      ? "Décrivez le film que vous cherchez..."
+                      : availableForMeEnabled
+                        ? "Rechercher dans mes films disponibles..."
+                        : "Rechercher un film..."
+                    : "Rechercher un utilisateur..."
+                }
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className={cn(
+                  "pl-11 pr-10 h-12 bg-card border-border/50 focus:border-primary/50 transition-all",
+                  aiSearchEnabled && "border-primary/30 bg-primary/5",
+                  availableForMeEnabled && "border-primary/30",
+                )}
+              />
+              {query && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
 
-              {/* Filters button (Films only) */}
-              {activeTab === "films" && (
-                <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" size="icon" className="relative h-12 w-12 shrink-0">
+            {/* AI Search Toggle (Films only) */}
+            {activeTab === "films" && (
+              <Button
+                variant={aiSearchEnabled ? "default" : "outline"}
+                size="icon"
+                className={cn("h-12 w-12 shrink-0", aiSearchEnabled && "bg-primary text-primary-foreground")}
+                onClick={() => setAiSearchEnabled(!aiSearchEnabled)}
+                title={aiSearchEnabled ? "Désactiver la recherche IA" : "Activer la recherche IA"}
+              >
+                <Sparkles className="w-5 h-5" />
+              </Button>
+            )}
+
+            {/* Filters button (Films only) */}
+            {activeTab === "films" && (
+              <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="relative h-12 w-12 shrink-0">
+                    <SlidersHorizontal className="w-5 h-5" />
+                    {activeFiltersCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                        {activeFiltersCount}
+                      </span>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2">
                       <SlidersHorizontal className="w-5 h-5" />
-                      {activeFiltersCount > 0 && (
-                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
-                          {activeFiltersCount}
-                        </span>
-                      )}
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-                    <SheetHeader>
-                      <SheetTitle className="flex items-center gap-2">
-                        <SlidersHorizontal className="w-5 h-5" />
-                        Filtres de recherche
-                      </SheetTitle>
-                    </SheetHeader>
+                      Filtres de recherche
+                    </SheetTitle>
+                  </SheetHeader>
 
-                    <div className="space-y-6 mt-6">
-                      {/* Streaming Platforms */}
+                  <div className="space-y-6 mt-6">
+                    {/* Streaming Platforms (Only visible if NOT in "available for me" mode to avoid confusion) */}
+                    {!availableForMeEnabled && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <Label className="flex items-center gap-2 text-base font-semibold">
@@ -654,126 +696,126 @@ export default function Search() {
                           </div>
                         )}
                       </div>
+                    )}
 
-                      {/* Genre */}
-                      <div className="space-y-3">
-                        <Label className="flex items-center gap-2">
-                          <Film className="w-4 h-4" />
-                          Genre
-                        </Label>
-                        <Select
-                          value={filters.genre?.toString() || "all"}
-                          onValueChange={(value) =>
-                            setFilters((f) => ({ ...f, genre: value === "all" ? null : parseInt(value) }))
+                    {/* Genre */}
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Film className="w-4 h-4" />
+                        Genre
+                      </Label>
+                      <Select
+                        value={filters.genre?.toString() || "all"}
+                        onValueChange={(value) =>
+                          setFilters((f) => ({ ...f, genre: value === "all" ? null : parseInt(value) }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Tous les genres" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous les genres</SelectItem>
+                          {genres.map((genre) => (
+                            <SelectItem key={genre.id} value={genre.id.toString()}>
+                              {genre.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Year Range */}
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        Période : {filters.yearMin} - {filters.yearMax}
+                      </Label>
+                      <div className="flex gap-4 items-center">
+                        <Input
+                          type="number"
+                          min={1900}
+                          max={currentYear}
+                          value={filters.yearMin}
+                          onChange={(e) => setFilters((f) => ({ ...f, yearMin: parseInt(e.target.value) || 1900 }))}
+                          className="w-24"
+                        />
+                        <span className="text-muted-foreground">à</span>
+                        <Input
+                          type="number"
+                          min={1900}
+                          max={currentYear}
+                          value={filters.yearMax}
+                          onChange={(e) =>
+                            setFilters((f) => ({ ...f, yearMax: parseInt(e.target.value) || currentYear }))
                           }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Tous les genres" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Tous les genres</SelectItem>
-                            {genres.map((genre) => (
-                              <SelectItem key={genre.id} value={genre.id.toString()}>
-                                {genre.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Year Range */}
-                      <div className="space-y-3">
-                        <Label className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          Période : {filters.yearMin} - {filters.yearMax}
-                        </Label>
-                        <div className="flex gap-4 items-center">
-                          <Input
-                            type="number"
-                            min={1900}
-                            max={currentYear}
-                            value={filters.yearMin}
-                            onChange={(e) => setFilters((f) => ({ ...f, yearMin: parseInt(e.target.value) || 1900 }))}
-                            className="w-24"
-                          />
-                          <span className="text-muted-foreground">à</span>
-                          <Input
-                            type="number"
-                            min={1900}
-                            max={currentYear}
-                            value={filters.yearMax}
-                            onChange={(e) =>
-                              setFilters((f) => ({ ...f, yearMax: parseInt(e.target.value) || currentYear }))
-                            }
-                            className="w-24"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Rating */}
-                      <div className="space-y-3">
-                        <Label className="flex items-center gap-2">
-                          <Star className="w-4 h-4" />
-                          Note minimum : {filters.ratingMin}/10
-                        </Label>
-                        <Slider
-                          value={[filters.ratingMin]}
-                          onValueChange={([value]) => setFilters((f) => ({ ...f, ratingMin: value }))}
-                          max={10}
-                          step={0.5}
-                          className="w-full"
+                          className="w-24"
                         />
-                      </div>
-
-                      {/* Runtime */}
-                      <div className="space-y-3">
-                        <Label className="flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          Durée max : {Math.floor(filters.runtimeMax / 60)}h{filters.runtimeMax % 60}
-                        </Label>
-                        <Slider
-                          value={[filters.runtimeMax]}
-                          onValueChange={([value]) => setFilters((f) => ({ ...f, runtimeMax: value }))}
-                          min={60}
-                          max={300}
-                          step={15}
-                          className="w-full"
-                        />
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex gap-2 pt-4">
-                        <Button variant="outline" onClick={resetFilters} className="flex-1">
-                          Réinitialiser
-                        </Button>
-                        <Button onClick={() => setFiltersOpen(false)} className="flex-1">
-                          Appliquer
-                        </Button>
                       </div>
                     </div>
-                  </SheetContent>
-                </Sheet>
-              )}
-            </div>
-          )}
+
+                    {/* Rating */}
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Star className="w-4 h-4" />
+                        Note minimum : {filters.ratingMin}/10
+                      </Label>
+                      <Slider
+                        value={[filters.ratingMin]}
+                        onValueChange={([value]) => setFilters((f) => ({ ...f, ratingMin: value }))}
+                        max={10}
+                        step={0.5}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Runtime */}
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Durée max : {Math.floor(filters.runtimeMax / 60)}h{filters.runtimeMax % 60}
+                      </Label>
+                      <Slider
+                        value={[filters.runtimeMax]}
+                        onValueChange={([value]) => setFilters((f) => ({ ...f, runtimeMax: value }))}
+                        min={60}
+                        max={300}
+                        step={15}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-4">
+                      <Button variant="outline" onClick={resetFilters} className="flex-1">
+                        Réinitialiser
+                      </Button>
+                      <Button onClick={() => setFiltersOpen(false)} className="flex-1">
+                        Appliquer
+                      </Button>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
+          </div>
 
           {/* AI Search hint */}
-          {activeTab === "films" && aiSearchEnabled && !query && !availableForMeEnabled && (
-            <p className="text-center text-sm text-muted-foreground mt-3 max-w-lg mx-auto">
+          {activeTab === "films" && aiSearchEnabled && !query && (
+            <p className="text-center text-sm text-muted-foreground mt-3 max-w-lg mx-auto animate-fade-in">
               💡 Décrivez le film : "le film avec le requin", "celui où le gars dit 'I'll be back'", "comédie française
               avec Dujardin"...
             </p>
           )}
 
           {/* AI Search result indicator */}
-          {aiSearchTitle && !availableForMeEnabled && (
-            <div className="flex items-center justify-center gap-2 mt-3">
+          {aiSearchTitle && (
+            <div className="flex items-center justify-center gap-2 mt-3 animate-fade-in">
               <Sparkles className="w-4 h-4 text-primary" />
               <span className="text-sm text-primary font-medium">Film identifié : {aiSearchTitle}</span>
             </div>
           )}
 
-          {/* Active filters chips & suggestions - Masqué si "Disponible pour moi" est actif */}
+          {/* Active filters chips & suggestions */}
           {activeTab === "films" && !availableForMeEnabled && (
             <div className="flex items-center gap-2 overflow-x-auto mt-4 pb-2 scrollbar-hide max-w-4xl mx-auto">
               {/* Active Filters Chips */}
@@ -863,12 +905,14 @@ export default function Search() {
               {availableForMeEnabled && (
                 <div className="mb-4 flex items-center gap-2">
                   <div className="w-1 h-6 bg-primary rounded-full" />
-                  <h2 className="font-serif text-xl sm:text-2xl font-medium">À regarder ce soir</h2>
+                  <h2 className="font-serif text-xl sm:text-2xl font-medium">
+                    {debouncedQuery ? `Résultats disponibles pour "${debouncedQuery}"` : "À regarder ce soir"}
+                  </h2>
                   <span className="text-sm text-muted-foreground ml-2">({displayedMovies.length} films)</span>
                 </div>
               )}
 
-              {loadingMovies || loadingAvailable ? (
+              {loadingMovies || (availableForMeEnabled && loadingAvailable && !searchedMovies) ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-4">
                   {Array.from({ length: 12 }).map((_, i) => (
                     <MovieCardSkeleton key={i} size="lg" />
@@ -888,9 +932,11 @@ export default function Search() {
                   title={availableForMeEnabled ? "Aucun film disponible" : "Aucun film trouvé"}
                   description={
                     availableForMeEnabled
-                      ? hasCollection || hasSubscriptions
-                        ? "Votre collection est vide et aucun film n'est disponible sur vos plateformes de streaming."
-                        : "Ajoutez des films à votre collection ou configurez vos abonnements streaming dans les paramètres."
+                      ? debouncedQuery
+                        ? `Le film "${debouncedQuery}" n'est pas disponible sur vos plateformes ou dans votre collection.`
+                        : hasCollection || hasSubscriptions
+                          ? "Votre collection est vide et aucun film n'est disponible sur vos plateformes de streaming."
+                          : "Ajoutez des films à votre collection ou configurez vos abonnements streaming dans les paramètres."
                       : filters.platforms.length > 0
                         ? `Aucun film disponible sur les plateformes sélectionnées dans la région ${filters.region}. Essayez de modifier vos filtres.`
                         : "Essayez de modifier vos termes de recherche ou vos filtres pour trouver ce que vous cherchez."
