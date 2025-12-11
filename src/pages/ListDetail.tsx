@@ -9,7 +9,7 @@ import { ArrowLeft, Globe, Lock, Trash2 } from "lucide-react";
 import { getImageUrl } from "@/services/tmdb";
 
 export default function ListDetail() {
-  const { listId } = useParams<{ listId: string }>();
+  const { id: listId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getListWithItems, removeMovieFromList } = useUserLists();
   const [list, setList] = useState<ListWithItems | null>(null);
