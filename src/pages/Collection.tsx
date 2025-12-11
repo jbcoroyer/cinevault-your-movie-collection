@@ -237,7 +237,7 @@ export default function Collection() {
     <div className="min-h-dvh bg-background pb-20 md:pb-8">
       <Header />
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
+      <main className="container mx-auto px-4 pt-20 md:pt-6 pb-6 space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
