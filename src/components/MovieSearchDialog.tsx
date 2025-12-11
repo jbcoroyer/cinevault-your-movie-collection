@@ -15,6 +15,7 @@ interface MovieSearchDialogProps {
   onOpenChange: (open: boolean) => void;
   onSelectMovie: (movie: Movie) => void;
   title?: string;
+  excludeIds?: number[];
 }
 
 export function MovieSearchDialog({
@@ -22,6 +23,7 @@ export function MovieSearchDialog({
   onOpenChange,
   onSelectMovie,
   title = 'Rechercher un film',
+  excludeIds = [],
 }: MovieSearchDialogProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Movie[]>([]);
@@ -39,7 +41,10 @@ export function MovieSearchDialog({
       if (query.trim().length > 1) {
         setLoading(true);
         const movies = await searchMovies(query);
-        setResults(movies);
+        const filtered = excludeIds.length > 0 
+          ? movies.filter(m => !excludeIds.includes(m.id))
+          : movies;
+        setResults(filtered);
         setLoading(false);
       } else {
         setResults([]);
@@ -47,7 +52,7 @@ export function MovieSearchDialog({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, excludeIds]);
 
   const handleSelect = (movie: Movie) => {
     onSelectMovie(movie);
