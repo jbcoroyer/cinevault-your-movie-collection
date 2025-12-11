@@ -1,87 +1,65 @@
 import { supabase } from "@/lib/supabase";
-import { STATIC_BADGES } from "@/data/gameData";
-import { toast } from "sonner";
 
-export interface UserBadgeProgress {
-  badgeId: string;
-  current: number;
-  target: number;
+export interface Badge {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  icon_name: string;
+  xp_reward: number;
+  base_rarity: string;
   isUnlocked: boolean;
   unlockedAt?: string;
-  rarity?: string;
+  rarity?: string; // Peut être différent de base_rarity si 'holographic'
+  criteria: any;
+  progress?: number;
+  currentVal?: number;
+  targetVal?: number;
 }
 
-/**
- * Récupère tous les badges de l'utilisateur avec leur état (débloqué/progression)
- */
-export const fetchUserBadgesStatus = async (userId: string) => {
+export const fetchAllBadges = async (userId: string): Promise<Badge[]> => {
   try {
-    // 1. Récupérer les badges débloqués depuis la DB
-    const { data: unlockedBadges, error } = await supabase
-      .from("user_badges") // Assurez-vous que cette table existe via la migration
-      .select("*")
-      .eq("user_id", userId);
+    // 1. Récupérer toutes les définitions
+    const { data: definitions, error: defError } = await supabase.from("badge_definitions").select("*");
 
-    if (error) throw error;
+    if (defError) throw defError;
 
-    // 2. Pour l'instant, on simule la progression basée sur les stats locales
-    // Dans une version finale, ces stats viendraient d'une vue SQL "user_stats"
-    const { data: movies } = await supabase.from("user_movies").select("tmdb_id, status").eq("user_id", userId);
+    // 2. Récupérer les badges acquis par l'utilisateur
+    const { data: userBadges, error: userError } = await supabase.from("user_badges").select("*").eq("user_id", userId);
 
-    const { data: physical } = await supabase.from("physical_movies").select("format").eq("user_id", userId);
+    if (userError) throw userError;
 
-    // Calculs basiques (Mockup de la logique Edge Function)
-    const stats = {
-      totalWatched: movies?.filter((m) => m.status === "watched").length || 0,
-      steelbooks: physical?.filter((p) => p.format === "steelbook").length || 0,
-    };
+    // 3. Fusionner les données
+    // Note: Dans une vraie prod, on récupèrerait aussi les stats (counts) pour la barre de progression
+    // Pour l'instant, on simule une progression à 0 si non débloqué pour simplifier l'UI
 
-    // 3. Mapper avec les définitions statiques
-    const badgesStatus = STATIC_BADGES.map((def) => {
-      const unlocked = unlockedBadges?.find((ub) => ub.badge_id === def.id);
-      let current = 0;
-
-      // Logique de progression simple (à remplacer par API backend)
-      if (def.criteria.type === "format" && def.criteria.value === "steelbook") {
-        current = stats.steelbooks;
-      }
-      // Ajouter d'autres logiques ici...
+    const fullBadges = definitions.map((def) => {
+      const userBadge = userBadges.find((ub) => ub.badge_id === def.id);
 
       return {
         ...def,
-        isUnlocked: !!unlocked,
-        rarity: unlocked?.rarity || def.baseRarity,
-        progress: Math.min(100, (current / (def.criteria.count || 1)) * 100),
-        currentVal: current,
+        isUnlocked: !!userBadge,
+        unlockedAt: userBadge?.unlocked_at,
+        rarity: userBadge?.rarity || def.base_rarity,
+        progress: userBadge ? 100 : 0, // TODO: Connecter aux vrais stats user_movies
+        currentVal: userBadge ? def.criteria.count || 1 : 0,
         targetVal: def.criteria.count || 1,
       };
     });
 
-    return badgesStatus;
-  } catch (err) {
-    console.error("Error fetching badges:", err);
+    return fullBadges;
+  } catch (error) {
+    console.error("Error fetching badges:", error);
     return [];
   }
 };
 
-/**
- * Fonction de debug pour débloquer un badge manuellement (pour test)
- */
+// Fonction de debug pour forcer l'unlock (utile pour tester l'UI)
 export const debugUnlockBadge = async (userId: string, badgeId: string) => {
-  const def = STATIC_BADGES.find((b) => b.id === badgeId);
-  if (!def) return;
-
   const { error } = await supabase.from("user_badges").insert({
     user_id: userId,
     badge_id: badgeId,
-    rarity: def.baseRarity, // Pourrait être calculé aléatoirement pour le "minting"
-    metadata: { unlocked_via: "debug" },
+    rarity: "holographic", // On force le shiny pour le test
   });
-
-  if (!error) {
-    toast.success(`Badge débloqué : ${def.title}`, {
-      description: "Vous avez gagné de l'XP !",
-      icon: "🏆" as any, // Casting as any to avoid type issues with sonner icons if strict
-    });
-  }
+  return { error };
 };
