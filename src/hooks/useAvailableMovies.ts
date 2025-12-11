@@ -28,6 +28,14 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
   const [error, setError] = useState<string | null>(null);
   const [region, setRegion] = useState("FR");
 
+  // Sécurisation contre les changements de référence d'objets (pour éviter les boucles infinies)
+  // On mémoïse les filtres en interne sur la base de leur contenu stringifié
+  const stableAdditionalFilters = useMemo(
+    () => additionalFilters,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(additionalFilters)],
+  );
+
   // Récupérer les films physiques de l'utilisateur
   const [physicalMovies, setPhysicalMovies] = useState<PhysicalMovieSimple[]>([]);
 
@@ -256,7 +264,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
           with_watch_monetization_types: "flatrate",
           sort_by: "popularity.desc",
           "vote_count.gte": "100",
-          ...additionalFilters,
+          ...stableAdditionalFilters,
         };
 
         const streamingMovies = await discoverMovies(params);
@@ -316,7 +324,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     physicalMovies,
     userProviderIds,
     region,
-    additionalFilters,
+    stableAdditionalFilters, // Utilisation de la version stable
     checkPlatformAvailability,
     getPhysicalAvailability,
   ]);
