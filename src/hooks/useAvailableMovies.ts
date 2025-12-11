@@ -27,10 +27,13 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [region, setRegion] = useState("FR");
-  const [page, setPage] = useState(1);
+
+  // On utilise un index de "chunk" (lot) plutôt qu'un numéro de page unique.
+  // Chunk 1 = pages 1, 2, 3 de TMDB. Chunk 2 = pages 4, 5, 6, etc.
+  const [chunkIndex, setChunkIndex] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  // Sécurisation des filtres (comme vu précédemment)
+  // Sécurisation des filtres
   const stableAdditionalFilters = useMemo(
     () => additionalFilters,
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -98,7 +101,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
   // Réinitialiser la pagination si les filtres changent
   useEffect(() => {
-    setPage(1);
+    setChunkIndex(1);
     setMovies([]);
     setHasMore(true);
   }, [stableAdditionalFilters, enabled]);
@@ -149,11 +152,15 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     setLoading(true);
     try {
       const newResults: AvailableMovieResult[] = [];
-      const seenIds = new Set<number>(page > 1 ? movies.map((m) => m.movie.id) : []);
-      const ITEMS_PER_PAGE = 20;
+      const seenIds = new Set<number>(chunkIndex > 1 ? movies.map((m) => m.movie.id) : []);
 
-      // 1. Charger les films physiques (seulement à la page 1)
-      if (page === 1 && physicalMovies.length > 0) {
+      // On récupère 3 pages TMDB à la fois pour avoir environ 60 films candidats
+      // Cela augmente les chances d'avoir des résultats après filtrage
+      const PAGES_PER_CHUNK = 3;
+      const startPage = (chunkIndex - 1) * PAGES_PER_CHUNK + 1;
+
+      // 1. Charger les films physiques (seulement au premier chargement)
+      if (chunkIndex === 1 && physicalMovies.length > 0) {
         const physicalTmdbIds = [...new Set(physicalMovies.map((pm) => pm.tmdb_id))];
         const batchResults = await Promise.all(
           physicalTmdbIds.map(async (tmdbId) => {
@@ -193,75 +200,86 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
         });
       }
 
-      // 2. Charger les films streaming
+      // 2. Charger les films streaming (Boucle sur les pages TMDB)
       if (userProviderIds.length > 0) {
-        const params: Record<string, string> = {
-          watch_region: region,
-          with_watch_providers: userProviderIds.join("|"),
-          with_watch_monetization_types: "flatrate",
-          // On demande à l'API de trier par note, mais avec un minimum de votes pour éviter les films obscurs à 10/10
-          sort_by: "vote_average.desc",
-          "vote_count.gte": "100",
-          page: page.toString(),
-          ...stableAdditionalFilters,
-        };
+        let emptyPagesCount = 0;
 
-        const streamingMovies = await discoverMovies(params);
+        for (let i = 0; i < PAGES_PER_CHUNK; i++) {
+          const currentPage = startPage + i;
 
-        if (streamingMovies.length === 0) {
-          setHasMore(false);
+          const params: Record<string, string> = {
+            watch_region: region,
+            with_watch_providers: userProviderIds.join("|"),
+            with_watch_monetization_types: "flatrate",
+            sort_by: "vote_average.desc",
+            "vote_count.gte": "100",
+            page: currentPage.toString(),
+            ...stableAdditionalFilters,
+          };
+
+          const streamingMovies = await discoverMovies(params);
+
+          if (streamingMovies.length === 0) {
+            emptyPagesCount++;
+            continue;
+          }
+
+          // Vérification disponibilité
+          const streamingResults = await Promise.all(
+            streamingMovies.map(async (movie) => {
+              if (seenIds.has(movie.id)) return null;
+              try {
+                const platformAvailability = await checkPlatformAvailability(movie.id);
+                const physicalAvailability = getPhysicalAvailability(movie.id);
+                const avail = [...physicalAvailability, ...platformAvailability];
+
+                if (avail.length > 0) {
+                  return { movie, availability: avail };
+                }
+              } catch {
+                /* ignore */
+              }
+              return null;
+            }),
+          );
+
+          streamingResults.forEach((res) => {
+            if (res) {
+              seenIds.add(res.movie.id);
+              newResults.push(res);
+            }
+          });
         }
 
-        // Vérification disponibilité
-        const streamingResults = await Promise.all(
-          streamingMovies.map(async (movie) => {
-            if (seenIds.has(movie.id)) return null;
-            try {
-              const platformAvailability = await checkPlatformAvailability(movie.id);
-              const physicalAvailability = getPhysicalAvailability(movie.id);
-              const avail = [...physicalAvailability, ...platformAvailability];
-
-              if (avail.length > 0) {
-                return { movie, availability: avail };
-              }
-            } catch {
-              /* ignore */
-            }
-            return null;
-          }),
-        );
-
-        streamingResults.forEach((res) => {
-          if (res) {
-            seenIds.add(res.movie.id);
-            newResults.push(res);
-          }
-        });
+        // Si toutes les pages demandées étaient vides, il n'y a probablement plus rien à charger
+        if (emptyPagesCount === PAGES_PER_CHUNK) {
+          setHasMore(false);
+        }
       } else {
         setHasMore(false);
       }
 
       setMovies((prev) => {
-        const combined = page === 1 ? newResults : [...prev, ...newResults];
+        const combined = chunkIndex === 1 ? newResults : [...prev, ...newResults];
         // TRI FINAL : Par Note (vote_average) décroissant
         return combined.sort((a, b) => b.movie.vote_average - a.movie.vote_average);
       });
     } catch (err) {
       console.error("Error fetching available movies:", err);
+      // En cas d'erreur, on ne bloque pas les tentatives futures
     } finally {
       setLoading(false);
     }
   }, [
     enabled,
     user,
-    page,
+    chunkIndex, // Dépendance clé pour le chargement suivant
     physicalMovies,
     userProviderIds,
     region,
     stableAdditionalFilters,
     checkPlatformAvailability,
     getPhysicalAvailability,
-    // Note: movies dependencies removed to avoid cycle, used functional update instead
   ]);
 
   useEffect(() => {
@@ -270,7 +288,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {
-      setPage((p) => p + 1);
+      setChunkIndex((prev) => prev + 1);
     }
   }, [loading, hasMore]);
 
@@ -283,7 +301,6 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     [getPhysicalAvailability, checkPlatformAvailability],
   );
 
-  // Fonction utilitaire pour filtrer une liste externe (utilisée par Search.tsx)
   const filterMoviesByAvailability = useCallback(
     async (candidates: Movie[]): Promise<AvailableMovieResult[]> => {
       const processed = await Promise.all(
@@ -308,7 +325,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     hasSubscriptions: userPlatforms.length > 0,
     hasCollection: physicalMovies.length > 0,
     refresh: () => {
-      setPage(1);
+      setChunkIndex(1);
       fetchAvailableMovies();
     },
     loadMore,

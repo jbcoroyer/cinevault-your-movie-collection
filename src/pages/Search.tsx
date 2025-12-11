@@ -106,7 +106,6 @@ export default function Search() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchedUsers, setSearchedUsers] = useState(false);
 
-  // Mémoïsation des filtres pour éviter les boucles infinies
   const additionalFilters = useMemo(() => {
     return filters.genre ? { with_genres: filters.genre.toString() } : {};
   }, [filters.genre]);
@@ -118,32 +117,29 @@ export default function Search() {
     hasSubscriptions,
     hasCollection,
     physicalMoviesCount,
-    getMovieAvailability, // Utilisé pour vérifier les films standards
-    loadMore, // Pour la pagination
-    hasMore, // Pour savoir si on peut charger plus
+    getMovieAvailability,
+    loadMore,
+    hasMore,
     filterMoviesByAvailability,
   } = useAvailableMovies({
-    enabled: availableForMeEnabled || !!user, // On active le hook si user est là pour avoir accès aux fonctions
+    enabled: availableForMeEnabled || !!user,
     additionalFilters,
   });
 
   const [availabilityMap, setAvailabilityMap] = useState<Map<number, AvailabilityInfo[]>>(new Map());
 
-  // Logique pour mettre à jour les disponibilités sur les résultats de recherche standard
+  // Mise à jour de la disponibilité sur les résultats standards
   useEffect(() => {
     const updateAvailabilityForResults = async () => {
-      // Ne rien faire si le mode "Disponible pour moi" est actif (déjà géré par le hook)
       if (availableForMeEnabled) return;
 
       const moviesToCheck = searchedMovies ? movieResults : popularMovies;
       if (moviesToCheck.length === 0) return;
 
-      // On vérifie seulement ceux qui n'ont pas encore été vérifiés
       const toCheck = moviesToCheck.filter((m) => !availabilityMap.has(m.id));
       if (toCheck.length === 0) return;
 
-      // On limite le nombre de vérifications simultanées pour ne pas surcharger
-      const batch = toCheck.slice(0, 10); // Vérifier les 10 premiers non vérifiés
+      const batch = toCheck.slice(0, 10);
 
       const results = await Promise.all(
         batch.map(async (movie) => {
@@ -156,7 +152,7 @@ export default function Search() {
         const next = new Map(prev);
         results.forEach((r) => {
           if (r.avail.length > 0) next.set(r.id, r.avail);
-          else next.set(r.id, []); // Marquer comme vérifié mais vide
+          else next.set(r.id, []);
         });
         return next;
       });
@@ -326,7 +322,6 @@ export default function Search() {
     aiSearchEnabled,
     availableForMeEnabled,
     filterMoviesByAvailability,
-    // Note: removed availabilityMap form dependency to avoid loops, managed internally
   ]);
 
   useEffect(() => {
@@ -420,13 +415,11 @@ export default function Search() {
   ]);
 
   const getAvailabilityForMovie = (movieId: number): AvailabilityInfo[] | undefined => {
-    // Si on a l'info dans la map, on l'utilise (valable pour recherche ET disponible pour moi)
     if (availabilityMap.has(movieId)) {
       const avail = availabilityMap.get(movieId);
       return avail && avail.length > 0 ? avail : undefined;
     }
 
-    // Fallback pour le mode "Disponible pour moi" par défaut
     if (availableForMeEnabled) {
       const available = availableMoviesDefault.find((am) => am.movie.id === movieId);
       if (available) return available.availability;
@@ -442,11 +435,8 @@ export default function Search() {
       <div className="min-h-screen bg-background pb-24">
         <Header />
 
-        {/* ... (Le reste du code de l'en-tête reste identique jusqu'au Main) ... */}
-
         <div className="bg-background/80 backdrop-blur-lg border-b border-border/50 p-4 sm:p-6 sticky top-14 z-30">
           <div className="flex p-1 bg-muted/50 rounded-xl mb-4 relative max-w-md mx-auto">
-            {/* Onglets Films / Utilisateurs (Code identique) */}
             <button
               onClick={() => {
                 setActiveTab("films");
@@ -500,7 +490,6 @@ export default function Search() {
                     : "border-border/50 bg-card/50 hover:border-primary/30 hover:bg-card",
                 )}
               >
-                {/* Contenu du bouton Disponible pour moi (Code identique) */}
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
@@ -546,7 +535,6 @@ export default function Search() {
           )}
 
           <div className="flex gap-2 max-w-2xl mx-auto">
-            {/* Barre de recherche et filtres (Code identique) */}
             <div className="relative flex-1">
               {aiSearching ? (
                 <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />
@@ -610,7 +598,6 @@ export default function Search() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-                  {/* Contenu de la Sheet Filtres (Code identique) */}
                   <SheetHeader>
                     <SheetTitle className="flex items-center gap-2">
                       <SlidersHorizontal className="w-5 h-5" />
@@ -752,7 +739,6 @@ export default function Search() {
             )}
           </div>
 
-          {/* Badges filtres actifs (Code identique) */}
           {activeTab === "films" && !availableForMeEnabled && (
             <div className="flex items-center gap-2 overflow-x-auto mt-4 pb-2 scrollbar-hide max-w-4xl mx-auto">
               {filters.platforms.length > 0 && (
@@ -842,7 +828,6 @@ export default function Search() {
                     ))}
                   </div>
 
-                  {/* Bouton Voir tous les films (Pagination) */}
                   {availableForMeEnabled && hasMore && !debouncedQuery.trim() && (
                     <div className="mt-8 flex justify-center">
                       <Button onClick={loadMore} disabled={loadingAvailable} variant="outline" className="gap-2">
