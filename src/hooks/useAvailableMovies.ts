@@ -31,6 +31,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
   // Récupérer les films physiques de l'utilisateur
   const [physicalMovies, setPhysicalMovies] = useState<PhysicalMovieSimple[]>([]);
 
+  // Map des films physiques pour lookup rapide
   const physicalMoviesMap = useMemo(() => {
     const map = new Map<number, string[]>();
     physicalMovies.forEach((pm) => {
@@ -41,14 +42,17 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     return map;
   }, [physicalMovies]);
 
+  // Plateformes de l'utilisateur
   const userPlatforms = useMemo(() => {
     return profile?.streaming_services || [];
   }, [profile]);
 
+  // Provider IDs pour les plateformes de l'utilisateur
   const userProviderIds = useMemo(() => {
     return userPlatforms.map((p) => STREAMING_PROVIDER_IDS[p]).filter(Boolean);
   }, [userPlatforms]);
 
+  // Détecter la région automatiquement
   useEffect(() => {
     const detectRegion = async () => {
       try {
@@ -61,6 +65,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     detectRegion();
   }, []);
 
+  // Charger les films physiques de l'utilisateur
   useEffect(() => {
     if (!user) {
       setPhysicalMovies([]);
@@ -69,6 +74,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
     const fetchPhysicalMovies = async () => {
       const { data, error } = await supabase.from("physical_movies").select("tmdb_id, format").eq("user_id", user.id);
+
       if (!error && data) {
         setPhysicalMovies(data);
       }
@@ -76,6 +82,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
     fetchPhysicalMovies();
 
+    // Souscrire aux changements
     const channel = supabase
       .channel("user-physical-movies")
       .on(
@@ -95,6 +102,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     };
   }, [user]);
 
+  // Fonction pour vérifier la disponibilité d'un film sur les plateformes
   const checkPlatformAvailability = useCallback(
     async (movieId: number): Promise<AvailabilityInfo[]> => {
       if (userPlatforms.length === 0) return [];
@@ -106,9 +114,8 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
         const available: AvailabilityInfo[] = [];
 
         providers.flatrate.forEach((provider) => {
-          // Check if provider matches our user platforms list
+          // Gestion souple des IDs (ex: Prime 119 vs 9)
           const platformEntry = Object.entries(STREAMING_PROVIDER_IDS).find(([, id]) => {
-            // Permissive check: strict ID match OR specific case for Prime (9 or 119)
             if (provider.provider_id === 119 || provider.provider_id === 9) {
               return id === 119 || id === 9;
             }
@@ -132,10 +139,12 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     [region, userPlatforms],
   );
 
+  // Fonction pour obtenir la disponibilité physique d'un film
   const getPhysicalAvailability = useCallback(
     (tmdbId: number): AvailabilityInfo[] => {
       const formats = physicalMoviesMap.get(tmdbId);
       if (!formats) return [];
+
       return formats.map((format) => ({
         type: "physical" as const,
         id: format,
@@ -144,6 +153,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     [physicalMoviesMap],
   );
 
+  // Filtrage parallèle pour éviter les blocages
   const filterMoviesByAvailability = useCallback(
     async (candidates: Movie[]): Promise<AvailableMovieResult[]> => {
       const results = await Promise.all(
@@ -166,11 +176,13 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
           return null;
         }),
       );
+
       return results.filter((r): r is AvailableMovieResult => r !== null);
     },
     [getPhysicalAvailability, checkPlatformAvailability, userPlatforms],
   );
 
+  // Charger les films disponibles (Mode découverte par défaut)
   const fetchAvailableMovies = useCallback(async () => {
     if (!enabled || !user) {
       if (!enabled) setMovies([]);
@@ -184,11 +196,13 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
       const allResults: AvailableMovieResult[] = [];
       const seenIds = new Set<number>();
 
+      // 1. Films de la collection physique
       if (physicalMovies.length > 0) {
         const physicalTmdbIds = [...new Set(physicalMovies.map((pm) => pm.tmdb_id))];
+
+        // Optimisation : Traiter par lots
         const batches = [];
         const batchSize = 10;
-
         for (let i = 0; i < physicalTmdbIds.length; i += batchSize) {
           batches.push(physicalTmdbIds.slice(i, i + batchSize));
         }
@@ -233,6 +247,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
         }
       }
 
+      // 2. Films streaming (Découverte)
       if (userProviderIds.length > 0) {
         const params: Record<string, string> = {
           watch_region: region,
@@ -245,14 +260,15 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
         const streamingMovies = await discoverMovies(params);
 
+        // Vérification parallèle
         const streamingResults = await Promise.all(
           streamingMovies.map(async (movie) => {
             if (seenIds.has(movie.id)) return null;
 
             const platformAvailability = await checkPlatformAvailability(movie.id);
             const physicalAvailability = getPhysicalAvailability(movie.id);
-            const avail = [...physicalAvailability, ...platformAvailability];
 
+            const avail = [...physicalAvailability, ...platformAvailability];
             if (avail.length > 0) {
               return { movie, availability: avail };
             }
@@ -268,11 +284,14 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
         });
       }
 
+      // Trier
       allResults.sort((a, b) => {
         const aHasPhysical = a.availability.some((av) => av.type === "physical");
         const bHasPhysical = b.availability.some((av) => av.type === "physical");
+
         if (aHasPhysical && !bHasPhysical) return -1;
         if (!aHasPhysical && bHasPhysical) return 1;
+
         return b.movie.popularity - a.movie.popularity;
       });
 
@@ -298,6 +317,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     fetchAvailableMovies();
   }, [fetchAvailableMovies]);
 
+  // Helper pour enrichir n'importe quel film
   const getMovieAvailability = useCallback(
     async (movie: Movie): Promise<AvailabilityInfo[]> => {
       const physical = getPhysicalAvailability(movie.id);
