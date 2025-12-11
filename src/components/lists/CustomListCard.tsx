@@ -1,15 +1,10 @@
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreVertical, Pencil, Trash2, Globe, Lock, ListVideo, Film, Layers } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { getImageUrl } from "@/services/tmdb";
-import { Badge } from "@/components/ui/badge";
+import { MoreVertical, Pencil, Trash2, Globe, Lock, Layers } from "lucide-react";
+import { Button } from "../ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { Badge } from "../ui/badge";
+import { cn } from "../../lib/utils";
+import { ListPosterStack } from "./ListPosterStack";
 
 interface CustomListCardProps {
   id: string;
@@ -17,7 +12,7 @@ interface CustomListCardProps {
   description: string | null;
   isPublic: boolean;
   updatedAt: string;
-  lastPosterPath?: string | null;
+  posters?: string[];
   itemCount?: number;
   onEdit: () => void;
   onDelete: () => void;
@@ -30,7 +25,7 @@ export function CustomListCard({
   description,
   isPublic,
   updatedAt,
-  lastPosterPath,
+  posters = [],
   itemCount = 0,
   onEdit,
   onDelete,
@@ -38,41 +33,18 @@ export function CustomListCard({
 }: CustomListCardProps) {
   return (
     <Link to={`/lists/${id}`} className={cn("block group relative", className)}>
-      {/* Effet de "pile" derrière la carte si elle contient des éléments */}
+      {/* Effet de "pile" derrière la carte globale */}
       {itemCount > 0 && (
-        <div className="absolute top-2 left-2 right-2 bottom-0 bg-foreground/5 rounded-2xl -z-10 transition-transform duration-300 group-hover:translate-y-2 group-hover:scale-[0.98]" />
+        <div className="absolute top-2 left-2 right-2 bottom-0 bg-foreground/5 rounded-3xl -z-10 transition-transform duration-300 group-hover:translate-y-2 group-hover:scale-[0.98]" />
       )}
 
-      <div className="relative h-full bg-card/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-        {/* Partie Visuelle (Affiche) */}
-        <div className="relative aspect-[2/1] sm:aspect-[16/9] w-full overflow-hidden bg-muted">
-          {lastPosterPath ? (
-            <>
-              {/* Fond flouté pour remplir l'espace */}
-              <div
-                className="absolute inset-0 bg-cover bg-center blur-xl opacity-50 scale-110"
-                style={{ backgroundImage: `url(${getImageUrl(lastPosterPath, "w300")})` }}
-              />
-              <div className="absolute inset-0 bg-black/20" />
+      <div className="relative h-full bg-card/80 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col">
+        {/* Partie Visuelle (Stack d'affiches) */}
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/20">
+          <ListPosterStack posters={posters} count={itemCount} />
 
-              {/* Affiche nette positionnée artistiquement */}
-              <div className="absolute right-4 top-4 bottom-[-40px] w-24 sm:w-32 shadow-2xl rotate-3 group-hover:rotate-0 transition-transform duration-500 ease-out origin-bottom-right">
-                <img
-                  src={getImageUrl(lastPosterPath, "w300") || ""}
-                  alt="Dernier ajout"
-                  className="w-full h-full object-cover rounded-lg border border-white/20"
-                />
-              </div>
-            </>
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-muted to-muted/50 text-muted-foreground/30">
-              <Film className="w-12 h-12 mb-2" />
-              <span className="text-xs font-medium uppercase tracking-widest">Vide</span>
-            </div>
-          )}
-
-          {/* Badge Count */}
-          <div className="absolute top-3 left-3 z-10">
+          {/* Badge Count - Flottant */}
+          <div className="absolute top-3 left-3 z-20">
             <Badge
               variant="secondary"
               className="bg-black/60 backdrop-blur-md text-white border-white/10 gap-1.5 pl-2 pr-2.5 h-7"
@@ -84,7 +56,7 @@ export function CustomListCard({
         </div>
 
         {/* Partie Contenu */}
-        <div className="p-4 sm:p-5 flex flex-col gap-3">
+        <div className="p-5 flex flex-col gap-3 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex items-center gap-2">
@@ -99,9 +71,9 @@ export function CustomListCard({
               </div>
 
               {description ? (
-                <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{description}</p>
+                <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed h-10">{description}</p>
               ) : (
-                <p className="text-xs text-muted-foreground/50 italic">Aucune description</p>
+                <p className="text-xs text-muted-foreground/50 italic h-10">Aucune description</p>
               )}
             </div>
 
@@ -140,7 +112,7 @@ export function CustomListCard({
             </DropdownMenu>
           </div>
 
-          <div className="flex items-center justify-between pt-2 mt-auto border-t border-border/50">
+          <div className="flex items-center justify-between pt-3 mt-auto border-t border-border/50">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Mis à jour</p>
             <p className="text-xs font-medium">
               {new Date(updatedAt).toLocaleDateString("fr-FR", {

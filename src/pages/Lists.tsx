@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { useUserLists } from "../hooks/useUserLists";
 import { useUserMovies } from "../hooks/useUserMovies";
 import { useAuth } from "../contexts/AuthContext";
-import { getMovieDetails, getImageUrl, Movie } from "../services/tmdb";
+import { getMovieDetails, Movie } from "../services/tmdb";
 import { AuthPlaceholder } from "../components/AuthPlaceholder";
 import { CreateListDialog, SpecialListCard, CustomListCard } from "../components/lists";
 import { Plus, ListVideo, Clock, Eye, Heart, ArrowLeft, Sparkles } from "lucide-react";
@@ -26,6 +26,7 @@ interface CategoryCard {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   getMovies: () => Movie[];
+  getPosters: () => string[]; // Nouveau champ pour récupérer les URLs des posters
   getCount: () => number;
 }
 
@@ -82,6 +83,15 @@ export default function Lists() {
     }
   }, [userMovies, moviesLoading]);
 
+  // Helper pour extraire les posters (urls) d'une liste filtrée de userMovies
+  const extractPosters = (filteredUserMovies: typeof userMovies) => {
+    return filteredUserMovies
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 10) // Top 10
+      .map((um) => movies[um.tmdb_id]?.poster_path)
+      .filter((path) => path !== undefined && path !== null) as string[];
+  };
+
   const getWatchlistMovies = () =>
     userMovies
       .filter((um) => um.status === "watchlist")
@@ -112,6 +122,7 @@ export default function Lists() {
       title: "Watchlist",
       icon: Clock,
       getMovies: getWatchlistMovies,
+      getPosters: () => extractPosters(userMovies.filter((um) => um.status === "watchlist")),
       getCount: () => userMovies.filter((um) => um.status === "watchlist").length,
     },
     {
@@ -119,6 +130,7 @@ export default function Lists() {
       title: "Films Vus",
       icon: Eye,
       getMovies: getWatchedMovies,
+      getPosters: () => extractPosters(userMovies.filter((um) => um.status === "watched")),
       getCount: () => userMovies.filter((um) => um.status === "watched").length,
     },
     {
@@ -126,19 +138,12 @@ export default function Lists() {
       title: "Favoris",
       icon: Heart,
       getMovies: getFavoriteMovies,
+      getPosters: () => extractPosters(userMovies.filter((um) => um.is_favorite)),
       getCount: () => userMovies.filter((um) => um.is_favorite).length,
     },
   ];
 
   const isLoading = moviesLoading || loadingMovies;
-
-  const getCategoryBackdrop = (category: CategoryCard): string | null => {
-    const categoryMovies = category.getMovies();
-    if (categoryMovies.length > 0) {
-      return categoryMovies[0]?.backdrop_path || categoryMovies[0]?.poster_path || null;
-    }
-    return null;
-  };
 
   const handleCreateList = async (
     listTitle: string,
@@ -281,7 +286,7 @@ export default function Lists() {
                 title={category.title}
                 count={category.getCount()}
                 icon={category.icon}
-                backdrop={getCategoryBackdrop(category)}
+                posters={category.getPosters()}
                 onClick={() => setSelectedSpecial(category.id)}
                 loading={isLoading}
                 type={category.id as "watchlist" | "watched" | "favorites"}
@@ -310,7 +315,7 @@ export default function Lists() {
           {listsLoading ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-video rounded-2xl" />
+                <Skeleton key={i} className="aspect-[4/5] rounded-3xl" />
               ))}
             </div>
           ) : lists.length === 0 ? (
@@ -342,7 +347,7 @@ export default function Lists() {
                   isPublic={list.is_public}
                   updatedAt={list.updated_at}
                   itemCount={list.item_count}
-                  lastPosterPath={list.last_poster_path}
+                  posters={list.posters}
                   onEdit={() => openEditDialog(list)}
                   onDelete={() => handleDelete(list.id)}
                   className={cn("animate-fade-in-up", `stagger-${Math.min(index + 1, 6)}`)}
