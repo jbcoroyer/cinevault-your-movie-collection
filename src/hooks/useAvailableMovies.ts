@@ -156,13 +156,18 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
   // Filtrage parallèle pour éviter les blocages
   const filterMoviesByAvailability = useCallback(
     async (candidates: Movie[]): Promise<AvailableMovieResult[]> => {
+      // Nous vérifions en parallèle et nous autorisons les échecs pour ne pas bloquer
       const results = await Promise.all(
         candidates.map(async (movie) => {
           const physicalAvail = getPhysicalAvailability(movie.id);
           let platformAvail: AvailabilityInfo[] = [];
 
           if (userPlatforms.length > 0) {
-            platformAvail = await checkPlatformAvailability(movie.id);
+            try {
+              platformAvail = await checkPlatformAvailability(movie.id);
+            } catch (e) {
+              console.warn("Failed to check platform availability for", movie.id);
+            }
           }
 
           const totalAvailability = [...physicalAvail, ...platformAvail];
@@ -191,83 +196,104 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
     setLoading(true);
     setError(null);
+    const seenIds = new Set<number>();
 
-    try {
-      const allResults: AvailableMovieResult[] = [];
-      const seenIds = new Set<number>();
+    // 1. Initialiser avec les films physiques (C'est rapide, on l'affiche tout de suite)
+    const physicalResults: AvailableMovieResult[] = [];
 
-      // 1. Films de la collection physique
-      if (physicalMovies.length > 0) {
-        const physicalTmdbIds = [...new Set(physicalMovies.map((pm) => pm.tmdb_id))];
+    if (physicalMovies.length > 0) {
+      const physicalTmdbIds = [...new Set(physicalMovies.map((pm) => pm.tmdb_id))];
+      const batches = [];
+      const batchSize = 10;
 
-        // Optimisation : Traiter par lots
-        const batches = [];
-        const batchSize = 10;
-        for (let i = 0; i < physicalTmdbIds.length; i += batchSize) {
-          batches.push(physicalTmdbIds.slice(i, i + batchSize));
-        }
-
-        for (const batch of batches) {
-          const batchResults = await Promise.all(
-            batch.map(async (tmdbId) => {
-              try {
-                const response = await fetch(
-                  `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=fr-FR`,
-                );
-                if (response.ok) {
-                  const movie = await response.json();
-                  return {
-                    movie: {
-                      id: movie.id,
-                      title: movie.title,
-                      poster_path: movie.poster_path,
-                      backdrop_path: movie.backdrop_path,
-                      release_date: movie.release_date,
-                      vote_average: movie.vote_average,
-                      vote_count: movie.vote_count,
-                      genre_ids: movie.genres?.map((g: any) => g.id) || [],
-                      popularity: movie.popularity,
-                    } as Movie,
-                    availability: getPhysicalAvailability(tmdbId),
-                  };
-                }
-              } catch {
-                return null;
-              }
-              return null;
-            }),
-          );
-
-          batchResults.forEach((res) => {
-            if (res && !seenIds.has(res.movie.id)) {
-              seenIds.add(res.movie.id);
-              allResults.push(res);
-            }
-          });
-        }
+      for (let i = 0; i < physicalTmdbIds.length; i += batchSize) {
+        batches.push(physicalTmdbIds.slice(i, i + batchSize));
       }
 
-      // 2. Films streaming (Découverte)
-      if (userProviderIds.length > 0) {
-        const params: Record<string, string> = {
-          watch_region: region,
-          with_watch_providers: userProviderIds.join("|"),
-          with_watch_monetization_types: "flatrate",
-          sort_by: "popularity.desc",
-          "vote_count.gte": "100",
-          ...additionalFilters,
-        };
+      for (const batch of batches) {
+        const batchResults = await Promise.all(
+          batch.map(async (tmdbId) => {
+            try {
+              const response = await fetch(
+                `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=fr-FR`,
+              );
+              if (response.ok) {
+                const movie = await response.json();
+                return {
+                  movie: {
+                    id: movie.id,
+                    title: movie.title,
+                    poster_path: movie.poster_path,
+                    backdrop_path: movie.backdrop_path,
+                    release_date: movie.release_date,
+                    vote_average: movie.vote_average,
+                    vote_count: movie.vote_count,
+                    genre_ids: movie.genres?.map((g: any) => g.id) || [],
+                    popularity: movie.popularity,
+                  } as Movie,
+                  availability: getPhysicalAvailability(tmdbId),
+                };
+              }
+            } catch {
+              return null;
+            }
+            return null;
+          }),
+        );
 
+        batchResults.forEach((res) => {
+          if (res && !seenIds.has(res.movie.id)) {
+            seenIds.add(res.movie.id);
+            physicalResults.push(res);
+          }
+        });
+      }
+    }
+
+    // Mise à jour immédiate de l'état avec les films physiques
+    setMovies([...physicalResults]);
+
+    // 2. Ensuite, ajouter les films disponibles sur les plateformes de streaming
+    if (userProviderIds.length > 0) {
+      const params: Record<string, string> = {
+        watch_region: region,
+        with_watch_providers: userProviderIds.join("|"),
+        with_watch_monetization_types: "flatrate",
+        sort_by: "popularity.desc",
+        "vote_count.gte": "100",
+        ...additionalFilters,
+      };
+
+      try {
         const streamingMovies = await discoverMovies(params);
 
-        // Vérification parallèle
-        const streamingResults = await Promise.all(
-          streamingMovies.map(async (movie) => {
-            if (seenIds.has(movie.id)) return null;
+        // Pour aller vite, on ajoute les films streaming DANS UN PREMIER TEMPS sans vérifier les détails
+        // car discoverMovies avec with_watch_providers garantit déjà qu'ils sont dispos.
+        // On affinera les badges ensuite.
+        const streamingResultsInitial: AvailableMovieResult[] = streamingMovies
+          .filter((m) => !seenIds.has(m.id))
+          .map((m) => {
+            seenIds.add(m.id);
+            return {
+              movie: m,
+              availability: [{ type: "platform", id: "streaming", name: "Streaming" }], // Placeholder
+            };
+          });
 
+        // On met à jour l'affichage immédiatement avec ces résultats mixtes
+        const allInitial = [...physicalResults, ...streamingResultsInitial].sort(
+          (a, b) => b.movie.popularity - a.movie.popularity,
+        );
+        setMovies(allInitial);
+        setLoading(false); // On arrête le chargement "bloquant" ici
+
+        // 3. (Optionnel / Background) On récupère les vrais badges pour le streaming
+        // On le fait en parallèle mais sans bloquer l'UI
+        const enrichedStreaming = await Promise.all(
+          streamingMovies.map(async (movie) => {
+            // On ne check que ceux qu'on a ajoutés
             const platformAvailability = await checkPlatformAvailability(movie.id);
             const physicalAvailability = getPhysicalAvailability(movie.id);
-
             const avail = [...physicalAvailability, ...platformAvailability];
             if (avail.length > 0) {
               return { movie, availability: avail };
@@ -276,30 +302,29 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
           }),
         );
 
-        streamingResults.forEach((res) => {
-          if (res) {
-            seenIds.add(res.movie.id);
-            allResults.push(res);
-          }
+        const validEnriched = enrichedStreaming.filter((r): r is AvailableMovieResult => r !== null);
+
+        // On fusionne proprement
+        const finalMap = new Map<number, AvailableMovieResult>();
+        // D'abord physique
+        physicalResults.forEach((r) => finalMap.set(r.movie.id, r));
+        // Puis streaming enrichi
+        validEnriched.forEach((r) => finalMap.set(r.movie.id, r));
+
+        const finalResults = Array.from(finalMap.values()).sort((a, b) => {
+          const aHasPhysical = a.availability.some((av) => av.type === "physical");
+          const bHasPhysical = b.availability.some((av) => av.type === "physical");
+          if (aHasPhysical && !bHasPhysical) return -1;
+          if (!aHasPhysical && bHasPhysical) return 1;
+          return b.movie.popularity - a.movie.popularity;
         });
+
+        setMovies(finalResults);
+      } catch (e) {
+        console.error("Error fetching streaming movies", e);
+        setLoading(false);
       }
-
-      // Trier
-      allResults.sort((a, b) => {
-        const aHasPhysical = a.availability.some((av) => av.type === "physical");
-        const bHasPhysical = b.availability.some((av) => av.type === "physical");
-
-        if (aHasPhysical && !bHasPhysical) return -1;
-        if (!aHasPhysical && bHasPhysical) return 1;
-
-        return b.movie.popularity - a.movie.popularity;
-      });
-
-      setMovies(allResults);
-    } catch (err) {
-      console.error("Error fetching available movies:", err);
-      setError("Erreur lors du chargement des films disponibles");
-    } finally {
+    } else {
       setLoading(false);
     }
   }, [
@@ -317,7 +342,6 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     fetchAvailableMovies();
   }, [fetchAvailableMovies]);
 
-  // Helper pour enrichir n'importe quel film
   const getMovieAvailability = useCallback(
     async (movie: Movie): Promise<AvailabilityInfo[]> => {
       const physical = getPhysicalAvailability(movie.id);
