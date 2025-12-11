@@ -25,6 +25,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
   const [movies, setMovies] = useState<AvailableMovieResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [region, setRegion] = useState("FR");
 
   // Récupérer les films physiques de l'utilisateur
@@ -81,6 +82,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
     fetchPhysicalMovies();
 
+    // Souscrire aux changements
     const channel = supabase
       .channel("user-physical-movies")
       .on(
@@ -112,6 +114,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
         const available: AvailabilityInfo[] = [];
 
         providers.flatrate.forEach((provider) => {
+          // Gestion souple des IDs (ex: Prime 119 vs 9)
           const platformEntry = Object.entries(STREAMING_PROVIDER_IDS).find(([, id]) => {
             if (provider.provider_id === 119 || provider.provider_id === 9) {
               return id === 119 || id === 9;
@@ -153,7 +156,6 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
   // Fonction pour filtrer une liste de films selon la disponibilité (limité à 50)
   const filterMoviesByAvailability = useCallback(
     async (candidates: Movie[]): Promise<AvailableMovieResult[]> => {
-      const results: AvailableMovieResult[] = [];
       // On limite le traitement pour ne pas surcharger
       const candidatesToProcess = candidates.slice(0, 50);
 
@@ -201,9 +203,8 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
       const seenIds = new Set<number>();
       const MAX_ITEMS = 50; // LIMITE STRICTE
 
-      // 1. D'abord, ajouter les films de la collection physique
+      // 1. D'abord, récupérer les films de la collection physique
       if (physicalMovies.length > 0) {
-        // On limite aussi les IDs physiques pour ne pas faire trop d'appels
         const physicalTmdbIds = [...new Set(physicalMovies.map((pm) => pm.tmdb_id))].slice(0, MAX_ITEMS);
 
         const batchResults = await Promise.all(
@@ -244,11 +245,10 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
         });
       }
 
-      // Mise à jour intermédiaire rapide
+      // MISE À JOUR 1 : On affiche immédiatement la collection physique (stable)
       setMovies([...allResults]);
 
-      // 2. Ensuite, ajouter les films disponibles sur les plateformes de streaming
-      // SEULEMENT SI on n'a pas atteint la limite de 50
+      // 2. Ensuite, récupérer les films streaming, SI on n'a pas atteint la limite
       if (userProviderIds.length > 0 && allResults.length < MAX_ITEMS) {
         const params: Record<string, string> = {
           watch_region: region,
@@ -261,44 +261,50 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
         const streamingMovies = await discoverMovies(params);
 
-        // On ne traite que ce qu'il faut pour compléter jusqu'à 50
+        // On ne traite que ce qu'il faut pour compléter jusqu'à 50 (avec une petite marge)
         const needed = MAX_ITEMS - allResults.length;
-        const potentialStreaming = streamingMovies.filter((m) => !seenIds.has(m.id)).slice(0, needed + 10); // +10 de marge
+        const potentialStreaming = streamingMovies.filter((m) => !seenIds.has(m.id)).slice(0, needed + 5);
 
+        // Vérification parallèle des disponibilités
         const streamingResults = await Promise.all(
           potentialStreaming.map(async (movie) => {
-            const platformAvailability = await checkPlatformAvailability(movie.id);
-            const physicalAvailability = getPhysicalAvailability(movie.id);
+            try {
+              const platformAvailability = await checkPlatformAvailability(movie.id);
+              const physicalAvailability = getPhysicalAvailability(movie.id);
 
-            const avail = [...physicalAvailability, ...platformAvailability];
-            if (avail.length > 0) {
-              return { movie, availability: avail };
+              const avail = [...physicalAvailability, ...platformAvailability];
+              if (avail.length > 0) {
+                return { movie, availability: avail };
+              }
+            } catch (e) {
+              console.warn("Skipping movie check due to error", movie.id);
             }
             return null;
           }),
         );
 
+        // Intégration des résultats streaming vérifiés
         streamingResults.forEach((res) => {
           if (res && allResults.length < MAX_ITEMS) {
             seenIds.add(res.movie.id);
             allResults.push(res);
           }
         });
+
+        // Tri final : Physique en premier, puis Popularité
+        allResults.sort((a, b) => {
+          const aHasPhysical = a.availability.some((av) => av.type === "physical");
+          const bHasPhysical = b.availability.some((av) => av.type === "physical");
+
+          if (aHasPhysical && !bHasPhysical) return -1;
+          if (!aHasPhysical && bHasPhysical) return 1;
+
+          return b.movie.popularity - a.movie.popularity;
+        });
+
+        // MISE À JOUR 2 : On affiche le tout (Physique + Streaming) en une seule fois
+        setMovies(allResults.slice(0, MAX_ITEMS));
       }
-
-      // Trier : films physiques d'abord, puis par popularité
-      allResults.sort((a, b) => {
-        const aHasPhysical = a.availability.some((av) => av.type === "physical");
-        const bHasPhysical = b.availability.some((av) => av.type === "physical");
-
-        if (aHasPhysical && !bHasPhysical) return -1;
-        if (!aHasPhysical && bHasPhysical) return 1;
-
-        return b.movie.popularity - a.movie.popularity;
-      });
-
-      // On coupe une dernière fois pour être sûr
-      setMovies(allResults.slice(0, MAX_ITEMS));
     } catch (err) {
       console.error("Error fetching available movies:", err);
     } finally {
@@ -331,6 +337,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
   return {
     movies,
     loading,
+    error,
     region,
     setRegion,
     userPlatforms,
