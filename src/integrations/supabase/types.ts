@@ -47,6 +47,39 @@ export type Database = {
         }
         Relationships: []
       }
+      badge_definitions: {
+        Row: {
+          category: string
+          created_at: string | null
+          criteria: Json
+          description: string
+          icon_name: string
+          id: string
+          title: string
+          xp_reward: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          criteria: Json
+          description: string
+          icon_name: string
+          id: string
+          title: string
+          xp_reward?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          criteria?: Json
+          description?: string
+          icon_name?: string
+          id?: string
+          title?: string
+          xp_reward?: number | null
+        }
+        Relationships: []
+      }
       follows: {
         Row: {
           created_at: string
@@ -136,6 +169,39 @@ export type Database = {
         }
         Relationships: []
       }
+      movies_metadata: {
+        Row: {
+          director_id: number | null
+          director_name: string | null
+          genres: Json | null
+          poster_path: string | null
+          release_year: number | null
+          title: string
+          tmdb_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          director_id?: number | null
+          director_name?: string | null
+          genres?: Json | null
+          poster_path?: string | null
+          release_year?: number | null
+          title: string
+          tmdb_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          director_id?: number | null
+          director_name?: string | null
+          genres?: Json | null
+          poster_path?: string | null
+          release_year?: number | null
+          title?: string
+          tmdb_id?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       physical_movies: {
         Row: {
           condition: string | null
@@ -180,24 +246,33 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string | null
+          current_title: string | null
           id: string
+          popcorn_points: number | null
           streaming_services: string[] | null
+          total_xp: number | null
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
+          current_title?: string | null
           id: string
+          popcorn_points?: number | null
           streaming_services?: string[] | null
+          total_xp?: number | null
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
+          current_title?: string | null
           id?: string
+          popcorn_points?: number | null
           streaming_services?: string[] | null
+          total_xp?: number | null
           username?: string | null
         }
         Relationships: []
@@ -243,6 +318,48 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_badges: {
+        Row: {
+          badge_id: string | null
+          id: string
+          metadata: Json | null
+          rarity: string | null
+          unlocked_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          badge_id?: string | null
+          id?: string
+          metadata?: Json | null
+          rarity?: string | null
+          unlocked_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          badge_id?: string | null
+          id?: string
+          metadata?: Json | null
+          rarity?: string | null
+          unlocked_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badge_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_movies: {
         Row: {
