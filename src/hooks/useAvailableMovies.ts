@@ -184,4 +184,23 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     [getPhysicalAvailability, checkPlatformAvailability, userPlatforms],
   );
 
-  // Charger les films disponibles (Mode
+  const hasSubscriptions = userPlatforms.length > 0;
+  const hasCollection = physicalMoviesMap.size > 0;
+  const physicalMoviesCount = physicalMoviesMap.size;
+
+  return {
+    movies,
+    loading,
+    error,
+    region,
+    physicalMoviesMap,
+    userPlatforms,
+    userProviderIds,
+    checkPlatformAvailability,
+    getPhysicalAvailability,
+    filterMoviesByAvailability,
+    hasSubscriptions,
+    hasCollection,
+    physicalMoviesCount,
+  };
+}
