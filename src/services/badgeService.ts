@@ -10,19 +10,14 @@ export interface Badge {
   base_rarity: string;
   isUnlocked: boolean;
   unlockedAt?: string;
-  rarity?: string; // Peut être différent de base_rarity si 'holographic'
-  criteria: {
-    type: string;
-    count: number;
-    genre?: string;
-    [key: string]: any;
-  };
+  rarity?: string;
+  criteria: any;
   progress?: number;
   currentVal?: number;
   targetVal?: number;
 }
 
-// Helper pour récupérer les stats globales de l'utilisateur
+// Helper pour récupérer les stats
 const getUserStats = async (userId: string) => {
   const { count: movieCount } = await supabase
     .from("user_movies")
@@ -49,7 +44,6 @@ const getUserStats = async (userId: string) => {
 
 export const fetchAllBadges = async (userId: string): Promise<Badge[]> => {
   try {
-    // 1. Récupérer toutes les définitions, les badges utilisateur et les stats en parallèle
     const [definitionsRes, userBadgesRes, stats] = await Promise.all([
       supabase.from("badge_definitions").select("*"),
       supabase.from("user_badges").select("*").eq("user_id", userId),
@@ -62,19 +56,19 @@ export const fetchAllBadges = async (userId: string): Promise<Badge[]> => {
     const definitions = definitionsRes.data;
     const userBadges = userBadgesRes.data;
 
-    // 2. Fusionner les données avec calcul de progression réelle
     const fullBadges = definitions.map((def) => {
       const userBadge = userBadges.find((ub) => ub.badge_id === def.id);
       const criteria = def.criteria as any;
 
-      // Calcul de la valeur actuelle selon le type de critère
       let currentVal = 0;
-      if (criteria.type === "movie_count") currentVal = stats.movie_count;
-      else if (criteria.type === "watched_count") currentVal = stats.watched_count;
-      else if (criteria.type === "review_count") currentVal = stats.review_count;
-      // Ajoutez d'autres types ici si nécessaire (ex: genre_count)
+      // Sécurité : on vérifie que criteria existe
+      if (criteria) {
+        if (criteria.type === "movie_count") currentVal = stats.movie_count;
+        else if (criteria.type === "watched_count") currentVal = stats.watched_count;
+        else if (criteria.type === "review_count") currentVal = stats.review_count;
+      }
 
-      const targetVal = criteria.count || 1;
+      const targetVal = criteria?.count || 1;
       const progress = Math.min(100, Math.round((currentVal / targetVal) * 100));
 
       return {
@@ -96,7 +90,6 @@ export const fetchAllBadges = async (userId: string): Promise<Badge[]> => {
   }
 };
 
-// Fonction pour vérifier et débloquer les badges automatiquement
 export const checkAndUnlockBadges = async (userId: string) => {
   try {
     const [definitionsRes, userBadgesRes, stats] = await Promise.all([
@@ -112,42 +105,42 @@ export const checkAndUnlockBadges = async (userId: string) => {
     const newBadgesToInsert = [];
 
     for (const def of definitions) {
-      // Si l'utilisateur a déjà ce badge, on ignore
+      // Déjà débloqué ? On passe.
       if (userBadges.some((ub) => ub.badge_id === def.id)) continue;
 
       const criteria = def.criteria as any;
+      if (!criteria) continue;
+
       let isEligible = false;
 
-      // Vérification des critères
+      // Vérification des conditions
       if (criteria.type === "movie_count" && stats.movie_count >= criteria.count) isEligible = true;
       if (criteria.type === "watched_count" && stats.watched_count >= criteria.count) isEligible = true;
       if (criteria.type === "review_count" && stats.review_count >= criteria.count) isEligible = true;
 
       if (isEligible) {
-        console.log(`Unlocking badge: ${def.title}`);
         newBadgesToInsert.push({
           user_id: userId,
           badge_id: def.id,
-          rarity: def.base_rarity, // On pourrait ajouter une logique de chance pour les versions holo ici
+          rarity: def.base_rarity,
         });
       }
     }
 
     if (newBadgesToInsert.length > 0) {
       const { error } = await supabase.from("user_badges").insert(newBadgesToInsert);
-      if (error) console.error("Error unlocking badges:", error);
+      if (error) console.error("Error inserting unlocked badges:", error);
     }
   } catch (error) {
     console.error("Error checking badge eligibility:", error);
   }
 };
 
-// Fonction de debug pour forcer l'unlock (utile pour tester l'UI)
 export const debugUnlockBadge = async (userId: string, badgeId: string) => {
   const { error } = await supabase.from("user_badges").insert({
     user_id: userId,
     badge_id: badgeId,
-    rarity: "holographic", // On force le shiny pour le test
+    rarity: "holographic",
   });
   return { error };
 };
