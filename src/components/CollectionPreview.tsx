@@ -74,53 +74,54 @@ const PreviewShelf: React.FC<PreviewShelfProps> = ({ movies, onMovieClick }) => 
     return distribution[index % distribution.length] as PreviewFormat;
   };
 
-  // --- DÉTECTION INTELLIGENTE DU GESTE ---
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-  const isScrollingRef = useRef<boolean>(false);
-  const hoverEnabledRef = useRef<boolean>(false);
+  // --- SOLUTION LONG PRESS ---
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressActiveRef = useRef<boolean>(false);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Seuils de détection
-  const SCROLL_THRESHOLD = 10;
-  const HORIZONTAL_RATIO = 1.5;
+  const LONG_PRESS_DELAY = 400;
+  const MOVE_THRESHOLD = 10;
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
-    touchStartRef.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      time: Date.now(),
-    };
-    isScrollingRef.current = false;
-    hoverEnabledRef.current = false;
-    setActiveId(null);
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    longPressActiveRef.current = false;
+
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    const spine = target?.closest("[data-movie-id]");
+    const movieId = spine?.getAttribute("data-movie-id") || null;
+
+    longPressTimerRef.current = setTimeout(() => {
+      longPressActiveRef.current = true;
+      if (movieId) {
+        setActiveId(Number(movieId));
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      }
+    }, LONG_PRESS_DELAY);
   }, []);
 
   const handleTouchMove = useCallback(
     (e: React.TouchEvent) => {
-      if (!touchStartRef.current) return;
-
       const touch = e.touches[0];
-      const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
-      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
 
-      // Si on a déjà détecté un scroll, ne rien faire
-      if (isScrollingRef.current) {
-        setActiveId(null);
-        return;
+      if (touchStartPosRef.current) {
+        const deltaX = Math.abs(touch.clientX - touchStartPosRef.current.x);
+        const deltaY = Math.abs(touch.clientY - touchStartPosRef.current.y);
+
+        if (deltaX > MOVE_THRESHOLD || deltaY > MOVE_THRESHOLD) {
+          if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
+          longPressActiveRef.current = false;
+          setActiveId(null);
+          return;
+        }
       }
 
-      // Mouvement vertical significatif → c'est un scroll
-      if (deltaY > SCROLL_THRESHOLD) {
-        isScrollingRef.current = true;
-        hoverEnabledRef.current = false;
-        setActiveId(null);
-        return;
-      }
-
-      // Mouvement horizontal dominant ou stationnaire → activer l'effet hover
-      if (deltaX > deltaY * HORIZONTAL_RATIO || (deltaX < 5 && deltaY < 5)) {
-        hoverEnabledRef.current = true;
-
+      if (longPressActiveRef.current) {
         const target = document.elementFromPoint(touch.clientX, touch.clientY);
         const spine = target?.closest("[data-movie-id]");
 
@@ -136,9 +137,12 @@ const PreviewShelf: React.FC<PreviewShelfProps> = ({ movies, onMovieClick }) => 
   );
 
   const handleTouchEnd = useCallback(() => {
-    touchStartRef.current = null;
-    isScrollingRef.current = false;
-    hoverEnabledRef.current = false;
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressActiveRef.current = false;
+    touchStartPosRef.current = null;
     setActiveId(null);
   }, []);
 
@@ -151,12 +155,12 @@ const PreviewShelf: React.FC<PreviewShelfProps> = ({ movies, onMovieClick }) => 
         "w-full bg-[#0a0a0a] rounded-xl overflow-hidden relative perspective-[2000px]",
         "border-[6px] border-[#151515] shadow-[0_0_50px_rgba(0,0,0,0.8)]",
         "min-h-[380px] md:min-h-[450px]",
-        // touch-pan-y permet le scroll vertical natif
         "touch-pan-y",
       )}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
       {/* Fond texturé bois très sombre */}
       <div className="absolute inset-0 opacity-15 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] pointer-events-none mix-blend-overlay" />
@@ -360,7 +364,6 @@ export const CollectionPreview: React.FC<CollectionPreviewProps> = ({ className 
       try {
         setLoading(true);
 
-        // Récupérer 2 pages (40 films)
         const API_KEY = import.meta.env.VITE_TMDB_API_KEY || "2218a5f1d1ccce0122e4be6c67cc7a90";
         const BASE_URL = "https://api.themoviedb.org/3";
 
