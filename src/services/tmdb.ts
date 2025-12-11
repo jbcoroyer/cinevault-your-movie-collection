@@ -132,14 +132,15 @@ interface TMDBResponse<T> {
 }
 
 // Mapping des IDs de providers TMDB
+// Mise à jour pour la France (Prime Video = 119)
 export const STREAMING_PROVIDER_IDS: Record<string, number> = {
   netflix: 8,
-  prime: 9,
+  prime: 119, // ID pour Amazon Prime Video en France/Europe (9 est pour les US)
   disney: 337,
   canal: 381,
   apple: 350,
-  max: 384,
-  hbo: 384, // alias pour max
+  max: 384, // Peut être 1870 selon les régions, 384 est HBO Max
+  hbo: 384,
   paramount: 531,
   crunchyroll: 283,
 };
@@ -147,11 +148,13 @@ export const STREAMING_PROVIDER_IDS: Record<string, number> = {
 // Mapping inverse pour afficher le nom du provider
 export const PROVIDER_NAMES: Record<number, string> = {
   8: "Netflix",
-  9: "Prime Video",
+  119: "Prime Video",
+  9: "Prime Video", // Fallback
   337: "Disney+",
   381: "Canal+",
   350: "Apple TV+",
   384: "Max",
+  1870: "Max",
   531: "Paramount+",
   283: "Crunchyroll",
 };
@@ -263,7 +266,7 @@ export const discoverMoviesByPlatform = async (
   return data.results;
 };
 
-// AI Search - Improved version that can identify specific movies
+// AI Search
 export interface AIFilters {
   with_genres?: string;
   without_genres?: string;
@@ -279,13 +282,12 @@ export interface AIFilters {
 export interface AISearchResult {
   type: "specific" | "discover";
   movies: Movie[];
-  title?: string; // For specific movie searches
+  title?: string;
 }
 
 export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> => {
   if (!prompt.trim()) return { type: "discover", movies: [] };
 
-  // Call the edge function to analyze the prompt
   const { data, error } = await supabase.functions.invoke("analyze-movie-prompt", {
     body: { prompt },
   });
@@ -295,17 +297,10 @@ export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> 
     throw new Error("Erreur lors de l'analyse IA");
   }
 
-  console.log("AI Response:", data);
-
-  // Handle specific movie search
   if (data?.type === "specific" && data?.title) {
-    // Search for the specific movie by title
     const searchResults = await searchMovies(data.title);
-
-    // If we have an original title, also search with that
     if (data.original_title && data.original_title !== data.title) {
       const originalResults = await searchMovies(data.original_title);
-      // Merge and deduplicate results
       const allResults = [...searchResults];
       originalResults.forEach((movie) => {
         if (!allResults.find((m) => m.id === movie.id)) {
@@ -318,7 +313,6 @@ export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> 
         title: data.title,
       };
     }
-
     return {
       type: "specific",
       movies: searchResults.slice(0, 10),
@@ -326,56 +320,31 @@ export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> 
     };
   }
 
-  // Handle discover/filter search
   const filters: AIFilters = data?.filters || data;
-
   if (!filters) {
     throw new Error("Aucun filtre retourné par l'IA");
   }
 
-  console.log("AI Filters:", filters);
-
-  // Build params for discover endpoint
   const params: Record<string, string> = {
     include_adult: "false",
     include_video: "false",
     page: "1",
   };
 
-  if (filters.with_genres) {
-    params.with_genres = filters.with_genres;
-  }
-  if (filters.without_genres) {
-    params.without_genres = filters.without_genres;
-  }
-  if (filters["primary_release_date.gte"]) {
-    params["primary_release_date.gte"] = filters["primary_release_date.gte"];
-  }
-  if (filters["primary_release_date.lte"]) {
-    params["primary_release_date.lte"] = filters["primary_release_date.lte"];
-  }
-  if (filters.with_people) {
-    params.with_people = filters.with_people;
-  }
-  if (filters.with_original_language) {
-    params.with_original_language = filters.with_original_language;
-  }
-  if (filters.sort_by) {
-    params.sort_by = filters.sort_by;
-  }
-  if (filters["vote_count.gte"]) {
-    params["vote_count.gte"] = filters["vote_count.gte"];
-  }
-  if (filters["vote_average.gte"]) {
-    params["vote_average.gte"] = filters["vote_average.gte"];
-  }
+  if (filters.with_genres) params.with_genres = filters.with_genres;
+  if (filters.without_genres) params.without_genres = filters.without_genres;
+  if (filters["primary_release_date.gte"]) params["primary_release_date.gte"] = filters["primary_release_date.gte"];
+  if (filters["primary_release_date.lte"]) params["primary_release_date.lte"] = filters["primary_release_date.lte"];
+  if (filters.with_people) params.with_people = filters.with_people;
+  if (filters.with_original_language) params.with_original_language = filters.with_original_language;
+  if (filters.sort_by) params.sort_by = filters.sort_by;
+  if (filters["vote_count.gte"]) params["vote_count.gte"] = filters["vote_count.gte"];
+  if (filters["vote_average.gte"]) params["vote_average.gte"] = filters["vote_average.gte"];
 
-  // Call TMDB discover endpoint with filters
   const movieData = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", params);
   return { type: "discover", movies: movieData.results };
 };
 
-// Helper functions
 export const formatRuntime = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -428,7 +397,6 @@ export const getRecommendations = async (movieId: number): Promise<Movie[]> => {
   return data.results;
 };
 
-// Now playing & streaming
 export const getNowPlayingMovies = async (): Promise<Movie[]> => {
   const data = await fetchTMDB<TMDBResponse<Movie>>("/movie/now_playing", {
     region: "FR",
@@ -520,7 +488,6 @@ export const getPopularMoviesPaginated = async (page: number = 1): Promise<{ mov
   };
 };
 
-// Get available streaming providers for a region
 export const getAvailableProviders = async (region: string = "FR"): Promise<WatchProvider[]> => {
   const data = await fetchTMDB<{ results: WatchProvider[] }>("/watch/providers/movie", {
     watch_region: region,
@@ -528,15 +495,13 @@ export const getAvailableProviders = async (region: string = "FR"): Promise<Watc
   return data.results;
 };
 
-// Get user's country code (can be used for region-specific content)
 export const getUserCountryCode = async (): Promise<string> => {
   try {
-    // Use ipapi.co for geolocation (free tier)
     const response = await fetch("https://ipapi.co/json/");
     const data = await response.json();
     return data.country_code || "FR";
   } catch (error) {
     console.error("Error getting user country:", error);
-    return "FR"; // Default to France
+    return "FR";
   }
 };
