@@ -44,7 +44,8 @@ export default function ListDetail() {
         setListItems(listWithItems.items);
         const moviePromises = listWithItems.items.map((m) => getMovieDetails(m.tmdb_id));
         const movies = await Promise.all(moviePromises);
-        setListMovies(movies);
+        // Filtrer les films null en cas d'erreur
+        setListMovies(movies.filter((m): m is Movie => m !== null && m !== undefined));
       } catch (error) {
         console.error("Erreur lors du chargement des films:", error);
         toast({
@@ -58,24 +59,45 @@ export default function ListDetail() {
     };
 
     fetchMovies();
-  }, [id, getListWithItems]);
+  }, [id]);
 
   const handleAddMovie = async (movie: Movie) => {
     if (!currentList) return;
 
-    await addMovieToList(currentList.id, {
-      tmdb_id: movie.id,
-      title: movie.title,
-      poster_path: movie.poster_path,
-    });
+    try {
+      // Vérifier si le film est déjà dans la liste
+      if (listItems.some((m) => m.tmdb_id === movie.id)) {
+        toast({
+          title: "Déjà ajouté",
+          description: `${movie.title} est déjà dans cette liste.`,
+        });
+        return;
+      }
 
-    // Recharger la liste
-    const updatedList = await getListWithItems(currentList.id);
-    if (updatedList) {
-      setListItems(updatedList.items);
-      const moviePromises = updatedList.items.map((m) => getMovieDetails(m.tmdb_id));
-      const movies = await Promise.all(moviePromises);
-      setListMovies(movies);
+      const success = await addMovieToList(currentList.id, {
+        tmdb_id: movie.id,
+        title: movie.title,
+        poster_path: movie.poster_path,
+      });
+
+      if (success) {
+        // Re-fetch to update local state
+        const listWithItems = await getListWithItems(currentList.id);
+        if (listWithItems) {
+          setListItems(listWithItems.items);
+          const moviePromises = listWithItems.items.map((m) => getMovieDetails(m.tmdb_id));
+          const movies = await Promise.all(moviePromises);
+          setListMovies(movies.filter((m): m is Movie => m !== null && m !== undefined));
+        }
+        setIsSearchOpen(false);
+      }
+    } catch (error) {
+      console.error("Erreur ajout film:", error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Impossible d'ajouter le film à la liste.",
+      });
     }
   };
 
@@ -88,6 +110,7 @@ export default function ListDetail() {
     if (window.confirm("Retirer ce film de la liste ?")) {
       await removeMovieFromList(currentList.id, tmdbId);
       setListMovies((prev) => prev.filter((m) => m.id !== tmdbId));
+      setListItems((prev) => prev.filter((m) => m.tmdb_id !== tmdbId));
     }
   };
 
@@ -163,7 +186,12 @@ export default function ListDetail() {
           <div className="container mx-auto max-w-7xl">
             <Button
               variant="ghost"
-              className="mb-6 pl-0 hover:bg-white/10 hover:text-white gap-2 text-white/90"
+              className={cn(
+                "mb-6 pl-0 gap-2",
+                coverImage
+                  ? "hover:bg-white/10 hover:text-white text-white/90"
+                  : "hover:bg-transparent hover:text-primary",
+              )}
               onClick={() => navigate("/lists")}
             >
               <ArrowLeft className="w-5 h-5" />
@@ -173,26 +201,49 @@ export default function ListDetail() {
             <div className="flex flex-col md:flex-row gap-8 items-start md:items-end justify-between">
               <div className="space-y-4 max-w-2xl">
                 <div className="flex items-center gap-3 text-sm">
-                  <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 text-white/90">
+                  <div
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1 rounded-full border",
+                      coverImage
+                        ? "bg-black/40 backdrop-blur-sm border-white/20 text-white/90"
+                        : "bg-background/50 border-white/10 text-muted-foreground",
+                    )}
+                  >
                     {currentList.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
                     <span>{currentList.is_public ? "Publique" : "Privée"}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-white/70">
+                  <div
+                    className={cn("flex items-center gap-1.5", coverImage ? "text-white/70" : "text-muted-foreground")}
+                  >
                     <Calendar className="w-3 h-3" />
                     <span>Créée le {new Date(currentList.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
 
-                <h1 className="text-4xl md:text-5xl font-display font-bold text-white drop-shadow-lg">
+                <h1
+                  className={cn(
+                    "text-4xl md:text-5xl font-display font-bold",
+                    coverImage
+                      ? "text-white drop-shadow-lg"
+                      : "bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/60",
+                  )}
+                >
                   {currentList.title}
                 </h1>
 
                 {currentList.description && (
-                  <p className="text-lg text-white/80 leading-relaxed drop-shadow">{currentList.description}</p>
+                  <p
+                    className={cn(
+                      "text-lg leading-relaxed",
+                      coverImage ? "text-white/80 drop-shadow" : "text-muted-foreground",
+                    )}
+                  >
+                    {currentList.description}
+                  </p>
                 )}
 
                 {/* Badge nombre de films */}
-                <div className="flex items-center gap-2 text-white/70">
+                <div className={cn("flex items-center gap-2", coverImage ? "text-white/70" : "text-muted-foreground")}>
                   <Layers className="w-4 h-4" />
                   <span>
                     {currentList.item_count || listMovies.length} film
@@ -213,7 +264,12 @@ export default function ListDetail() {
                 <Button
                   size="icon"
                   variant="outline"
-                  className="rounded-full border-white/20 bg-black/30 backdrop-blur-sm hover:bg-white/20 text-white"
+                  className={cn(
+                    "rounded-full",
+                    coverImage
+                      ? "border-white/20 bg-black/30 backdrop-blur-sm hover:bg-white/20 text-white"
+                      : "border-white/10 bg-background/50",
+                  )}
                 >
                   <Share2 className="w-5 h-5" />
                 </Button>
@@ -229,7 +285,7 @@ export default function ListDetail() {
           <h2 className="text-xl font-semibold flex items-center gap-2">
             Films
             <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-              {currentList.item_count || listMovies.length}
+              {listMovies.length}
             </span>
           </h2>
         </div>
