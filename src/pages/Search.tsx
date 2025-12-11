@@ -1,22 +1,75 @@
 import { useState, useEffect, useRef } from "react";
-import { Search as SearchIcon, X, Film, Users, SlidersHorizontal, Calendar, Clock, Star } from "lucide-react";
+import {
+  Search as SearchIcon,
+  X,
+  Film,
+  Users,
+  SlidersHorizontal,
+  Calendar,
+  Clock,
+  Star,
+  Tv,
+  Sparkles,
+  Globe,
+  Loader2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { BottomNav } from "@/components/BottomNav";
 import { MovieCard, MovieCardSkeleton } from "@/components/MovieCard";
 import { UserCard, UserCardSkeleton } from "@/components/UserCard";
 import { EmptyState } from "@/components/EmptyState";
-import { searchMovies, getGenres, getPopularMovies, discoverMovies, Movie, Genre } from "@/services/tmdb";
+import {
+  searchMovies,
+  getGenres,
+  getPopularMovies,
+  discoverMovies,
+  searchMoviesByAI,
+  discoverMoviesByPlatform,
+  getUserCountryCode,
+  STREAMING_PROVIDER_IDS,
+  Movie,
+  Genre,
+} from "@/services/tmdb";
 import { searchUsers, getPopularUsers, UserProfile } from "@/services/users";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Header } from "@/components/Header";
+import { toast } from "@/hooks/use-toast";
 
 type SearchTab = "films" | "users";
+
+// Liste des plateformes de streaming (même que dans l'onboarding)
+const STREAMING_SERVICES = [
+  { id: "netflix", name: "Netflix", color: "bg-red-600" },
+  { id: "prime", name: "Prime Video", color: "bg-blue-500" },
+  { id: "disney", name: "Disney+", color: "bg-indigo-600" },
+  { id: "canal", name: "Canal+", color: "bg-gray-800" },
+  { id: "apple", name: "Apple TV+", color: "bg-zinc-700" },
+  { id: "max", name: "Max", color: "bg-purple-600" },
+  { id: "paramount", name: "Paramount+", color: "bg-blue-700" },
+  { id: "crunchyroll", name: "Crunchyroll", color: "bg-orange-500" },
+];
+
+// Régions disponibles
+const REGIONS = [
+  { code: "FR", name: "France" },
+  { code: "US", name: "États-Unis" },
+  { code: "GB", name: "Royaume-Uni" },
+  { code: "DE", name: "Allemagne" },
+  { code: "ES", name: "Espagne" },
+  { code: "IT", name: "Italie" },
+  { code: "CA", name: "Canada" },
+  { code: "JP", name: "Japon" },
+  { code: "KR", name: "Corée du Sud" },
+  { code: "BR", name: "Brésil" },
+];
 
 interface Filters {
   genre: number | null;
@@ -24,15 +77,23 @@ interface Filters {
   yearMax: number;
   ratingMin: number;
   runtimeMax: number;
+  platforms: string[];
+  region: string;
 }
 
 const currentYear = new Date().getFullYear();
 
 export default function Search() {
+  const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<SearchTab>("films");
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 300);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // AI Search state
+  const [aiSearchEnabled, setAiSearchEnabled] = useState(false);
+  const [aiSearching, setAiSearching] = useState(false);
+  const [aiSearchTitle, setAiSearchTitle] = useState<string | null>(null);
 
   // Films state
   const [movieResults, setMovieResults] = useState<Movie[]>([]);
@@ -48,6 +109,8 @@ export default function Search() {
     yearMax: currentYear,
     ratingMin: 0,
     runtimeMax: 300,
+    platforms: [],
+    region: "FR",
   });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
@@ -57,6 +120,26 @@ export default function Search() {
   const [popularUsers, setPopularUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchedUsers, setSearchedUsers] = useState(false);
+
+  // Auto-detect user region on mount
+  useEffect(() => {
+    const detectRegion = async () => {
+      try {
+        const countryCode = await getUserCountryCode();
+        setFilters((prev) => ({ ...prev, region: countryCode }));
+      } catch (error) {
+        console.error("Error detecting region:", error);
+      }
+    };
+    detectRegion();
+  }, []);
+
+  // Pre-fill user's streaming platforms from profile
+  useEffect(() => {
+    if (profile?.streaming_services && profile.streaming_services.length > 0) {
+      // Don't auto-apply, just have them ready
+    }
+  }, [profile]);
 
   // Keyboard shortcut: "/" to focus search
   useEffect(() => {
@@ -105,6 +188,7 @@ export default function Search() {
     if (filters.yearMin > 1900 || filters.yearMax < currentYear) count++;
     if (filters.ratingMin > 0) count++;
     if (filters.runtimeMax < 300) count++;
+    if (filters.platforms.length > 0) count++;
     setActiveFiltersCount(count);
   }, [filters]);
 
@@ -114,15 +198,39 @@ export default function Search() {
 
     const searchAndFilter = async () => {
       setLoadingMovies(true);
+      setAiSearchTitle(null);
 
       try {
         let results: Movie[] = [];
 
         if (debouncedQuery.trim()) {
-          // Text search
-          results = await searchMovies(debouncedQuery);
+          if (aiSearchEnabled) {
+            // AI Search
+            setAiSearching(true);
+            try {
+              const aiResult = await searchMoviesByAI(debouncedQuery);
+              results = aiResult.movies;
+              if (aiResult.type === "specific" && aiResult.title) {
+                setAiSearchTitle(aiResult.title);
+              }
+            } catch (error: any) {
+              console.error("AI Search error:", error);
+              toast({
+                title: "Erreur de recherche IA",
+                description: error.message || "Impossible d'analyser votre demande",
+                variant: "destructive",
+              });
+              // Fallback to regular search
+              results = await searchMovies(debouncedQuery);
+            } finally {
+              setAiSearching(false);
+            }
+          } else {
+            // Regular text search
+            results = await searchMovies(debouncedQuery);
+          }
           setSearchedMovies(true);
-        } else if (activeFiltersCount > 0 || filters.genre) {
+        } else if (activeFiltersCount > 0 || filters.genre || filters.platforms.length > 0) {
           // Filter search using discover API
           const params: Record<string, string> = {
             sort_by: "popularity.desc",
@@ -145,6 +253,17 @@ export default function Search() {
             params["with_runtime.lte"] = filters.runtimeMax.toString();
           }
 
+          // Platform filter
+          if (filters.platforms.length > 0) {
+            const providerIds = filters.platforms.map((p) => STREAMING_PROVIDER_IDS[p]).filter(Boolean);
+
+            if (providerIds.length > 0) {
+              params.watch_region = filters.region;
+              params.with_watch_providers = providerIds.join("|");
+              params.with_watch_monetization_types = "flatrate";
+            }
+          }
+
           results = await discoverMovies(params);
           setSearchedMovies(true);
         } else {
@@ -162,7 +281,7 @@ export default function Search() {
     };
 
     searchAndFilter();
-  }, [debouncedQuery, filters, activeTab, popularMovies, activeFiltersCount]);
+  }, [debouncedQuery, filters, activeTab, popularMovies, activeFiltersCount, aiSearchEnabled]);
 
   // Search users
   useEffect(() => {
@@ -191,6 +310,7 @@ export default function Search() {
     setUserResults([]);
     setSearchedMovies(false);
     setSearchedUsers(false);
+    setAiSearchTitle(null);
   };
 
   const resetFilters = () => {
@@ -200,6 +320,8 @@ export default function Search() {
       yearMax: currentYear,
       ratingMin: 0,
       runtimeMax: 300,
+      platforms: [],
+      region: "FR",
     });
   };
 
@@ -211,8 +333,27 @@ export default function Search() {
       if (key === "yearMax") newState.yearMax = currentYear;
       if (key === "ratingMin") newState.ratingMin = 0;
       if (key === "runtimeMax") newState.runtimeMax = 300;
+      if (key === "platforms") newState.platforms = [];
       return newState;
     });
+  };
+
+  const togglePlatform = (platformId: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      platforms: prev.platforms.includes(platformId)
+        ? prev.platforms.filter((p) => p !== platformId)
+        : [...prev.platforms, platformId],
+    }));
+  };
+
+  const applyMyPlatforms = () => {
+    if (profile?.streaming_services) {
+      setFilters((prev) => ({
+        ...prev,
+        platforms: profile.streaming_services || [],
+      }));
+    }
   };
 
   const displayedMovies = searchedMovies || activeFiltersCount > 0 ? movieResults : popularMovies;
@@ -233,7 +374,7 @@ export default function Search() {
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                 activeTab === "films"
-                  ? "bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                  ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -248,7 +389,7 @@ export default function Search() {
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                 activeTab === "users"
-                  ? "bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                  ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -257,212 +398,265 @@ export default function Search() {
             </button>
           </div>
 
-          {/* Search input */}
+          {/* Search bar */}
           <div className="flex gap-2 max-w-2xl mx-auto">
             <div className="relative flex-1">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              {aiSearching ? (
+                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />
+              ) : aiSearchEnabled ? (
+                <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+              ) : (
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              )}
               <Input
                 ref={inputRef}
                 type="text"
-                placeholder={activeTab === "films" ? "Rechercher un film..." : "Rechercher un utilisateur..."}
+                placeholder={
+                  activeTab === "films"
+                    ? aiSearchEnabled
+                      ? "Décrivez le film que vous cherchez..."
+                      : "Rechercher un film..."
+                    : "Rechercher un utilisateur..."
+                }
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="pl-10 pr-16 h-11 bg-muted/30 border-transparent focus:border-primary/50 focus:bg-background transition-all"
+                className={cn(
+                  "pl-11 pr-10 h-12 bg-card border-border/50 focus:border-primary/50 transition-all",
+                  aiSearchEnabled && "border-primary/30 bg-primary/5",
+                )}
               />
-              {query ? (
+              {query && (
                 <button
                   onClick={clearSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-4 h-4" />
                 </button>
-              ) : (
-                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center justify-center w-6 h-6 text-xs font-medium text-muted-foreground bg-muted rounded border border-border">
-                  /
-                </kbd>
               )}
             </div>
 
-            {/* Filters button - only for films */}
+            {/* AI Search Toggle (Films only) */}
+            {activeTab === "films" && (
+              <Button
+                variant={aiSearchEnabled ? "default" : "outline"}
+                size="icon"
+                className={cn("h-12 w-12 shrink-0", aiSearchEnabled && "bg-primary text-primary-foreground")}
+                onClick={() => setAiSearchEnabled(!aiSearchEnabled)}
+                title={aiSearchEnabled ? "Désactiver la recherche IA" : "Activer la recherche IA"}
+              >
+                <Sparkles className="w-5 h-5" />
+              </Button>
+            )}
+
+            {/* Filters button (Films only) */}
             {activeTab === "films" && (
               <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
                 <SheetTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-11 w-11 relative flex-shrink-0 border-muted-foreground/20"
-                  >
+                  <Button variant="outline" size="icon" className="relative h-12 w-12 shrink-0">
                     <SlidersHorizontal className="w-5 h-5" />
                     {activeFiltersCount > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm border-2 border-background">
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
                         {activeFiltersCount}
                       </span>
                     )}
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
-                  <SheetHeader className="mb-6">
-                    <SheetTitle className="font-serif text-2xl">Filtres</SheetTitle>
+                <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2">
+                      <SlidersHorizontal className="w-5 h-5" />
+                      Filtres de recherche
+                    </SheetTitle>
                   </SheetHeader>
 
-                  <div className="space-y-8 pb-20 px-1">
-                    {/* Genre */}
+                  <div className="space-y-6 mt-6">
+                    {/* Streaming Platforms */}
                     <div className="space-y-3">
-                      <Label className="text-base font-medium flex items-center gap-2">
-                        <Film className="w-4 h-4 text-primary" />
-                        Genre
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {genres.map((genre) => (
-                          <button
-                            key={genre.id}
-                            onClick={() => setFilters((f) => ({ ...f, genre: f.genre === genre.id ? null : genre.id }))}
-                            className={cn(
-                              "px-3 py-1.5 rounded-full text-sm transition-all border",
-                              filters.genre === genre.id
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-card text-muted-foreground border-border hover:border-primary/50",
-                            )}
-                          >
-                            {genre.name}
-                          </button>
-                        ))}
+                      <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-2 text-base font-semibold">
+                          <Tv className="w-4 h-4" />
+                          Plateformes
+                        </Label>
+                        {profile?.streaming_services && profile.streaming_services.length > 0 && (
+                          <Button variant="ghost" size="sm" onClick={applyMyPlatforms} className="text-xs h-7">
+                            Mes abonnements
+                          </Button>
+                        )}
                       </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        {STREAMING_SERVICES.map((service) => {
+                          const isSelected = filters.platforms.includes(service.id);
+                          return (
+                            <button
+                              key={service.id}
+                              onClick={() => togglePlatform(service.id)}
+                              className={cn(
+                                "flex items-center gap-2 p-3 rounded-lg border-2 transition-all text-sm font-medium",
+                                isSelected
+                                  ? "border-primary bg-primary/10 text-foreground"
+                                  : "border-border/50 bg-card/50 text-muted-foreground hover:border-border hover:bg-card",
+                              )}
+                            >
+                              <span className={cn("w-2 h-2 rounded-full", service.color)} />
+                              {service.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Region selector */}
+                      {filters.platforms.length > 0 && (
+                        <div className="flex items-center gap-2 mt-3">
+                          <Globe className="w-4 h-4 text-muted-foreground" />
+                          <Select
+                            value={filters.region}
+                            onValueChange={(value) => setFilters((prev) => ({ ...prev, region: value }))}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Région" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {REGIONS.map((region) => (
+                                <SelectItem key={region.code} value={region.code}>
+                                  {region.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Year range */}
-                    <div className="space-y-4">
-                      <Label className="text-base font-medium flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-primary" />
-                        Année de sortie
+                    {/* Genre */}
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Film className="w-4 h-4" />
+                        Genre
                       </Label>
-                      <div className="flex items-center gap-4">
-                        <Select
-                          value={filters.yearMin.toString()}
-                          onValueChange={(v) => setFilters((f) => ({ ...f, yearMin: parseInt(v) }))}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="De" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: currentYear - 1900 + 1 }, (_, i) => 1900 + i)
-                              .reverse()
-                              .map((year) => (
-                                <SelectItem key={year} value={year.toString()}>
-                                  {year}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <span className="text-muted-foreground font-medium">à</span>
-                        <Select
-                          value={filters.yearMax.toString()}
-                          onValueChange={(v) => setFilters((f) => ({ ...f, yearMax: parseInt(v) }))}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="À" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: currentYear - 1900 + 1 }, (_, i) => 1900 + i)
-                              .reverse()
-                              .map((year) => (
-                                <SelectItem key={year} value={year.toString()}>
-                                  {year}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
+                      <Select
+                        value={filters.genre?.toString() || "all"}
+                        onValueChange={(value) =>
+                          setFilters((f) => ({ ...f, genre: value === "all" ? null : parseInt(value) }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Tous les genres" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous les genres</SelectItem>
+                          {genres.map((genre) => (
+                            <SelectItem key={genre.id} value={genre.id.toString()}>
+                              {genre.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Year Range */}
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        Période : {filters.yearMin} - {filters.yearMax}
+                      </Label>
+                      <div className="flex gap-4 items-center">
+                        <Input
+                          type="number"
+                          min={1900}
+                          max={currentYear}
+                          value={filters.yearMin}
+                          onChange={(e) => setFilters((f) => ({ ...f, yearMin: parseInt(e.target.value) || 1900 }))}
+                          className="w-24"
+                        />
+                        <span className="text-muted-foreground">à</span>
+                        <Input
+                          type="number"
+                          min={1900}
+                          max={currentYear}
+                          value={filters.yearMax}
+                          onChange={(e) =>
+                            setFilters((f) => ({ ...f, yearMax: parseInt(e.target.value) || currentYear }))
+                          }
+                          className="w-24"
+                        />
                       </div>
                     </div>
 
                     {/* Rating */}
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <Label className="text-base font-medium flex items-center gap-2">
-                          <Star className="w-4 h-4 text-primary" />
-                          Note minimum
-                        </Label>
-                        <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded">
-                          {filters.ratingMin > 0 ? `${filters.ratingMin}/10` : "Toutes"}
-                        </span>
-                      </div>
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Star className="w-4 h-4" />
+                        Note minimum : {filters.ratingMin}/10
+                      </Label>
                       <Slider
                         value={[filters.ratingMin]}
-                        onValueChange={([v]) => setFilters((f) => ({ ...f, ratingMin: v }))}
-                        max={9}
-                        step={1}
+                        onValueChange={([value]) => setFilters((f) => ({ ...f, ratingMin: value }))}
+                        max={10}
+                        step={0.5}
                         className="w-full"
                       />
-                      <div className="flex justify-between text-xs text-muted-foreground px-1">
-                        <span>0</span>
-                        <span>5</span>
-                        <span>9+</span>
-                      </div>
                     </div>
 
                     {/* Runtime */}
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <Label className="text-base font-medium flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-primary" />
-                          Durée maximum
-                        </Label>
-                        <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded">
-                          {filters.runtimeMax < 300
-                            ? `${Math.floor(filters.runtimeMax / 60)}h${filters.runtimeMax % 60 ? ` ${filters.runtimeMax % 60}m` : ""}`
-                            : "Illimitée"}
-                        </span>
-                      </div>
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Durée max : {Math.floor(filters.runtimeMax / 60)}h{filters.runtimeMax % 60}
+                      </Label>
                       <Slider
                         value={[filters.runtimeMax]}
-                        onValueChange={([v]) => setFilters((f) => ({ ...f, runtimeMax: v }))}
+                        onValueChange={([value]) => setFilters((f) => ({ ...f, runtimeMax: value }))}
                         min={60}
                         max={300}
                         step={15}
                         className="w-full"
                       />
-                      <div className="flex justify-between text-xs text-muted-foreground px-1">
-                        <span>1h</span>
-                        <span>2h30</span>
-                        <span>5h+</span>
-                      </div>
                     </div>
-                  </div>
 
-                  {/* Footer */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t flex gap-3">
-                    <Button variant="outline" onClick={resetFilters} className="flex-1">
-                      Réinitialiser
-                    </Button>
-                    <Button onClick={() => setFiltersOpen(false)} className="flex-1">
-                      Voir les résultats
-                    </Button>
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-4">
+                      <Button variant="outline" onClick={resetFilters} className="flex-1">
+                        Réinitialiser
+                      </Button>
+                      <Button onClick={() => setFiltersOpen(false)} className="flex-1">
+                        Appliquer
+                      </Button>
+                    </div>
                   </div>
                 </SheetContent>
               </Sheet>
             )}
           </div>
 
-          {/* Quick Filters Chips */}
+          {/* AI Search hint */}
+          {activeTab === "films" && aiSearchEnabled && !query && (
+            <p className="text-center text-sm text-muted-foreground mt-3 max-w-lg mx-auto">
+              💡 Décrivez le film : "le film avec le requin", "celui où le gars dit 'I'll be back'", "comédie française
+              avec Dujardin"...
+            </p>
+          )}
+
+          {/* AI Search result indicator */}
+          {aiSearchTitle && (
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm text-primary font-medium">Film identifié : {aiSearchTitle}</span>
+            </div>
+          )}
+
+          {/* Active filters chips & suggestions */}
           {activeTab === "films" && (
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide mt-4 pb-1 max-w-4xl mx-auto items-center">
-              {/* Active Filter Chips */}
-              {filters.yearMin > 1900 && (
+            <div className="flex items-center gap-2 overflow-x-auto mt-4 pb-2 scrollbar-hide max-w-4xl mx-auto">
+              {/* Active Filters Chips */}
+              {filters.platforms.length > 0 && (
                 <button
-                  onClick={() => removeFilter("yearMin")}
+                  onClick={() => removeFilter("platforms")}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground animate-fade-in flex-shrink-0 group"
                 >
-                  Après {filters.yearMin}
-                  <X className="w-3 h-3 opacity-70 group-hover:opacity-100" />
-                </button>
-              )}
-              {filters.yearMax < currentYear && (
-                <button
-                  onClick={() => removeFilter("yearMax")}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground animate-fade-in flex-shrink-0 group"
-                >
-                  Avant {filters.yearMax}
-                  <X className="w-3 h-3 opacity-70 group-hover:opacity-100" />
+                  <Tv className="w-3 h-3" />
+                  {filters.platforms.length} plateforme{filters.platforms.length > 1 ? "s" : ""}
+                  <X className="w-3 h-3 opacity-70 group-hover:opacity-100 ml-1" />
                 </button>
               )}
               {filters.ratingMin > 0 && (
@@ -470,7 +664,20 @@ export default function Search() {
                   onClick={() => removeFilter("ratingMin")}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground animate-fade-in flex-shrink-0 group"
                 >
-                  {filters.ratingMin}+ <Star className="w-3 h-3 fill-current" />
+                  <Star className="w-3 h-3" />
+                  {filters.ratingMin}+
+                  <X className="w-3 h-3 opacity-70 group-hover:opacity-100 ml-1" />
+                </button>
+              )}
+              {(filters.yearMin > 1900 || filters.yearMax < currentYear) && (
+                <button
+                  onClick={() => {
+                    removeFilter("yearMin");
+                    removeFilter("yearMax");
+                  }}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground animate-fade-in flex-shrink-0 group"
+                >
+                  {filters.yearMin}-{filters.yearMax}
                   <X className="w-3 h-3 opacity-70 group-hover:opacity-100 ml-1" />
                 </button>
               )}
@@ -479,7 +686,8 @@ export default function Search() {
                   onClick={() => removeFilter("runtimeMax")}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground animate-fade-in flex-shrink-0 group"
                 >
-                  &lt; {Math.floor(filters.runtimeMax / 60)}h{filters.runtimeMax % 60}
+                  <Clock className="w-3 h-3" />
+                  &lt;{Math.floor(filters.runtimeMax / 60)}h{filters.runtimeMax % 60}
                   <X className="w-3 h-3 opacity-70 group-hover:opacity-100 ml-1" />
                 </button>
               )}
@@ -498,9 +706,7 @@ export default function Search() {
 
               {/* Suggestions Chips */}
               {genres.slice(0, 10).map((genre) => {
-                // Don't show chip if already selected
                 if (filters.genre === genre.id) return null;
-
                 return (
                   <button
                     key={genre.id}
@@ -544,7 +750,11 @@ export default function Search() {
                 <EmptyState
                   icon={Film}
                   title="Aucun film trouvé"
-                  description="Essayez de modifier vos termes de recherche ou vos filtres pour trouver ce que vous cherchez."
+                  description={
+                    filters.platforms.length > 0
+                      ? `Aucun film disponible sur les plateformes sélectionnées dans la région ${filters.region}. Essayez de modifier vos filtres.`
+                      : "Essayez de modifier vos termes de recherche ou vos filtres pour trouver ce que vous cherchez."
+                  }
                   actionLabel={activeFiltersCount > 0 ? "Réinitialiser les filtres" : undefined}
                   onAction={activeFiltersCount > 0 ? resetFilters : undefined}
                 />
