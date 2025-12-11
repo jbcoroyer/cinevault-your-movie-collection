@@ -1,28 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Modification : Utilisation de la variable d'environnement
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
+const API_KEY = import.meta.env.VITE_TMDB_API_KEY || "demo";
 const BASE_URL = "https://api.themoviedb.org/3";
-export const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
-export const getImageUrl = (path: string | null, size: "w92" | "w200" | "w300" | "w500" | "w780" | "w1280" | "original" = "w500") => {
-  if (!path) return null;
-  return `${IMAGE_BASE_URL}/${size}${path}`;
-};
-
+// Types
 export interface Movie {
   id: number;
   title: string;
   original_title: string;
+  overview: string;
   poster_path: string | null;
   backdrop_path: string | null;
-  overview: string;
   release_date: string;
   vote_average: number;
   vote_count: number;
-  genre_ids?: number[];
-  genres?: Genre[];
-  runtime?: number;
+  genre_ids: number[];
+  popularity: number;
+  adult: boolean;
+  original_language: string;
 }
 
 export interface Genre {
@@ -55,43 +50,6 @@ export interface Video {
   official: boolean;
 }
 
-export interface ReleaseDate {
-  certification: string;
-  release_date: string;
-  type: number;
-}
-
-export interface ReleaseDatesResult {
-  iso_3166_1: string;
-  release_dates: ReleaseDate[];
-}
-
-export interface MovieImage {
-  aspect_ratio: number;
-  height: number;
-  width: number;
-  file_path: string;
-  vote_average: number;
-  vote_count: number;
-}
-
-export interface MovieImages {
-  backdrops: MovieImage[];
-  posters: MovieImage[];
-  logos?: MovieImage[];
-}
-
-export interface PersonMovieCredit {
-  id: number;
-  title: string;
-  original_title?: string;
-  poster_path: string | null;
-  release_date?: string;
-  character?: string;
-  job?: string;
-  vote_average?: number;
-}
-
 export interface PersonDetails {
   id: number;
   name: string;
@@ -102,16 +60,37 @@ export interface PersonDetails {
   profile_path: string | null;
   known_for_department: string;
   movie_credits?: {
-    cast: PersonMovieCredit[];
-    crew: PersonMovieCredit[];
+    cast: (Movie & { character: string })[];
+    crew: (Movie & { job: string })[];
   };
 }
 
+interface ReleaseDateEntry {
+  certification: string;
+  iso_639_1: string;
+  release_date: string;
+  type: number;
+}
+
+interface ReleaseDatesResult {
+  iso_3166_1: string;
+  release_dates: ReleaseDateEntry[];
+}
+
+export interface MovieImages {
+  backdrops: { file_path: string; width: number; height: number }[];
+  posters: { file_path: string; width: number; height: number }[];
+  logos: { file_path: string; width: number; height: number }[];
+}
+
 export interface MovieDetails extends Movie {
-  genres: Genre[];
   runtime: number;
-  budget?: number;
-  revenue?: number;
+  budget: number;
+  revenue: number;
+  status: string;
+  tagline: string;
+  genres: Genre[];
+  production_companies?: { id: number; name: string; logo_path: string | null }[];
   production_countries?: { iso_3166_1: string; name: string }[];
   spoken_languages?: { iso_639_1: string; name: string; english_name: string }[];
   original_language?: string;
@@ -153,6 +132,31 @@ interface TMDBResponse<T> {
   total_results: number;
 }
 
+// Mapping des IDs de providers TMDB
+export const STREAMING_PROVIDER_IDS: Record<string, number> = {
+  netflix: 8,
+  prime: 9,
+  disney: 337,
+  canal: 381,
+  apple: 350,
+  max: 384,
+  hbo: 384, // alias pour max
+  paramount: 531,
+  crunchyroll: 283,
+};
+
+// Mapping inverse pour afficher le nom du provider
+export const PROVIDER_NAMES: Record<number, string> = {
+  8: "Netflix",
+  9: "Prime Video",
+  337: "Disney+",
+  381: "Canal+",
+  350: "Apple TV+",
+  384: "Max",
+  531: "Paramount+",
+  283: "Crunchyroll",
+};
+
 const fetchTMDB = async <T,>(endpoint: string, params: Record<string, string> = {}): Promise<T> => {
   const queryParams = new URLSearchParams({
     api_key: API_KEY,
@@ -169,10 +173,18 @@ const fetchTMDB = async <T,>(endpoint: string, params: Record<string, string> = 
   return response.json();
 };
 
+// Image URL helper
+export const getImageUrl = (path: string | null, size: string = "w500"): string | null => {
+  if (!path) return null;
+  return `https://image.tmdb.org/t/p/${size}${path}`;
+};
+
+// Basic fetchers
 export const getTrendingMovies = async (): Promise<Movie[]> => {
   const data = await fetchTMDB<TMDBResponse<Movie>>("/trending/movie/week");
   return data.results;
 };
+
 export const getTopRatedMovies = async (): Promise<Movie[]> => {
   const response = await fetch(`${BASE_URL}/movie/top_rated?api_key=${API_KEY}&language=fr-FR&region=FR`);
   const data = await response.json();
@@ -198,53 +210,9 @@ export const getMovieImages = async (movieId: number): Promise<MovieImages> => {
   return data;
 };
 
-// Get writers from credits
-export const getWriters = (movie: MovieDetails): CrewMember[] => {
-  return (
-    movie.credits?.crew
-      .filter((c) => c.job === "Writer" || c.job === "Screenplay" || c.department === "Writing")
-      .slice(0, 3) || []
-  );
-};
-
-// Get composer from credits
-export const getComposer = (movie: MovieDetails): CrewMember | undefined => {
-  return movie.credits?.crew.find((c) => c.job === "Original Music Composer" || c.job === "Music");
-};
-
-// Format budget/revenue
-export const formatMoney = (amount: number): string => {
-  if (!amount) return "N/A";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(
-    amount,
-  );
-};
-
-// Extract director from credits
-export const getDirector = (movie: MovieDetails): CrewMember | undefined => {
-  return movie.credits?.crew.find((c) => c.job === "Director");
-};
-
-// Extract certification (age rating) for a specific country
-export const getCertification = (movie: MovieDetails, country: string = "FR"): string | null => {
-  const countryRelease = movie.release_dates?.results.find((r) => r.iso_3166_1 === country);
-  if (!countryRelease) return null;
-
-  const certification = countryRelease.release_dates.find((rd) => rd.certification)?.certification;
-  return certification || null;
-};
-
-// Ajoutez cette fonction avec les autres exports
-export const getRecommendations = async (movieId: number): Promise<Movie[]> => {
-  const data = await fetchTMDB<TMDBResponse<Movie>>(`/movie/${movieId}/recommendations`);
-  return data.results;
-};
-
-// Get trailers from videos
-export const getTrailers = (movie: MovieDetails): Video[] => {
-  return (
-    movie.videos?.results.filter((v) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser")) || []
-  );
+export const getWatchProviders = async (movieId: number, country: string = "FR"): Promise<WatchProviders | null> => {
+  const data = await fetchTMDB<{ results: Record<string, WatchProviders> }>(`/movie/${movieId}/watch/providers`);
+  return data.results[country] || null;
 };
 
 export const getPersonDetails = async (personId: number): Promise<PersonDetails> => {
@@ -272,11 +240,31 @@ export const discoverMoviesByGenre = async (genreId: number): Promise<Movie[]> =
   return data.results;
 };
 
-export const getWatchProviders = async (movieId: number, country: string = "FR"): Promise<WatchProviders | null> => {
-  const data = await fetchTMDB<{ results: Record<string, WatchProviders> }>(`/movie/${movieId}/watch/providers`);
-  return data.results[country] || null;
+// Discover movies with custom filters
+export const discoverMovies = async (params: Record<string, string>): Promise<Movie[]> => {
+  const data = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", params);
+  return data.results;
 };
 
+// Discover movies with streaming platform filter
+export const discoverMoviesByPlatform = async (
+  providerIds: number[],
+  region: string = "FR",
+  additionalParams: Record<string, string> = {},
+): Promise<Movie[]> => {
+  const params: Record<string, string> = {
+    watch_region: region,
+    with_watch_providers: providerIds.join("|"),
+    with_watch_monetization_types: "flatrate",
+    sort_by: "popularity.desc",
+    ...additionalParams,
+  };
+
+  const data = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", params);
+  return data.results;
+};
+
+// AI Search - Improved version that can identify specific movies
 export interface AIFilters {
   with_genres?: string;
   without_genres?: string;
@@ -289,8 +277,14 @@ export interface AIFilters {
   "vote_average.gte"?: string;
 }
 
-export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
-  if (!prompt.trim()) return [];
+export interface AISearchResult {
+  type: "specific" | "discover";
+  movies: Movie[];
+  title?: string; // For specific movie searches
+}
+
+export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> => {
+  if (!prompt.trim()) return { type: "discover", movies: [] };
 
   // Call the edge function to analyze the prompt
   const { data, error } = await supabase.functions.invoke("analyze-movie-prompt", {
@@ -302,11 +296,44 @@ export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
     throw new Error("Erreur lors de l'analyse IA");
   }
 
-  if (!data?.filters) {
+  console.log("AI Response:", data);
+
+  // Handle specific movie search
+  if (data?.type === "specific" && data?.title) {
+    // Search for the specific movie by title
+    const searchResults = await searchMovies(data.title);
+
+    // If we have an original title, also search with that
+    if (data.original_title && data.original_title !== data.title) {
+      const originalResults = await searchMovies(data.original_title);
+      // Merge and deduplicate results
+      const allResults = [...searchResults];
+      originalResults.forEach((movie) => {
+        if (!allResults.find((m) => m.id === movie.id)) {
+          allResults.push(movie);
+        }
+      });
+      return {
+        type: "specific",
+        movies: allResults.slice(0, 10),
+        title: data.title,
+      };
+    }
+
+    return {
+      type: "specific",
+      movies: searchResults.slice(0, 10),
+      title: data.title,
+    };
+  }
+
+  // Handle discover/filter search
+  const filters: AIFilters = data?.filters || data;
+
+  if (!filters) {
     throw new Error("Aucun filtre retourné par l'IA");
   }
 
-  const filters: AIFilters = data.filters;
   console.log("AI Filters:", filters);
 
   // Build params for discover endpoint
@@ -346,9 +373,10 @@ export const searchMoviesByAI = async (prompt: string): Promise<Movie[]> => {
 
   // Call TMDB discover endpoint with filters
   const movieData = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", params);
-  return movieData.results;
+  return { type: "discover", movies: movieData.results };
 };
 
+// Helper functions
 export const formatRuntime = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -359,6 +387,49 @@ export const getYear = (dateString: string): string => {
   if (!dateString) return "";
   return new Date(dateString).getFullYear().toString();
 };
+
+export const getDirector = (movie: MovieDetails): CrewMember | undefined => {
+  return movie.credits?.crew.find((c) => c.job === "Director");
+};
+
+export const getWriters = (movie: MovieDetails): CrewMember[] => {
+  return (
+    movie.credits?.crew
+      .filter((c) => c.job === "Writer" || c.job === "Screenplay" || c.department === "Writing")
+      .slice(0, 3) || []
+  );
+};
+
+export const getComposer = (movie: MovieDetails): CrewMember | undefined => {
+  return movie.credits?.crew.find((c) => c.job === "Original Music Composer" || c.job === "Music");
+};
+
+export const formatMoney = (amount: number): string => {
+  if (!amount) return "N/A";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(
+    amount,
+  );
+};
+
+export const getCertification = (movie: MovieDetails, country: string = "FR"): string | null => {
+  const countryRelease = movie.release_dates?.results.find((r) => r.iso_3166_1 === country);
+  if (!countryRelease) return null;
+  const certification = countryRelease.release_dates.find((rd) => rd.certification)?.certification;
+  return certification || null;
+};
+
+export const getTrailers = (movie: MovieDetails): Video[] => {
+  return (
+    movie.videos?.results.filter((v) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser")) || []
+  );
+};
+
+export const getRecommendations = async (movieId: number): Promise<Movie[]> => {
+  const data = await fetchTMDB<TMDBResponse<Movie>>(`/movie/${movieId}/recommendations`);
+  return data.results;
+};
+
+// Now playing & streaming
 export const getNowPlayingMovies = async (): Promise<Movie[]> => {
   const data = await fetchTMDB<TMDBResponse<Movie>>("/movie/now_playing", {
     region: "FR",
@@ -380,6 +451,7 @@ export const getStreamingMovies = async (): Promise<Movie[]> => {
   });
   return data.results;
 };
+
 export const getNowAvailableMovies = async (): Promise<Movie[]> => {
   const today = new Date();
   const threeMonthsAgo = new Date();
@@ -398,13 +470,12 @@ export const getNowAvailableMovies = async (): Promise<Movie[]> => {
     }),
   ]);
 
-  // Fusionner et supprimer les doublons par ID
   const allMovies = [...nowPlayingData.results, ...streamingData.results];
   const uniqueMovies = allMovies.filter((movie, index, self) => index === self.findIndex((m) => m.id === movie.id));
 
-  // Trier par date de sortie (plus récent en premier)
   return uniqueMovies.sort((a, b) => new Date(b.release_date).getTime() - new Date(a.release_date).getTime());
 };
+
 export const getNowAvailableMoviesPaginated = async (
   page: number = 1,
 ): Promise<{ movies: Movie[]; totalPages: number }> => {
@@ -450,8 +521,23 @@ export const getPopularMoviesPaginated = async (page: number = 1): Promise<{ mov
   };
 };
 
-// Discover movies with custom filters
-export const discoverMovies = async (params: Record<string, string>): Promise<Movie[]> => {
-  const data = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", params);
+// Get available streaming providers for a region
+export const getAvailableProviders = async (region: string = "FR"): Promise<WatchProvider[]> => {
+  const data = await fetchTMDB<{ results: WatchProvider[] }>("/watch/providers/movie", {
+    watch_region: region,
+  });
   return data.results;
+};
+
+// Get user's country code (can be used for region-specific content)
+export const getUserCountryCode = async (): Promise<string> => {
+  try {
+    // Use ipapi.co for geolocation (free tier)
+    const response = await fetch("https://ipapi.co/json/");
+    const data = await response.json();
+    return data.country_code || "FR";
+  } catch (error) {
+    console.error("Error getting user country:", error);
+    return "FR"; // Default to France
+  }
 };
