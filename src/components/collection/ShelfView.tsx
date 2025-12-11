@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { PhysicalMovie, PhysicalFormat, formatLabels } from "../../services/physicalMovies";
 import { MovieDetails, getImageUrl } from "../../services/tmdb";
 import { cn } from "../../lib/utils";
@@ -54,20 +54,76 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
 
   const isLight = variant === "light";
 
-  // --- GESTION TACTILE ---
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    const target = document.elementFromPoint(touch.clientX, touch.clientY);
-    const spine = target?.closest("[data-movie-id]");
+  // --- DÉTECTION INTELLIGENTE DU GESTE ---
+  // État pour tracker le geste tactile
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const isScrollingRef = useRef<boolean>(false);
+  const hoverEnabledRef = useRef<boolean>(false);
 
-    if (spine) {
-      const id = spine.getAttribute("data-movie-id");
-      if (id !== activeId) setActiveId(id);
-    } else {
-      setActiveId(null);
-    }
-  };
-  const handleTouchEnd = () => setActiveId(null);
+  // Seuils de détection
+  const SCROLL_THRESHOLD = 10; // pixels de mouvement vertical pour considérer comme scroll
+  const HORIZONTAL_RATIO = 1.5; // ratio horizontal/vertical pour considérer comme hover
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+    };
+    isScrollingRef.current = false;
+    hoverEnabledRef.current = false;
+    setActiveId(null);
+  }, []);
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (!touchStartRef.current) return;
+
+      const touch = e.touches[0];
+      const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+
+      // Si on a déjà détecté un scroll, ne rien faire (laisser le scroll natif)
+      if (isScrollingRef.current) {
+        setActiveId(null);
+        return;
+      }
+
+      // Détection du type de geste
+      if (deltaY > SCROLL_THRESHOLD) {
+        // Mouvement vertical significatif → c'est un scroll
+        isScrollingRef.current = true;
+        hoverEnabledRef.current = false;
+        setActiveId(null);
+        return;
+      }
+
+      // Si mouvement horizontal dominant ou stationnaire → activer l'effet hover
+      if (deltaX > deltaY * HORIZONTAL_RATIO || (deltaX < 5 && deltaY < 5)) {
+        hoverEnabledRef.current = true;
+
+        // Trouver l'élément sous le doigt
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        const spine = target?.closest("[data-movie-id]");
+
+        if (spine) {
+          const id = spine.getAttribute("data-movie-id");
+          if (id !== activeId) setActiveId(id);
+        } else {
+          setActiveId(null);
+        }
+      }
+    },
+    [activeId],
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    touchStartRef.current = null;
+    isScrollingRef.current = false;
+    hoverEnabledRef.current = false;
+    setActiveId(null);
+  }, []);
 
   if (movies.length === 0) return null;
 
@@ -77,10 +133,12 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
       className={cn(
         "w-full bg-[#0a0a0a] rounded-xl overflow-hidden relative perspective-[2000px]",
         isLight
-          ? "border-[4px] border-[#151515] touch-pan-y max-h-[290px] md:max-h-none h-auto"
-          : "border-[12px] border-[#151515] shadow-[0_0_50px_rgba(0,0,0,0.8)] touch-none min-h-[450px]",
+          ? "border-[4px] border-[#151515] max-h-[290px] md:max-h-none h-auto"
+          : "border-[12px] border-[#151515] shadow-[0_0_50px_rgba(0,0,0,0.8)] min-h-[450px]",
+        // touch-pan-y permet le scroll vertical natif
+        "touch-pan-y",
       )}
-      onTouchStart={handleTouchMove}
+      onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
@@ -214,7 +272,7 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                 </div>
               </TooltipTrigger>
 
-              {/* FIXED: Preview Poster au survol - maintenant 100% SOLIDE sans transparence */}
+              {/* Preview Poster au survol */}
               <TooltipContent
                 side="right"
                 sideOffset={30}
@@ -229,7 +287,7 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                     </div>
                   )}
 
-                  {/* Badge format - SOLIDE */}
+                  {/* Badge format */}
                   <div
                     className={cn(
                       "absolute top-3 right-3 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider text-white border shadow-lg",
@@ -239,7 +297,7 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                     {formatLabels[pm.format]}
                   </div>
 
-                  {/* Infos en bas - fond SOLIDE */}
+                  {/* Infos en bas */}
                   <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/95 to-black/80 p-5 pt-20 text-left">
                     <h4 className="text-white font-sans font-bold text-xl leading-tight line-clamp-2 drop-shadow-sm">
                       {title}

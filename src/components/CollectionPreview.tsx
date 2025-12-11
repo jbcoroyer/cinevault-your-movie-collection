@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Movie, getImageUrl } from "@/services/tmdb";
 import { cn } from "@/lib/utils";
@@ -74,20 +74,73 @@ const PreviewShelf: React.FC<PreviewShelfProps> = ({ movies, onMovieClick }) => 
     return distribution[index % distribution.length] as PreviewFormat;
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  // --- DÉTECTION INTELLIGENTE DU GESTE ---
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const isScrollingRef = useRef<boolean>(false);
+  const hoverEnabledRef = useRef<boolean>(false);
+
+  // Seuils de détection
+  const SCROLL_THRESHOLD = 10;
+  const HORIZONTAL_RATIO = 1.5;
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
-    const target = document.elementFromPoint(touch.clientX, touch.clientY);
-    const spine = target?.closest("[data-movie-id]");
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+    };
+    isScrollingRef.current = false;
+    hoverEnabledRef.current = false;
+    setActiveId(null);
+  }, []);
 
-    if (spine) {
-      const id = spine.getAttribute("data-movie-id");
-      if (id && Number(id) !== activeId) setActiveId(Number(id));
-    } else {
-      setActiveId(null);
-    }
-  };
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (!touchStartRef.current) return;
 
-  const handleTouchEnd = () => setActiveId(null);
+      const touch = e.touches[0];
+      const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+
+      // Si on a déjà détecté un scroll, ne rien faire
+      if (isScrollingRef.current) {
+        setActiveId(null);
+        return;
+      }
+
+      // Mouvement vertical significatif → c'est un scroll
+      if (deltaY > SCROLL_THRESHOLD) {
+        isScrollingRef.current = true;
+        hoverEnabledRef.current = false;
+        setActiveId(null);
+        return;
+      }
+
+      // Mouvement horizontal dominant ou stationnaire → activer l'effet hover
+      if (deltaX > deltaY * HORIZONTAL_RATIO || (deltaX < 5 && deltaY < 5)) {
+        hoverEnabledRef.current = true;
+
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        const spine = target?.closest("[data-movie-id]");
+
+        if (spine) {
+          const id = spine.getAttribute("data-movie-id");
+          if (id && Number(id) !== activeId) setActiveId(Number(id));
+        } else {
+          setActiveId(null);
+        }
+      }
+    },
+    [activeId],
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    touchStartRef.current = null;
+    isScrollingRef.current = false;
+    hoverEnabledRef.current = false;
+    setActiveId(null);
+  }, []);
 
   if (movies.length === 0) return null;
 
@@ -96,10 +149,12 @@ const PreviewShelf: React.FC<PreviewShelfProps> = ({ movies, onMovieClick }) => 
       ref={containerRef}
       className={cn(
         "w-full bg-[#0a0a0a] rounded-xl overflow-hidden relative perspective-[2000px]",
-        "border-[6px] border-[#151515] shadow-[0_0_50px_rgba(0,0,0,0.8)] touch-none",
+        "border-[6px] border-[#151515] shadow-[0_0_50px_rgba(0,0,0,0.8)]",
         "min-h-[380px] md:min-h-[450px]",
+        // touch-pan-y permet le scroll vertical natif
+        "touch-pan-y",
       )}
-      onTouchStart={handleTouchMove}
+      onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
@@ -117,7 +172,6 @@ const PreviewShelf: React.FC<PreviewShelfProps> = ({ movies, onMovieClick }) => 
           const randomHeight = (index % 3) * 1.5;
           const isActive = activeId === movie.id;
           const isSteelbook = format === "steelbook";
-          const isCollector = format === "collector";
 
           return (
             <Tooltip key={movie.id} open={isActive} delayDuration={0}>
@@ -134,67 +188,95 @@ const PreviewShelf: React.FC<PreviewShelfProps> = ({ movies, onMovieClick }) => 
                     "border-l border-white/5 border-r border-black/50",
                     "shadow-[inset_2px_0_5px_rgba(255,255,255,0.05),inset_-2px_0_10px_rgba(0,0,0,0.8)]",
                     isActive
-                      ? "scale-105 -translate-y-2 z-20 shadow-[0_10px_40px_rgba(0,0,0,0.9),inset_2px_0_8px_rgba(255,255,255,0.1)]"
-                      : "hover:scale-[1.02] hover:-translate-y-1",
+                      ? [
+                          "z-50 scale-110 -translate-y-4 brightness-110",
+                          "shadow-[4px_0_0_#080808,8px_20px_30px_rgba(0,0,0,0.8)]",
+                        ]
+                      : [
+                          "hover:z-50 hover:scale-110 hover:-translate-y-4 hover:brightness-110",
+                          "hover:shadow-[4px_0_0_#080808,8px_20px_30px_rgba(0,0,0,0.8)]",
+                        ],
                   )}
-                  style={{ height: `calc(12rem + ${randomHeight}px)` }}
+                  style={{
+                    height: `${16 + (format === "dvd" ? 0.8 : 0)}rem`,
+                    transform: `translateY(${randomHeight}px) ${isActive ? "scale(1.1) translateY(-24px)" : ""}`,
+                    marginBottom: isActive ? "12px" : "0px",
+                  }}
                 >
-                  {/* Fond dégradé de la tranche */}
+                  {/* Fond visuel */}
                   <div
                     className={cn(
-                      "absolute inset-0 z-0",
+                      "absolute inset-0 z-0 bg-cover bg-center transition-all duration-500 saturate-[0.8]",
+                      isActive
+                        ? "blur-[0.5px] opacity-50"
+                        : "blur-[2px] opacity-30 group-hover:blur-[0.5px] group-hover:opacity-50",
+                    )}
+                    style={{
+                      backgroundImage: poster ? `url(${poster})` : undefined,
+                      backgroundColor: "#2a2a2a",
+                    }}
+                  />
+
+                  {/* Reflet spéculaire */}
+                  <div
+                    className={cn(
+                      "absolute inset-0 z-10 pointer-events-none bg-gradient-to-r",
                       isSteelbook
-                        ? "bg-gradient-to-b from-slate-400 via-slate-500 to-slate-600"
-                        : isCollector
-                          ? "bg-gradient-to-b from-amber-700 via-amber-800 to-amber-900"
-                          : format === "4k"
-                            ? "bg-gradient-to-b from-neutral-800 via-neutral-900 to-black"
-                            : format === "bluray"
-                              ? "bg-gradient-to-b from-blue-900 via-blue-950 to-slate-900"
-                              : "bg-gradient-to-b from-neutral-700 via-neutral-800 to-neutral-900",
+                        ? "from-transparent via-white/30 to-transparent bg-[length:200%_100%] bg-left group-hover:bg-right transition-[background-position] duration-700 ease-in-out mix-blend-overlay opacity-70"
+                        : "from-white/20 via-transparent to-black/60 opacity-80",
                     )}
                   />
 
-                  {/* Effet de lumière sur le bord gauche */}
-                  <div className="absolute top-0 left-0 w-[2px] h-full bg-gradient-to-b from-white/30 via-white/10 to-transparent z-10" />
+                  {/* Arête brillante */}
+                  <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-white/30 z-20 pointer-events-none mix-blend-overlay"></div>
 
-                  {/* Contenu de la tranche */}
-                  <div className="relative z-10 h-full flex flex-col items-center justify-end py-3 px-1">
-                    <FormatLogo format={format} />
-                    <div className="flex-1 flex items-center justify-center w-full overflow-hidden">
-                      <span
-                        className={cn(
-                          "text-[9px] sm:text-[10px] font-bold uppercase tracking-wider",
-                          "writing-vertical whitespace-nowrap overflow-hidden text-ellipsis max-h-[80%]",
-                          "text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
-                        )}
-                        style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+                  {/* Ombre interne */}
+                  <div className="absolute inset-0 z-10 shadow-[inset_0_2px_5px_rgba(255,255,255,0.1),inset_0_-2px_5px_rgba(0,0,0,0.5)] pointer-events-none"></div>
+
+                  {/* Contenu */}
+                  <div className="relative z-30 w-full h-full flex flex-col py-4 pointer-events-none">
+                    <div className="flex-shrink-0 flex flex-col items-center justify-center w-full px-1 drop-shadow-md">
+                      <FormatLogo format={format} />
+                    </div>
+
+                    <div className="flex-grow relative w-full overflow-hidden">
+                      <h3
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-sans font-bold text-[#e8e8e8] text-xs sm:text-[13px] uppercase tracking-[0.1em] text-center whitespace-nowrap"
+                        style={{
+                          writingMode: "vertical-rl",
+                          textOrientation: "mixed",
+                          maxWidth: "85%",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          textShadow: "0 2px 4px rgba(0,0,0,0.8)",
+                        }}
                       >
                         {movie.title}
-                      </span>
+                      </h3>
+                    </div>
+
+                    <div className="flex-shrink-0 w-full flex flex-col items-center justify-end gap-2 opacity-80 pb-1">
+                      {movie.vote_average >= 8 && (
+                        <div
+                          className="w-1.5 h-1.5 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,1)]"
+                          title="Note élevée"
+                        />
+                      )}
+                      <div className="w-6 h-4 border-[1.5px] border-white/20 rounded-[2px] flex items-center justify-center bg-black/40 shadow-sm">
+                        <div className="w-3 h-[1.5px] bg-white/40"></div>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Effet de reflet steelbook */}
-                  {isSteelbook && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-white/5 pointer-events-none z-10 opacity-50" />
-                  )}
                 </div>
               </TooltipTrigger>
 
-              {/* Tooltip au survol */}
+              {/* Tooltip avec affiche */}
               <TooltipContent
-                side="top"
-                align="center"
-                sideOffset={8}
-                className={cn(
-                  "p-0 w-56 overflow-hidden rounded-xl",
-                  "bg-black/95 border border-white/10 backdrop-blur-xl",
-                  "shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)]",
-                )}
+                side="right"
+                sideOffset={30}
+                className="p-0 border-none shadow-2xl pointer-events-none overflow-visible bg-zinc-900 rounded-lg"
               >
-                <div className="relative">
-                  {/* Poster ou placeholder */}
+                <div className="relative w-56 sm:w-64 rounded-lg overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.9)] border border-zinc-700 animate-in fade-in slide-in-from-left-4 duration-300 ease-out">
                   {poster ? (
                     <div className="relative aspect-[2/3] overflow-hidden">
                       <img src={poster} alt={movie.title} className="w-full h-full object-cover" />
@@ -244,7 +326,7 @@ const PreviewShelf: React.FC<PreviewShelfProps> = ({ movies, onMovieClick }) => 
           );
         })}
 
-        {/* Espaces vides pour l'effet réaliste */}
+        {/* Espaces vides */}
         {Array.from({ length: Math.max(0, 6 - (movies.length % 10)) }).map((_, i) => (
           <div
             key={`filler-${i}`}
