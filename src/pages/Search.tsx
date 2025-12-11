@@ -194,10 +194,8 @@ export default function Search() {
     setActiveFiltersCount(count);
   }, [filters]);
 
-  // Sync loading state with available hook only if we have NO data yet
   useEffect(() => {
     if (availableForMeEnabled && !debouncedQuery.trim() && activeFiltersCount === 0) {
-      // Si on a déjà des films, on n'affiche pas le squelette de chargement, c'est plus fluide
       if (availableMoviesDefault.length === 0) {
         setLoadingMovies(loadingAvailable);
       } else {
@@ -283,11 +281,6 @@ export default function Search() {
         setMovieResults(results);
       } catch (error) {
         console.error("Error searching movies:", error);
-        toast({
-          title: "Erreur",
-          description: "Une erreur est survenue lors de la recherche.",
-          variant: "destructive",
-        });
       } finally {
         setLoadingMovies(false);
       }
@@ -786,11 +779,9 @@ export default function Search() {
                         ? "Résultats filtrés disponibles"
                         : "À regarder ce soir"}
                   </h2>
-                  <span className="text-sm text-muted-foreground ml-2">({displayedMovies.length} films)</span>
                 </div>
               )}
 
-              {/* Logic améliorée : Si on a des films, on les affiche MÊME SI loading est true (chargement progressif) */}
               {loadingMovies && displayedMovies.length === 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-4">
                   {Array.from({ length: 12 }).map((_, i) => (

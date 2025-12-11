@@ -25,7 +25,6 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
   const [movies, setMovies] = useState<AvailableMovieResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [region, setRegion] = useState("FR");
 
   // Récupérer les films physiques de l'utilisateur
@@ -82,7 +81,6 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
     fetchPhysicalMovies();
 
-    // Souscrire aux changements
     const channel = supabase
       .channel("user-physical-movies")
       .on(
@@ -114,7 +112,6 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
         const available: AvailabilityInfo[] = [];
 
         providers.flatrate.forEach((provider) => {
-          // Gestion souple des IDs (ex: Prime 119 vs 9)
           const platformEntry = Object.entries(STREAMING_PROVIDER_IDS).find(([, id]) => {
             if (provider.provider_id === 119 || provider.provider_id === 9) {
               return id === 119 || id === 9;
@@ -153,20 +150,23 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     [physicalMoviesMap],
   );
 
-  // Filtrage parallèle pour éviter les blocages
+  // Fonction pour filtrer une liste de films selon la disponibilité (limité à 50)
   const filterMoviesByAvailability = useCallback(
     async (candidates: Movie[]): Promise<AvailableMovieResult[]> => {
-      // Nous vérifions en parallèle et nous autorisons les échecs pour ne pas bloquer
-      const results = await Promise.all(
-        candidates.map(async (movie) => {
+      const results: AvailableMovieResult[] = [];
+      // On limite le traitement pour ne pas surcharger
+      const candidatesToProcess = candidates.slice(0, 50);
+
+      const processed = await Promise.all(
+        candidatesToProcess.map(async (movie) => {
           const physicalAvail = getPhysicalAvailability(movie.id);
           let platformAvail: AvailabilityInfo[] = [];
 
           if (userPlatforms.length > 0) {
             try {
               platformAvail = await checkPlatformAvailability(movie.id);
-            } catch (e) {
-              console.warn("Failed to check platform availability for", movie.id);
+            } catch {
+              // Ignore errors
             }
           }
 
@@ -182,7 +182,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
         }),
       );
 
-      return results.filter((r): r is AvailableMovieResult => r !== null);
+      return processed.filter((r): r is AvailableMovieResult => r !== null);
     },
     [getPhysicalAvailability, checkPlatformAvailability, userPlatforms],
   );
@@ -195,24 +195,19 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     }
 
     setLoading(true);
-    setError(null);
-    const seenIds = new Set<number>();
 
-    // 1. Initialiser avec les films physiques (C'est rapide, on l'affiche tout de suite)
-    const physicalResults: AvailableMovieResult[] = [];
+    try {
+      const allResults: AvailableMovieResult[] = [];
+      const seenIds = new Set<number>();
+      const MAX_ITEMS = 50; // LIMITE STRICTE
 
-    if (physicalMovies.length > 0) {
-      const physicalTmdbIds = [...new Set(physicalMovies.map((pm) => pm.tmdb_id))];
-      const batches = [];
-      const batchSize = 10;
+      // 1. D'abord, ajouter les films de la collection physique
+      if (physicalMovies.length > 0) {
+        // On limite aussi les IDs physiques pour ne pas faire trop d'appels
+        const physicalTmdbIds = [...new Set(physicalMovies.map((pm) => pm.tmdb_id))].slice(0, MAX_ITEMS);
 
-      for (let i = 0; i < physicalTmdbIds.length; i += batchSize) {
-        batches.push(physicalTmdbIds.slice(i, i + batchSize));
-      }
-
-      for (const batch of batches) {
         const batchResults = await Promise.all(
-          batch.map(async (tmdbId) => {
+          physicalTmdbIds.map(async (tmdbId) => {
             try {
               const response = await fetch(
                 `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=fr-FR`,
@@ -244,56 +239,37 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
         batchResults.forEach((res) => {
           if (res && !seenIds.has(res.movie.id)) {
             seenIds.add(res.movie.id);
-            physicalResults.push(res);
+            allResults.push(res);
           }
         });
       }
-    }
 
-    // Mise à jour immédiate de l'état avec les films physiques
-    setMovies([...physicalResults]);
+      // Mise à jour intermédiaire rapide
+      setMovies([...allResults]);
 
-    // 2. Ensuite, ajouter les films disponibles sur les plateformes de streaming
-    if (userProviderIds.length > 0) {
-      const params: Record<string, string> = {
-        watch_region: region,
-        with_watch_providers: userProviderIds.join("|"),
-        with_watch_monetization_types: "flatrate",
-        sort_by: "popularity.desc",
-        "vote_count.gte": "100",
-        ...additionalFilters,
-      };
+      // 2. Ensuite, ajouter les films disponibles sur les plateformes de streaming
+      // SEULEMENT SI on n'a pas atteint la limite de 50
+      if (userProviderIds.length > 0 && allResults.length < MAX_ITEMS) {
+        const params: Record<string, string> = {
+          watch_region: region,
+          with_watch_providers: userProviderIds.join("|"),
+          with_watch_monetization_types: "flatrate",
+          sort_by: "popularity.desc",
+          "vote_count.gte": "100",
+          ...additionalFilters,
+        };
 
-      try {
         const streamingMovies = await discoverMovies(params);
 
-        // Pour aller vite, on ajoute les films streaming DANS UN PREMIER TEMPS sans vérifier les détails
-        // car discoverMovies avec with_watch_providers garantit déjà qu'ils sont dispos.
-        // On affinera les badges ensuite.
-        const streamingResultsInitial: AvailableMovieResult[] = streamingMovies
-          .filter((m) => !seenIds.has(m.id))
-          .map((m) => {
-            seenIds.add(m.id);
-            return {
-              movie: m,
-              availability: [{ type: "platform", id: "streaming", name: "Streaming" }], // Placeholder
-            };
-          });
+        // On ne traite que ce qu'il faut pour compléter jusqu'à 50
+        const needed = MAX_ITEMS - allResults.length;
+        const potentialStreaming = streamingMovies.filter((m) => !seenIds.has(m.id)).slice(0, needed + 10); // +10 de marge
 
-        // On met à jour l'affichage immédiatement avec ces résultats mixtes
-        const allInitial = [...physicalResults, ...streamingResultsInitial].sort(
-          (a, b) => b.movie.popularity - a.movie.popularity,
-        );
-        setMovies(allInitial);
-        setLoading(false); // On arrête le chargement "bloquant" ici
-
-        // 3. (Optionnel / Background) On récupère les vrais badges pour le streaming
-        // On le fait en parallèle mais sans bloquer l'UI
-        const enrichedStreaming = await Promise.all(
-          streamingMovies.map(async (movie) => {
-            // On ne check que ceux qu'on a ajoutés
+        const streamingResults = await Promise.all(
+          potentialStreaming.map(async (movie) => {
             const platformAvailability = await checkPlatformAvailability(movie.id);
             const physicalAvailability = getPhysicalAvailability(movie.id);
+
             const avail = [...physicalAvailability, ...platformAvailability];
             if (avail.length > 0) {
               return { movie, availability: avail };
@@ -302,29 +278,30 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
           }),
         );
 
-        const validEnriched = enrichedStreaming.filter((r): r is AvailableMovieResult => r !== null);
-
-        // On fusionne proprement
-        const finalMap = new Map<number, AvailableMovieResult>();
-        // D'abord physique
-        physicalResults.forEach((r) => finalMap.set(r.movie.id, r));
-        // Puis streaming enrichi
-        validEnriched.forEach((r) => finalMap.set(r.movie.id, r));
-
-        const finalResults = Array.from(finalMap.values()).sort((a, b) => {
-          const aHasPhysical = a.availability.some((av) => av.type === "physical");
-          const bHasPhysical = b.availability.some((av) => av.type === "physical");
-          if (aHasPhysical && !bHasPhysical) return -1;
-          if (!aHasPhysical && bHasPhysical) return 1;
-          return b.movie.popularity - a.movie.popularity;
+        streamingResults.forEach((res) => {
+          if (res && allResults.length < MAX_ITEMS) {
+            seenIds.add(res.movie.id);
+            allResults.push(res);
+          }
         });
-
-        setMovies(finalResults);
-      } catch (e) {
-        console.error("Error fetching streaming movies", e);
-        setLoading(false);
       }
-    } else {
+
+      // Trier : films physiques d'abord, puis par popularité
+      allResults.sort((a, b) => {
+        const aHasPhysical = a.availability.some((av) => av.type === "physical");
+        const bHasPhysical = b.availability.some((av) => av.type === "physical");
+
+        if (aHasPhysical && !bHasPhysical) return -1;
+        if (!aHasPhysical && bHasPhysical) return 1;
+
+        return b.movie.popularity - a.movie.popularity;
+      });
+
+      // On coupe une dernière fois pour être sûr
+      setMovies(allResults.slice(0, MAX_ITEMS));
+    } catch (err) {
+      console.error("Error fetching available movies:", err);
+    } finally {
       setLoading(false);
     }
   }, [
@@ -354,7 +331,6 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
   return {
     movies,
     loading,
-    error,
     region,
     setRegion,
     userPlatforms,
