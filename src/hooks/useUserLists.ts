@@ -11,6 +11,9 @@ export interface List {
   is_public: boolean;
   created_at: string;
   updated_at: string;
+  // Champs calculés pour l'affichage
+  last_poster_path?: string | null;
+  item_count?: number;
 }
 
 export interface ListItem {
@@ -41,14 +44,45 @@ export function useUserLists() {
     }
 
     try {
+      // On récupère les listes avec leurs items pour calculer les métadonnées
+      // Note: Dans une app à très grande échelle, on ferait ça via une vue SQL ou une fonction RPC
+      // pour éviter de charger tous les items. Pour l'instant, c'est acceptable.
       const { data, error } = await supabase
         .from("lists")
-        .select("*")
+        .select(
+          `
+          *,
+          list_items (
+            poster_path,
+            added_at
+          )
+        `,
+        )
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
-      setLists(data || []);
+
+      // Transformation des données pour inclure le poster du dernier film et le compte
+      const listsWithMeta = (data || []).map((list: any) => {
+        const items = list.list_items || [];
+        // Trier par date d'ajout pour trouver le plus récent
+        const sortedItems = [...items].sort((a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime());
+
+        return {
+          id: list.id,
+          user_id: list.user_id,
+          title: list.title,
+          description: list.description,
+          is_public: list.is_public,
+          created_at: list.created_at,
+          updated_at: list.updated_at,
+          item_count: items.length,
+          last_poster_path: sortedItems.length > 0 ? sortedItems[0].poster_path : null,
+        };
+      });
+
+      setLists(listsWithMeta);
     } catch (error) {
       console.error("Error fetching lists:", error);
       toast({
@@ -82,7 +116,13 @@ export function useUserLists() {
 
       if (error) throw error;
 
-      setLists((prev) => [data, ...prev]);
+      const newList: List = {
+        ...data,
+        item_count: 0,
+        last_poster_path: null,
+      };
+
+      setLists((prev) => [newList, ...prev]);
       toast({
         title: "Liste créée",
         description: `"${title}" a été créée`,
@@ -101,16 +141,11 @@ export function useUserLists() {
 
   const updateList = async (listId: string, updates: Partial<Pick<List, "title" | "description" | "is_public">>) => {
     try {
-      const { error } = await supabase
-        .from("lists")
-        .update(updates)
-        .eq("id", listId);
+      const { error } = await supabase.from("lists").update(updates).eq("id", listId);
 
       if (error) throw error;
 
-      setLists((prev) =>
-        prev.map((list) => (list.id === listId ? { ...list, ...updates } : list))
-      );
+      setLists((prev) => prev.map((list) => (list.id === listId ? { ...list, ...updates } : list)));
       toast({
         title: "Liste modifiée",
         description: "Vos modifications ont été enregistrées",
@@ -127,10 +162,7 @@ export function useUserLists() {
 
   const deleteList = async (listId: string) => {
     try {
-      const { error } = await supabase
-        .from("lists")
-        .delete()
-        .eq("id", listId);
+      const { error } = await supabase.from("lists").delete().eq("id", listId);
 
       if (error) throw error;
 
@@ -151,11 +183,7 @@ export function useUserLists() {
 
   const getListWithItems = async (listId: string): Promise<ListWithItems | null> => {
     try {
-      const { data: list, error: listError } = await supabase
-        .from("lists")
-        .select("*")
-        .eq("id", listId)
-        .single();
+      const { data: list, error: listError } = await supabase.from("lists").select("*").eq("id", listId).single();
 
       if (listError) throw listError;
 
@@ -176,7 +204,7 @@ export function useUserLists() {
 
   const addMovieToList = async (
     listId: string,
-    movie: { tmdb_id: number; title: string; poster_path: string | null }
+    movie: { tmdb_id: number; title: string; poster_path: string | null },
   ) => {
     try {
       // Get current max position
@@ -208,6 +236,21 @@ export function useUserLists() {
         throw error;
       }
 
+      // Update local state to reflect change (new poster/count)
+      setLists((prev) =>
+        prev.map((list) => {
+          if (list.id === listId) {
+            return {
+              ...list,
+              item_count: (list.item_count || 0) + 1,
+              last_poster_path: movie.poster_path, // Update with latest added
+              updated_at: new Date().toISOString(),
+            };
+          }
+          return list;
+        }),
+      );
+
       toast({
         title: "Film ajouté",
         description: `"${movie.title}" a été ajouté à la liste`,
@@ -226,13 +269,24 @@ export function useUserLists() {
 
   const removeMovieFromList = async (listId: string, tmdbId: number) => {
     try {
-      const { error } = await supabase
-        .from("list_items")
-        .delete()
-        .eq("list_id", listId)
-        .eq("tmdb_id", tmdbId);
+      const { error } = await supabase.from("list_items").delete().eq("list_id", listId).eq("tmdb_id", tmdbId);
 
       if (error) throw error;
+
+      // Note: We don't easily update last_poster_path here without refetching,
+      // but we can update the count
+      setLists((prev) =>
+        prev.map((list) => {
+          if (list.id === listId) {
+            return {
+              ...list,
+              item_count: Math.max(0, (list.item_count || 0) - 1),
+              updated_at: new Date().toISOString(),
+            };
+          }
+          return list;
+        }),
+      );
 
       toast({
         title: "Film retiré",
@@ -254,10 +308,7 @@ export function useUserLists() {
     if (!user) return [];
 
     try {
-      const { data, error } = await supabase
-        .from("list_items")
-        .select("list_id")
-        .eq("tmdb_id", tmdbId);
+      const { data, error } = await supabase.from("list_items").select("list_id").eq("tmdb_id", tmdbId);
 
       if (error) throw error;
       return data?.map((item) => item.list_id) || [];

@@ -1,6 +1,6 @@
 import { getImageUrl } from "@/services/tmdb";
-import { Film } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ArrowRight, Sparkles } from "lucide-react";
 
 interface SpecialListCardProps {
   title: string;
@@ -10,6 +10,7 @@ interface SpecialListCardProps {
   onClick: () => void;
   loading?: boolean;
   variant?: "default" | "featured";
+  type?: "watchlist" | "watched" | "favorites";
   className?: string;
 }
 
@@ -21,75 +22,97 @@ export function SpecialListCard({
   onClick,
   loading = false,
   variant = "default",
+  type = "watchlist",
   className,
 }: SpecialListCardProps) {
+  // Configuration des couleurs selon le type de liste
+  const styles = {
+    watchlist: {
+      gradient: "from-blue-600/80 to-purple-600/80",
+      iconColor: "text-blue-200",
+      iconBg: "bg-blue-500/20",
+      borderHover: "hover:border-blue-500/50",
+    },
+    watched: {
+      gradient: "from-emerald-600/80 to-teal-600/80",
+      iconColor: "text-emerald-200",
+      iconBg: "bg-emerald-500/20",
+      borderHover: "hover:border-emerald-500/50",
+    },
+    favorites: {
+      gradient: "from-rose-600/80 to-amber-600/80",
+      iconColor: "text-rose-200",
+      iconBg: "bg-rose-500/20",
+      borderHover: "hover:border-rose-500/50",
+    },
+  };
+
+  const style = styles[type] || styles.watchlist;
+
   return (
     <button
       onClick={onClick}
       className={cn(
-        "group relative overflow-hidden rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 w-full transition-all duration-500",
-        variant === "featured" ? "h-40 md:h-48" : "h-28 md:h-32",
-        "glass-elevated hover:scale-[1.02]",
-        className
+        "group relative overflow-hidden rounded-3xl w-full transition-all duration-500",
+        "border border-white/10 dark:border-white/5",
+        "shadow-lg hover:shadow-2xl hover:scale-[1.02]",
+        style.borderHover,
+        variant === "featured" ? "h-56 md:h-64" : "h-40 md:h-48",
+        className,
       )}
     >
-      {/* Background image */}
-      {backdrop ? (
-        <img
-          src={getImageUrl(backdrop, "w780") || ""}
-          alt={title}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-40 group-hover:opacity-50"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-          <Film className="w-16 h-16 text-muted-foreground/10" />
-        </div>
-      )}
-
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent opacity-90 group-hover:opacity-80 transition-opacity duration-300" />
-
-      {/* Aurora glow effect */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-16 bg-primary/20 blur-3xl" />
+      {/* Background Image avec Zoom effect */}
+      <div className="absolute inset-0 bg-muted">
+        {backdrop ? (
+          <img
+            src={getImageUrl(backdrop, "w780") || ""}
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center opacity-30">
+            <Sparkles className="w-20 h-20 text-white/10" />
+          </div>
+        )}
       </div>
 
-      {/* Content */}
-      <div className="absolute inset-0 flex flex-col justify-end p-4 md:p-5">
-        <div className="flex items-end justify-between">
-          <div className="text-left">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="p-1.5 rounded-lg bg-primary/20 backdrop-blur-sm group-hover:bg-primary/30 transition-colors">
-                <Icon className="w-4 h-4 text-primary" />
-              </div>
-              <h2 className="text-lg md:text-xl font-display font-bold tracking-tight">
-                {title}
-              </h2>
-            </div>
-            <p className="text-sm text-muted-foreground font-medium">
-              {loading ? (
-                <span className="inline-block w-12 h-4 bg-muted animate-pulse rounded" />
-              ) : (
-                `${count} film${count !== 1 ? "s" : ""}`
-              )}
-            </p>
+      {/* Overlay Gradient dynamique */}
+      <div
+        className={cn(
+          "absolute inset-0 bg-gradient-to-br opacity-80 transition-opacity duration-300 group-hover:opacity-90",
+          style.gradient,
+        )}
+      />
+
+      {/* Overlay noir pour texte */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+      {/* Contenu */}
+      <div className="absolute inset-0 p-5 md:p-6 flex flex-col justify-between text-left">
+        {/* En-tête : Icône + Compteur */}
+        <div className="flex justify-between items-start">
+          <div
+            className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10 transition-transform group-hover:rotate-6",
+              style.iconBg,
+            )}
+          >
+            <Icon className={cn("w-6 h-6", style.iconColor)} />
           </div>
-          
-          {/* Arrow indicator */}
-          <div className="p-2 rounded-full bg-foreground/5 group-hover:bg-primary/20 transition-all duration-300 group-hover:translate-x-1">
-            <svg
-              className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+
+          <div className="px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white text-xs font-medium font-mono">
+            {loading ? <span className="inline-block w-4 h-3 bg-white/20 animate-pulse rounded" /> : count}
+          </div>
+        </div>
+
+        {/* Pied : Titre + CTA */}
+        <div>
+          <h2 className="text-2xl md:text-3xl font-display font-bold text-white mb-1 tracking-tight drop-shadow-sm group-hover:translate-x-1 transition-transform duration-300">
+            {title}
+          </h2>
+          <div className="flex items-center gap-2 text-white/70 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+            <span>Explorer</span>
+            <ArrowRight className="w-4 h-4" />
           </div>
         </div>
       </div>
