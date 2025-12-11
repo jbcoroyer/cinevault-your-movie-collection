@@ -25,7 +25,7 @@ export function MovieReviewSection({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { getMyReview, fetchMovieReviews, createReview, updateReview, deleteReview } = useReviews();
-  const { refreshStats } = useBadgeNotification();
+  const { checkBadges } = useBadgeNotification();
 
   const [myReview, setMyReview] = useState<Review | null>(null);
   const [otherReviews, setOtherReviews] = useState<Review[]>([]);
@@ -109,7 +109,7 @@ export function MovieReviewSection({
       if (newReview) {
         setMyReview(newReview);
         // Rafraîchir les stats pour débloquer les badges
-        refreshStats();
+        checkBadges();
         return true;
       }
       return false;
