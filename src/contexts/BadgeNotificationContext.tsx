@@ -2,8 +2,9 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { useAuth } from "@/contexts/AuthContext";
 import { BadgeUnlockDialog } from "@/components/BadgeUnlockDialog";
 import { supabase } from "@/lib/supabase";
-import { ICON_MAP } from "@/data/gameData"; // On utilise le nouveau mapping d'icônes
+import { ICON_MAP } from "@/data/gameData";
 import { Sparkles } from "lucide-react";
+import { checkAndUnlockBadges } from "@/services/badgeService";
 
 // --- TYPES ---
 interface BadgeNotification {
@@ -41,9 +42,14 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
   const [notificationQueue, setNotificationQueue] = useState<BadgeNotification[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // 1. Récupérer l'XP actuelle depuis le profil
+  // 1. Récupérer l'XP actuelle et vérifier les badges manquants
   const refreshStats = useCallback(async () => {
     if (!user) return;
+
+    // Vérifier si des badges doivent être débloqués en fonction des actions récentes
+    // Cela déclenchera une insertion en base, qui sera captée par le channel realtime ci-dessous
+    await checkAndUnlockBadges(user.id);
+
     const { data: profile } = await supabase.from("profiles").select("total_xp").eq("id", user.id).single();
     if (profile) {
       setXp(profile.total_xp || 0);
@@ -88,7 +94,17 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
             setNotificationQueue((prev) => [...prev, newNotif]);
 
             // On rafraichit l'XP global car le trigger DB a dû le mettre à jour
-            setTimeout(refreshStats, 1000);
+            // On utilise un délai pour laisser le temps au trigger DB de s'exécuter
+            setTimeout(() => {
+              supabase
+                .from("profiles")
+                .select("total_xp")
+                .eq("id", user.id)
+                .single()
+                .then(({ data }) => {
+                  if (data) setXp(data.total_xp || 0);
+                });
+            }, 1000);
           }
         },
       )
@@ -134,7 +150,6 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
   const nextLevelXp = currentLevel * LEVEL_THRESHOLD; // XP requis pour le prochain niveau (total)
 
   // Progression dans le niveau actuel (0 à 100%)
-  // Ex: 1250 XP -> Niveau 2. XP dans le niveau = 250. % = 25%.
   const xpInCurrentLevel = xp % LEVEL_THRESHOLD;
   const progressPercent = (xpInCurrentLevel / LEVEL_THRESHOLD) * 100;
 
@@ -162,7 +177,6 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
             description: currentBadgeData.description,
             xp: currentBadgeData.xp,
             icon: currentBadgeData.icon,
-            // On peut déduire la couleur du texte depuis la rareté si besoin, ici défaut
             color: "text-amber-500",
           }}
           onClose={handleCloseDialog}
