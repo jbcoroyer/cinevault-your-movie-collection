@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-// import { getImageUrl } from "@/services/tmdb"; // Import supprimé
+// import { getImageUrl } from "@/services/tmdb"; // Import supprimé pour éviter l'erreur
 import { useMemo, useState } from "react";
 
 interface AnimatedListCardProps {
@@ -24,7 +24,7 @@ interface AnimatedListCardProps {
   index?: number;
 }
 
-// Fonction utilitaire locale pour éviter les problèmes d'import
+// Fonction utilitaire locale pour éviter les problèmes de résolution d'import
 const getImageUrl = (path: string | null | undefined, size: string = "w500") => {
   if (!path) return null;
   return `https://image.tmdb.org/t/p/${size}${path}`;
