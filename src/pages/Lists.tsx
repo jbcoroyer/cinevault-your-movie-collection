@@ -1,27 +1,26 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Header } from "../components/Header";
-import { BottomNav } from "../components/BottomNav";
-import { MovieCard, MovieCardSkeleton } from "../components/MovieCard";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { Switch } from "../components/ui/switch";
-import { Label } from "../components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { useUserLists } from "../hooks/useUserLists";
-import { useUserMovies } from "../hooks/useUserMovies";
-import { useAuth } from "../contexts/AuthContext";
-import { getMovieDetails, Movie } from "../services/tmdb";
-import { AuthPlaceholder } from "../components/AuthPlaceholder";
-// Imports directs pour éviter les erreurs de résolution de dossier
-import { CreateListDialog } from "../components/lists/CreateListDialog";
-import { SpecialListCard } from "../components/lists/SpecialListCard";
-import { CustomListCard } from "../components/lists/CustomListCard";
+import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useUserLists } from "@/hooks/useUserLists";
+import { useUserMovies } from "@/hooks/useUserMovies";
+import { useAuth } from "@/contexts/AuthContext";
+import { getMovieDetails, Movie } from "@/services/tmdb";
+import { AuthPlaceholder } from "@/components/AuthPlaceholder";
+import { CreateListDialog } from "@/components/lists/CreateListDialog";
+import { SpecialListCard } from "@/components/lists/SpecialListCard";
+import { AnimatedListCard } from "@/components/lists/AnimatedListCard";
 
-import { Plus, ListVideo, Clock, Eye, Heart, ArrowLeft, Sparkles } from "lucide-react";
-import { Skeleton } from "../components/ui/skeleton";
-import { cn } from "../lib/utils";
+import { Plus, ListVideo, Clock, Eye, Heart, ArrowLeft, Sparkles, FolderPlus } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { MovieCard, MovieCardSkeleton } from "@/components/MovieCard";
 
 type SpecialList = "watchlist" | "watched" | "favorites" | null;
 
@@ -275,7 +274,7 @@ export default function Lists() {
         </div>
 
         {/* Special Lists - Bento Grid Style */}
-        <section className="mb-12">
+        <section className="mb-16">
           <div className="flex items-center gap-2 mb-6">
             <div className="p-2 rounded-lg bg-primary/10">
               <Sparkles className="w-5 h-5 text-primary" />
@@ -300,9 +299,9 @@ export default function Lists() {
           </div>
         </section>
 
-        {/* Custom Lists */}
+        {/* Custom Lists - Nouvelle grille avec cartes animées */}
         <section>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-muted">
                 <ListVideo className="w-5 h-5 text-muted-foreground" />
@@ -317,15 +316,17 @@ export default function Lists() {
           </div>
 
           {listsLoading ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-[4/5] rounded-3xl" />
+                <div key={i} className="pt-12">
+                  <Skeleton className="w-full h-40 rounded-2xl" />
+                </div>
               ))}
             </div>
           ) : lists.length === 0 ? (
             <div className="text-center py-24 rounded-3xl border border-dashed border-border/50 bg-card/30 animate-fade-in-up">
               <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
-                <ListVideo className="w-10 h-10 text-muted-foreground/50" />
+                <FolderPlus className="w-10 h-10 text-muted-foreground/50" />
               </div>
               <h3 className="font-display font-semibold text-lg mb-2">Aucune liste personnalisée</h3>
               <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
@@ -341,22 +342,37 @@ export default function Lists() {
               </Button>
             </div>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            // GRILLE POUR LES NOUVELLES CARTES
+            // Utilisation de gap-y important car les cartes "débordent" vers le haut
+            <div className="grid gap-x-6 gap-y-8 sm:gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {lists.map((list, index) => (
-                <CustomListCard
+                <AnimatedListCard
                   key={list.id}
                   id={list.id}
                   title={list.title}
                   description={list.description}
                   isPublic={list.is_public}
-                  updatedAt={list.updated_at}
-                  itemCount={list.item_count}
+                  itemCount={list.item_count || 0}
                   posters={list.posters}
                   onEdit={() => openEditDialog(list)}
                   onDelete={() => handleDelete(list.id)}
                   className={cn("animate-fade-in-up", `stagger-${Math.min(index + 1, 6)}`)}
+                  index={index}
                 />
               ))}
+
+              {/* Carte "Créer" à la fin de la grille */}
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className="group relative w-full pt-12 pb-4 cursor-pointer flex flex-col h-full min-h-[200px]"
+              >
+                <div className="relative w-full h-full min-h-[220px] bg-muted/10 border-2 border-dashed border-border rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300">
+                  <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
+                    <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary" />
+                  </div>
+                  <span className="font-medium text-muted-foreground group-hover:text-foreground">Nouvelle liste</span>
+                </div>
+              </button>
             </div>
           )}
         </section>
