@@ -49,6 +49,7 @@ export type Database = {
       }
       badge_definitions: {
         Row: {
+          base_rarity: string | null
           category: string
           created_at: string | null
           criteria: Json
@@ -59,6 +60,7 @@ export type Database = {
           xp_reward: number | null
         }
         Insert: {
+          base_rarity?: string | null
           category: string
           created_at?: string | null
           criteria: Json
@@ -69,6 +71,7 @@ export type Database = {
           xp_reward?: number | null
         }
         Update: {
+          base_rarity?: string | null
           category?: string
           created_at?: string | null
           criteria?: Json
@@ -321,28 +324,28 @@ export type Database = {
       }
       user_badges: {
         Row: {
-          badge_id: string | null
+          badge_id: string
           id: string
           metadata: Json | null
           rarity: string | null
           unlocked_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
-          badge_id?: string | null
+          badge_id: string
           id?: string
           metadata?: Json | null
           rarity?: string | null
           unlocked_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
-          badge_id?: string | null
+          badge_id?: string
           id?: string
           metadata?: Json | null
           rarity?: string | null
           unlocked_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {

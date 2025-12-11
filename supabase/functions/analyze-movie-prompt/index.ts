@@ -12,6 +12,8 @@ const systemPrompt = `Tu es un expert cinématographique. Ta mission est d'analy
 1. UN FILM PRÉCIS (description vague d'un film spécifique)
 2. UN TYPE DE FILM (genre, période, style, etc.)
 
+RÈGLE CRITIQUE : Tu dois retourner UNIQUEMENT du JSON valide, SANS aucun commentaire (pas de // ou /* */), SANS texte explicatif.
+
 RÈGLES IMPORTANTES :
 
 ## DÉTECTION DE FILM PRÉCIS
@@ -68,7 +70,7 @@ Action: 28, Aventure: 12, Animation: 16, Comédie: 35, Crime: 80, Documentaire: 
 - Par défaut (recherche de qualité) : sort_by: "vote_average.desc" + vote_count.gte: "500"
 - Si "récent", "tendance", "du moment" : sort_by: "popularity.desc"
 
-Retourne UNIQUEMENT le JSON, sans aucun texte.`;
+Retourne UNIQUEMENT le JSON brut, sans aucun commentaire, sans markdown, sans texte.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
