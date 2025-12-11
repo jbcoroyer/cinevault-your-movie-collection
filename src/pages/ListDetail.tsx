@@ -12,11 +12,14 @@ import { toast } from "../components/ui/use-toast";
 import { cn } from "../lib/utils";
 import { Layers } from "lucide-react";
 
+import { ListItem } from "../hooks/useUserLists";
+
 export default function ListDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { lists, addMovieToList, removeMovieFromList, loading: listsLoading } = useUserLists();
+  const { lists, getListWithItems, addMovieToList, removeMovieFromList, loading: listsLoading } = useUserLists();
 
+  const [listItems, setListItems] = useState<ListItem[]>([]);
   const [listMovies, setListMovies] = useState<Movie[]>([]);
   const [loadingMovies, setLoadingMovies] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -27,16 +30,20 @@ export default function ListDetail() {
   // Charger les détails des films de la liste
   useEffect(() => {
     const fetchMovies = async () => {
-      if (!currentList?.movies || currentList.movies.length === 0) {
-        setListMovies([]);
-        return;
-      }
+      if (!id) return;
 
       setLoadingMovies(true);
       try {
-        // Supposons que currentList.movies contient des objets { tmdb_id: number, ... }
-        // On récupère les détails complets pour l'affichage
-        const moviePromises = currentList.movies.map((m) => getMovieDetails(m.tmdb_id));
+        const listWithItems = await getListWithItems(id);
+        if (!listWithItems || listWithItems.items.length === 0) {
+          setListItems([]);
+          setListMovies([]);
+          setLoadingMovies(false);
+          return;
+        }
+
+        setListItems(listWithItems.items);
+        const moviePromises = listWithItems.items.map((m) => getMovieDetails(m.tmdb_id));
         const movies = await Promise.all(moviePromises);
         setListMovies(movies);
       } catch (error) {
@@ -51,17 +58,15 @@ export default function ListDetail() {
       }
     };
 
-    if (currentList) {
-      fetchMovies();
-    }
-  }, [currentList]);
+    fetchMovies();
+  }, [id]);
 
   const handleAddMovie = async (movie: Movie) => {
     if (!currentList) return;
 
     try {
       // Vérifier si le film est déjà dans la liste
-      if (currentList.movies?.some((m) => m.tmdb_id === movie.id)) {
+      if (listItems.some((m) => m.tmdb_id === movie.id)) {
         toast({
           title: "Déjà ajouté",
           description: `${movie.title} est déjà dans cette liste.`,
@@ -69,17 +74,23 @@ export default function ListDetail() {
         return;
       }
 
-      await addMovieToList(currentList.id, {
+      const success = await addMovieToList(currentList.id, {
         tmdb_id: movie.id,
         title: movie.title,
         poster_path: movie.poster_path,
       });
 
-      toast({
-        title: "Film ajouté",
-        description: `${movie.title} a été ajouté à la liste.`,
-      });
-      setIsSearchOpen(false);
+      if (success) {
+        // Re-fetch to update local state
+        const listWithItems = await getListWithItems(currentList.id);
+        if (listWithItems) {
+          setListItems(listWithItems.items);
+          const moviePromises = listWithItems.items.map((m) => getMovieDetails(m.tmdb_id));
+          const movies = await Promise.all(moviePromises);
+          setListMovies(movies);
+        }
+        setIsSearchOpen(false);
+      }
     } catch (error) {
       console.error("Erreur ajout film:", error);
       toast({
@@ -242,7 +253,7 @@ export default function ListDetail() {
       </div>
 
       {/* Dialog de recherche */}
-      <MovieSearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} onMovieSelect={handleAddMovie} />
+      <MovieSearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} onSelectMovie={handleAddMovie} />
 
       <BottomNav />
     </div>
