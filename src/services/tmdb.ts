@@ -131,16 +131,14 @@ interface TMDBResponse<T> {
   total_results: number;
 }
 
-// Mapping des IDs de providers TMDB
-// Mise à jour pour la France (Prime Video = 119)
+// Mapping des IDs de providers TMDB corrigés pour la France/Europe
 export const STREAMING_PROVIDER_IDS: Record<string, number> = {
   netflix: 8,
-  prime: 119, // ID pour Amazon Prime Video en France/Europe (9 est pour les US)
+  prime: 119, // ID correct pour Prime Video en France (9 est pour les US)
   disney: 337,
   canal: 381,
   apple: 350,
-  max: 384, // Peut être 1870 selon les régions, 384 est HBO Max
-  hbo: 384,
+  max: 384, // HBO Max / Max
   paramount: 531,
   crunchyroll: 283,
 };
@@ -154,7 +152,6 @@ export const PROVIDER_NAMES: Record<number, string> = {
   381: "Canal+",
   350: "Apple TV+",
   384: "Max",
-  1870: "Max",
   531: "Paramount+",
   283: "Crunchyroll",
 };
@@ -282,12 +279,13 @@ export interface AIFilters {
 export interface AISearchResult {
   type: "specific" | "discover";
   movies: Movie[];
-  title?: string;
+  title?: string; // For specific movie searches
 }
 
 export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> => {
   if (!prompt.trim()) return { type: "discover", movies: [] };
 
+  // Call the edge function to analyze the prompt
   const { data, error } = await supabase.functions.invoke("analyze-movie-prompt", {
     body: { prompt },
   });
@@ -297,6 +295,9 @@ export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> 
     throw new Error("Erreur lors de l'analyse IA");
   }
 
+  console.log("AI Response:", data);
+
+  // Handle specific movie search
   if (data?.type === "specific" && data?.title) {
     const searchResults = await searchMovies(data.title);
     if (data.original_title && data.original_title !== data.title) {
@@ -321,9 +322,7 @@ export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> 
   }
 
   const filters: AIFilters = data?.filters || data;
-  if (!filters) {
-    throw new Error("Aucun filtre retourné par l'IA");
-  }
+  if (!filters) throw new Error("Aucun filtre retourné par l'IA");
 
   const params: Record<string, string> = {
     include_adult: "false",
@@ -345,6 +344,7 @@ export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> 
   return { type: "discover", movies: movieData.results };
 };
 
+// Helper functions
 export const formatRuntime = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -502,6 +502,6 @@ export const getUserCountryCode = async (): Promise<string> => {
     return data.country_code || "FR";
   } catch (error) {
     console.error("Error getting user country:", error);
-    return "FR";
+    return "FR"; // Default to France
   }
 };
