@@ -35,7 +35,7 @@ import { ShelfView } from "../components/collection/ShelfView";
 export default function Index() {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();
-  const { currentLevel, currentXp, progressPercent, unlockedBadges, userStats } = useBadgeNotification();
+  const { currentLevel, currentXp, progressPercent } = useBadgeNotification();
 
   const [popular, setPopular] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
