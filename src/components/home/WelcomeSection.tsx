@@ -1,13 +1,13 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Library, Compass, Trophy, ListVideo, Plus, Sparkles, Users, Film } from "lucide-react";
+import { Library, Compass, Trophy, ListVideo, Plus, Sparkles, Users, Film, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
  * WelcomeSection — Section d'accueil engageante
  *
- * 4 actions rapides avec le CTA principal "Ma Collection" au centre
- * Animations CSS fluides et design premium cinéma
+ * Layout mobile optimisé : carte principale pleine largeur en haut,
+ * puis grille 2x3 équilibrée pour les autres actions
  */
 
 interface QuickActionCardProps {
@@ -55,7 +55,7 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
     badges: {
       gradient: "from-purple-500/15 via-violet-500/10 to-fuchsia-500/5",
       border: "border-purple-500/20 hover:border-purple-400/50",
-      iconBg: "bg-gradient-to-br from-purple-500 to-fuchsia-500",
+      iconBg: "bg-gradient-to-br from-purple-500 to-violet-500",
       iconColor: "text-white",
       glow: "group-hover:shadow-purple-500/20",
       ring: "ring-purple-500/20",
@@ -63,13 +63,13 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
       pulse: false,
     },
     lists: {
-      gradient: "from-rose-500/15 via-pink-500/10 to-red-500/5",
-      border: "border-rose-500/20 hover:border-rose-400/50",
-      iconBg: "bg-gradient-to-br from-rose-500 to-pink-500",
+      gradient: "from-emerald-500/15 via-green-500/10 to-teal-500/5",
+      border: "border-emerald-500/20 hover:border-emerald-400/50",
+      iconBg: "bg-gradient-to-br from-emerald-500 to-green-500",
       iconColor: "text-white",
-      glow: "group-hover:shadow-rose-500/20",
-      ring: "ring-rose-500/20",
-      ctaBg: "bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30",
+      glow: "group-hover:shadow-emerald-500/20",
+      ring: "ring-emerald-500/20",
+      ctaBg: "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
       pulse: false,
     },
   };
@@ -81,123 +81,141 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
     <button
       onClick={onClick}
       className={cn(
-        "group relative w-full text-left overflow-hidden rounded-2xl",
-        "bg-gradient-to-br",
+        "group relative overflow-hidden rounded-2xl md:rounded-3xl transition-all duration-500",
+        "bg-gradient-to-br backdrop-blur-xl",
+        "border shadow-lg hover:shadow-2xl",
         style.gradient,
-        "border",
         style.border,
-        "transition-all duration-500 ease-out",
-        "hover:scale-[1.02] hover:-translate-y-1",
-        "hover:shadow-xl",
         style.glow,
-        "animate-fade-in",
-        isPrimary && "md:col-span-2 md:row-span-2",
+        // Layout mobile vs desktop
+        isPrimary
+          ? "col-span-2 p-4 md:p-6" // Pleine largeur sur mobile
+          : "col-span-1 p-3 md:p-5",
+        "animate-fade-in text-left",
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
-      {/* Fond animé */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-        <div
-          className={cn(
-            "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl",
-            variant === "primary" && "bg-amber-500/20",
-            variant === "discover" && "bg-blue-500/20",
-            variant === "badges" && "bg-purple-500/20",
-            variant === "lists" && "bg-rose-500/20",
-          )}
-        />
-      </div>
+      {/* Glow effect */}
+      <div
+        className={cn(
+          "absolute -inset-px rounded-2xl md:rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl",
+          isPrimary ? "bg-amber-500/20" : "bg-current/10",
+        )}
+      />
 
-      {/* Pulse ring pour le CTA principal */}
-      {style.pulse && <div className="absolute inset-0 rounded-2xl animate-pulse-ring opacity-50" />}
+      {/* Content wrapper - horizontal on mobile for primary, vertical for others */}
+      <div
+        className={cn(
+          "relative z-10",
+          isPrimary ? "flex flex-row items-center gap-4 md:flex-col md:items-start" : "flex flex-col h-full",
+        )}
+      >
+        {/* Icon & Title section for primary on mobile */}
+        {isPrimary ? (
+          <>
+            {/* Left: Icon + Info */}
+            <div className="flex items-center gap-3 md:flex-col md:items-start md:gap-4 flex-1">
+              {/* Icon */}
+              <div
+                className={cn(
+                  "relative flex items-center justify-center rounded-xl md:rounded-2xl transition-transform group-hover:scale-110 flex-shrink-0",
+                  style.iconBg,
+                  "w-12 h-12 md:w-14 md:h-14",
+                  style.pulse && "animate-pulse-slow",
+                )}
+              >
+                <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                {style.pulse && (
+                  <div className="absolute inset-0 rounded-xl md:rounded-2xl ring-4 ring-amber-500/20 animate-ping-slow" />
+                )}
+              </div>
 
-      <div className={cn("relative p-5", isPrimary && "md:p-8")}>
-        {/* En-tête avec icône */}
-        <div className="flex items-start gap-4 mb-4">
-          <div
-            className={cn(
-              "relative flex-shrink-0 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3",
-              style.iconBg,
-              isPrimary ? "w-14 h-14" : "w-11 h-11",
-            )}
-          >
-            <Icon className={cn(style.iconColor, isPrimary ? "w-7 h-7" : "w-5 h-5")} />
+              {/* Text info */}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-display font-bold text-lg md:text-xl lg:text-2xl mb-0.5 md:mb-1">{title}</h3>
+                <p className="text-muted-foreground text-xs md:text-sm leading-relaxed line-clamp-2 md:line-clamp-none">
+                  {description}
+                </p>
+              </div>
+            </div>
 
-            {/* Badge "+" pour collection */}
-            {isPrimary && (
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-lg animate-bounce-subtle">
-                <Plus className="w-3 h-3 text-white" />
+            {/* Right: CTA Button (mobile) / Full width (desktop) */}
+            <div className="flex-shrink-0 md:w-full md:mt-4">
+              <div
+                className={cn(
+                  "inline-flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-full text-sm md:text-base transition-all duration-300",
+                  style.ctaBg,
+                )}
+              >
+                <span className="hidden sm:inline">{cta}</span>
+                <span className="sm:hidden">Ouvrir</span>
+                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </div>
+            </div>
+
+            {/* DVD Illustration - Hidden on mobile, visible on md+ */}
+            <div className="hidden md:flex items-center gap-3 mt-4 py-3 px-4 rounded-xl bg-black/20 backdrop-blur-sm border border-white/5">
+              <div className="flex -space-x-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="w-8 h-12 rounded bg-gradient-to-b from-gray-700 to-gray-800 border border-gray-600 shadow-lg transform transition-transform hover:scale-110 hover:-translate-y-1"
+                    style={{
+                      animationDelay: `${i * 100}ms`,
+                      transform: `rotate(${(i - 2) * 5}deg)`,
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-amber-400/80 font-medium">Nouveau DVD ?</p>
+                <p className="text-xs text-muted-foreground">Ajoutez-le en quelques clics</p>
+              </div>
+              <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
+            </div>
+          </>
+        ) : (
+          /* Non-primary cards - compact layout */
+          <>
+            {/* Header row */}
+            <div className="flex items-start gap-2.5 md:gap-3 mb-2 md:mb-3">
+              <div
+                className={cn(
+                  "flex items-center justify-center rounded-lg md:rounded-xl transition-transform group-hover:scale-110 flex-shrink-0",
+                  style.iconBg,
+                  "w-9 h-9 md:w-11 md:h-11",
+                )}
+              >
+                <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-display font-semibold text-sm md:text-base line-clamp-1">{title}</h3>
+                <p className="text-muted-foreground text-[10px] md:text-xs leading-snug line-clamp-2 mt-0.5">
+                  {description}
+                </p>
+              </div>
+            </div>
+
+            {/* CTA - pushed to bottom */}
+            <div className="mt-auto pt-2">
+              <div
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-[11px] md:text-xs transition-all duration-300",
+                  style.ctaBg,
+                )}
+              >
+                <span>{cta}</span>
+                <ArrowRight className="w-3 h-3 md:w-3.5 md:h-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
+              </div>
+            </div>
+
+            {/* Background icon */}
+            {IconSecondary && (
+              <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                <IconSecondary className="w-10 h-10 md:w-16 md:h-16" />
               </div>
             )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <h3
-              className={cn(
-                "font-display font-bold text-foreground mb-1 transition-colors",
-                isPrimary ? "text-xl md:text-2xl" : "text-base",
-              )}
-            >
-              {title}
-            </h3>
-            <p
-              className={cn(
-                "text-muted-foreground leading-relaxed",
-                isPrimary ? "text-sm md:text-base" : "text-xs line-clamp-2",
-              )}
-            >
-              {description}
-            </p>
-          </div>
-        </div>
-
-        {/* Illustration pour le CTA principal */}
-        {isPrimary && (
-          <div className="flex items-center gap-3 mb-5 py-3 px-4 rounded-xl bg-black/20 backdrop-blur-sm border border-white/5">
-            <div className="flex -space-x-2">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="w-8 h-12 rounded bg-gradient-to-b from-gray-700 to-gray-800 border border-gray-600 shadow-lg transform transition-transform hover:scale-110 hover:-translate-y-1"
-                  style={{
-                    animationDelay: `${i * 100}ms`,
-                    transform: `rotate(${(i - 2) * 5}deg)`,
-                  }}
-                />
-              ))}
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-amber-400/80 font-medium">Nouveau DVD ?</p>
-              <p className="text-xs text-muted-foreground">Ajoutez-le en quelques clics</p>
-            </div>
-            <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
-          </div>
-        )}
-
-        {/* CTA Button */}
-        <div
-          className={cn(
-            "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all duration-300",
-            style.ctaBg,
-            isPrimary && "px-6 py-3 text-base",
-          )}
-        >
-          <span>{cta}</span>
-          <svg
-            className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-        </div>
-
-        {/* Icône secondaire flottante */}
-        {IconSecondary && (
-          <div className="absolute bottom-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <IconSecondary className="w-16 h-16" />
-          </div>
+          </>
         )}
       </div>
     </button>
@@ -221,26 +239,26 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({ username, classN
       </div>
 
       {/* Header */}
-      <div className="mb-6 animate-fade-in">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 mb-3">
+      <div className="mb-5 md:mb-6 animate-fade-in">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 mb-2 md:mb-3">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span className="text-xs font-medium text-amber-500">En ligne</span>
         </div>
-        <h1 className="font-display text-2xl md:text-3xl font-bold mb-2">
+        <h1 className="font-display text-xl md:text-2xl lg:text-3xl font-bold mb-1 md:mb-2">
           {username ? `Salut ${username} !` : "Bienvenue sur CineVault"}
           <span className="inline-block ml-2 animate-wave">👋</span>
         </h1>
         <p className="text-muted-foreground text-sm md:text-base">Que souhaitez-vous faire aujourd'hui ?</p>
       </div>
 
-      {/* Grille Bento des actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        {/* Ma Collection - CTA Principal */}
+      {/* Grille Bento des actions - Layout optimisé mobile */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4 auto-rows-fr">
+        {/* Ma Collection - CTA Principal (pleine largeur sur mobile) */}
         <QuickActionCard
           icon={Library}
           iconSecondary={Film}
           title="Ma Collection"
-          description="Ajoutez vos dernières acquisitions DVD, Blu-ray ou 4K et gardez votre collection à jour."
+          description="Gérez vos DVD, Blu-ray et 4K"
           cta="Ouvrir ma collection"
           onClick={() => navigate("/collection")}
           variant="primary"
@@ -252,7 +270,7 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({ username, classN
           icon={Compass}
           iconSecondary={Users}
           title="Découvrir"
-          description="Films tendance et collectionneurs à suivre"
+          description="Films tendance"
           cta="Explorer"
           onClick={() => navigate("/search")}
           variant="discover"
@@ -263,117 +281,24 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({ username, classN
         <QuickActionCard
           icon={Trophy}
           title="Mes Badges"
-          description="Progression et récompenses débloquées"
-          cta="Voir mes badges"
+          description="Progression"
+          cta="Voir"
           onClick={() => navigate("/badges")}
           variant="badges"
-          delay={200}
+          delay={150}
         />
 
         {/* Listes */}
         <QuickActionCard
           icon={ListVideo}
           title="Mes Listes"
-          description="Organisez par thème ou créez une watchlist"
-          cta="Gérer mes listes"
+          description="Organisez vos films"
+          cta="Gérer"
           onClick={() => navigate("/lists")}
           variant="lists"
-          delay={300}
+          delay={200}
         />
       </div>
-
-      {/* Styles CSS additionnels */}
-      <style>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0) scale(1);
-          }
-          50% {
-            transform: translateY(-20px) scale(1.05);
-          }
-        }
-
-        @keyframes float-delayed {
-          0%, 100% {
-            transform: translateY(0) scale(1);
-          }
-          50% {
-            transform: translateY(-15px) scale(1.03);
-          }
-        }
-
-        @keyframes wave {
-          0%, 100% {
-            transform: rotate(0deg);
-          }
-          25% {
-            transform: rotate(20deg);
-          }
-          75% {
-            transform: rotate(-10deg);
-          }
-        }
-
-        @keyframes bounce-subtle {
-          0%, 100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-3px);
-          }
-        }
-
-        @keyframes pulse-ring {
-          0% {
-            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
-          }
-          70% {
-            box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
-          }
-          100% {
-            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
-          }
-        }
-
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out forwards;
-          opacity: 0;
-        }
-
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-
-        .animate-float-delayed {
-          animation: float-delayed 8s ease-in-out infinite;
-          animation-delay: 1s;
-        }
-
-        .animate-wave {
-          display: inline-block;
-          animation: wave 1.5s ease-in-out infinite;
-          transform-origin: 70% 70%;
-        }
-
-        .animate-bounce-subtle {
-          animation: bounce-subtle 2s ease-in-out infinite;
-        }
-
-        .animate-pulse-ring {
-          animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-      `}</style>
     </section>
   );
 };
