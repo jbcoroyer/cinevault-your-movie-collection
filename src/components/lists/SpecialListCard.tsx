@@ -27,7 +27,7 @@ export function SpecialListCard({
 }: SpecialListCardProps) {
   const styles = {
     watchlist: {
-      gradient: "from-blue-600/20 to-purple-600/20", // Plus subtil car on a les images
+      gradient: "from-blue-600/20 to-purple-600/20",
       accent: "text-blue-400",
       border: "hover:border-blue-500/50",
     },
@@ -58,16 +58,11 @@ export function SpecialListCard({
     >
       {/* Contenu visuel (Stack de posters) */}
       <div className="absolute inset-0 bottom-16">
-        {" "}
-        {/* Laisse de la place pour le texte en bas */}
         <ListPosterStack posters={posters} count={count} className="h-full" />
-        {/* Gradient Overlay pour fondre avec le bas */}
-        <div
-          className={cn(
-            "absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-card", // Transition vers la couleur de fond
-            "opacity-100",
-          )}
-        />
+
+        {/* Gradient Overlay */}
+        <div className={cn("absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-card opacity-100")} />
+
         {/* Accent Color Overlay */}
         <div
           className={cn(

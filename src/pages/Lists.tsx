@@ -14,7 +14,11 @@ import { useUserMovies } from "../hooks/useUserMovies";
 import { useAuth } from "../contexts/AuthContext";
 import { getMovieDetails, Movie } from "../services/tmdb";
 import { AuthPlaceholder } from "../components/AuthPlaceholder";
-import { CreateListDialog, SpecialListCard, CustomListCard } from "../components/lists";
+// Imports directs pour éviter les erreurs de résolution de dossier
+import { CreateListDialog } from "../components/lists/CreateListDialog";
+import { SpecialListCard } from "../components/lists/SpecialListCard";
+import { CustomListCard } from "../components/lists/CustomListCard";
+
 import { Plus, ListVideo, Clock, Eye, Heart, ArrowLeft, Sparkles } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
 import { cn } from "../lib/utils";
@@ -26,7 +30,7 @@ interface CategoryCard {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   getMovies: () => Movie[];
-  getPosters: () => string[]; // Nouveau champ pour récupérer les URLs des posters
+  getPosters: () => string[];
   getCount: () => number;
 }
 
