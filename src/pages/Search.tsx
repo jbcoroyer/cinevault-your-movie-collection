@@ -10,11 +10,11 @@ import {
   Star,
   Tv,
   Sparkles,
-  Globe,
   Loader2,
   Disc,
   CheckCircle2,
   Eye,
+  PlusCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { BottomNav } from "@/components/BottomNav";
 import { MovieCard, MovieCardSkeleton, AvailabilityInfo } from "@/components/MovieCard";
-import { UserCard, UserCardSkeleton } from "@/components/UserCard";
+import { UserCard } from "@/components/UserCard";
 import { EmptyState } from "@/components/EmptyState";
 import {
   searchMovies,
@@ -58,18 +58,7 @@ const STREAMING_SERVICES = [
   { id: "crunchyroll", name: "Crunchyroll", color: "bg-orange-500" },
 ];
 
-const REGIONS = [
-  { code: "FR", name: "France" },
-  { code: "US", name: "États-Unis" },
-  { code: "GB", name: "Royaume-Uni" },
-  { code: "DE", name: "Allemagne" },
-  { code: "ES", name: "Espagne" },
-  { code: "IT", name: "Italie" },
-  { code: "CA", name: "Canada" },
-  { code: "JP", name: "Japon" },
-  { code: "KR", name: "Corée du Sud" },
-  { code: "BR", name: "Brésil" },
-];
+const currentYear = new Date().getFullYear();
 
 interface Filters {
   genre: number | null;
@@ -80,8 +69,6 @@ interface Filters {
   platforms: string[];
   region: string;
 }
-
-const currentYear = new Date().getFullYear();
 
 export default function Search() {
   const { user, profile } = useAuth();
@@ -119,8 +106,7 @@ export default function Search() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchedUsers, setSearchedUsers] = useState(false);
 
-  // Correction : Utilisation de useMemo pour stabiliser l'objet additionalFilters
-  // Cela empêche la boucle infinie de re-rendu dans le hook useAvailableMovies
+  // Mémoïsation des filtres pour éviter les boucles infinies
   const additionalFilters = useMemo(() => {
     return filters.genre ? { with_genres: filters.genre.toString() } : {};
   }, [filters.genre]);
@@ -132,14 +118,52 @@ export default function Search() {
     hasSubscriptions,
     hasCollection,
     physicalMoviesCount,
-    getPhysicalAvailability,
+    getMovieAvailability, // Utilisé pour vérifier les films standards
+    loadMore, // Pour la pagination
+    hasMore, // Pour savoir si on peut charger plus
     filterMoviesByAvailability,
   } = useAvailableMovies({
-    enabled: availableForMeEnabled,
-    additionalFilters, // On passe l'objet mémoïsé
+    enabled: availableForMeEnabled || !!user, // On active le hook si user est là pour avoir accès aux fonctions
+    additionalFilters,
   });
 
   const [availabilityMap, setAvailabilityMap] = useState<Map<number, AvailabilityInfo[]>>(new Map());
+
+  // Logique pour mettre à jour les disponibilités sur les résultats de recherche standard
+  useEffect(() => {
+    const updateAvailabilityForResults = async () => {
+      // Ne rien faire si le mode "Disponible pour moi" est actif (déjà géré par le hook)
+      if (availableForMeEnabled) return;
+
+      const moviesToCheck = searchedMovies ? movieResults : popularMovies;
+      if (moviesToCheck.length === 0) return;
+
+      // On vérifie seulement ceux qui n'ont pas encore été vérifiés
+      const toCheck = moviesToCheck.filter((m) => !availabilityMap.has(m.id));
+      if (toCheck.length === 0) return;
+
+      // On limite le nombre de vérifications simultanées pour ne pas surcharger
+      const batch = toCheck.slice(0, 10); // Vérifier les 10 premiers non vérifiés
+
+      const results = await Promise.all(
+        batch.map(async (movie) => {
+          const avail = await getMovieAvailability(movie);
+          return { id: movie.id, avail };
+        }),
+      );
+
+      setAvailabilityMap((prev) => {
+        const next = new Map(prev);
+        results.forEach((r) => {
+          if (r.avail.length > 0) next.set(r.id, r.avail);
+          else next.set(r.id, []); // Marquer comme vérifié mais vide
+        });
+        return next;
+      });
+    };
+
+    updateAvailabilityForResults();
+  }, [movieResults, popularMovies, searchedMovies, availableForMeEnabled, getMovieAvailability, availabilityMap]);
 
   useEffect(() => {
     const detectRegion = async () => {
@@ -302,6 +326,7 @@ export default function Search() {
     aiSearchEnabled,
     availableForMeEnabled,
     filterMoviesByAvailability,
+    // Note: removed availabilityMap form dependency to avoid loops, managed internally
   ]);
 
   useEffect(() => {
@@ -395,12 +420,18 @@ export default function Search() {
   ]);
 
   const getAvailabilityForMovie = (movieId: number): AvailabilityInfo[] | undefined => {
-    if (!availableForMeEnabled) return undefined;
+    // Si on a l'info dans la map, on l'utilise (valable pour recherche ET disponible pour moi)
     if (availabilityMap.has(movieId)) {
-      return availabilityMap.get(movieId);
+      const avail = availabilityMap.get(movieId);
+      return avail && avail.length > 0 ? avail : undefined;
     }
-    const available = availableMoviesDefault.find((am) => am.movie.id === movieId);
-    if (available) return available.availability;
+
+    // Fallback pour le mode "Disponible pour moi" par défaut
+    if (availableForMeEnabled) {
+      const available = availableMoviesDefault.find((am) => am.movie.id === movieId);
+      if (available) return available.availability;
+    }
+
     return undefined;
   };
 
@@ -411,8 +442,11 @@ export default function Search() {
       <div className="min-h-screen bg-background pb-24">
         <Header />
 
+        {/* ... (Le reste du code de l'en-tête reste identique jusqu'au Main) ... */}
+
         <div className="bg-background/80 backdrop-blur-lg border-b border-border/50 p-4 sm:p-6 sticky top-14 z-30">
           <div className="flex p-1 bg-muted/50 rounded-xl mb-4 relative max-w-md mx-auto">
+            {/* Onglets Films / Utilisateurs (Code identique) */}
             <button
               onClick={() => {
                 setActiveTab("films");
@@ -466,6 +500,7 @@ export default function Search() {
                     : "border-border/50 bg-card/50 hover:border-primary/30 hover:bg-card",
                 )}
               >
+                {/* Contenu du bouton Disponible pour moi (Code identique) */}
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
@@ -511,6 +546,7 @@ export default function Search() {
           )}
 
           <div className="flex gap-2 max-w-2xl mx-auto">
+            {/* Barre de recherche et filtres (Code identique) */}
             <div className="relative flex-1">
               {aiSearching ? (
                 <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />
@@ -574,6 +610,7 @@ export default function Search() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+                  {/* Contenu de la Sheet Filtres (Code identique) */}
                   <SheetHeader>
                     <SheetTitle className="flex items-center gap-2">
                       <SlidersHorizontal className="w-5 h-5" />
@@ -715,6 +752,7 @@ export default function Search() {
             )}
           </div>
 
+          {/* Badges filtres actifs (Code identique) */}
           {activeTab === "films" && !availableForMeEnabled && (
             <div className="flex items-center gap-2 overflow-x-auto mt-4 pb-2 scrollbar-hide max-w-4xl mx-auto">
               {filters.platforms.length > 0 && (
@@ -795,13 +833,29 @@ export default function Search() {
                   ))}
                 </div>
               ) : displayedMovies.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-4">
-                  {displayedMovies.map((movie, index) => (
-                    <div key={movie.id} className="animate-fade-in" style={{ animationDelay: `${index * 30}ms` }}>
-                      <MovieCard movie={movie} size="lg" showInfo availability={getAvailabilityForMovie(movie.id)} />
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-4">
+                    {displayedMovies.map((movie, index) => (
+                      <div key={movie.id} className="animate-fade-in" style={{ animationDelay: `${index * 30}ms` }}>
+                        <MovieCard movie={movie} size="lg" showInfo availability={getAvailabilityForMovie(movie.id)} />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Bouton Voir tous les films (Pagination) */}
+                  {availableForMeEnabled && hasMore && !debouncedQuery.trim() && (
+                    <div className="mt-8 flex justify-center">
+                      <Button onClick={loadMore} disabled={loadingAvailable} variant="outline" className="gap-2">
+                        {loadingAvailable ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <PlusCircle className="w-4 h-4" />
+                        )}
+                        Voir tous les films disponibles pour moi
+                      </Button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               ) : (
                 <EmptyState
                   icon={availableForMeEnabled ? Eye : Film}
