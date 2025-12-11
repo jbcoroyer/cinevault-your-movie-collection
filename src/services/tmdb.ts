@@ -139,6 +139,7 @@ export const STREAMING_PROVIDER_IDS: Record<string, number> = {
   canal: 381,
   apple: 350,
   max: 384, // HBO Max / Max
+  hbo: 384, // Alias
   paramount: 531,
   crunchyroll: 283,
 };
@@ -147,7 +148,7 @@ export const STREAMING_PROVIDER_IDS: Record<string, number> = {
 export const PROVIDER_NAMES: Record<number, string> = {
   8: "Netflix",
   119: "Prime Video",
-  9: "Prime Video", // Fallback
+  9: "Prime Video", // Fallback US
   337: "Disney+",
   381: "Canal+",
   350: "Apple TV+",
@@ -172,13 +173,11 @@ const fetchTMDB = async <T,>(endpoint: string, params: Record<string, string> = 
   return response.json();
 };
 
-// Image URL helper
 export const getImageUrl = (path: string | null, size: string = "w500"): string | null => {
   if (!path) return null;
   return `https://image.tmdb.org/t/p/${size}${path}`;
 };
 
-// Basic fetchers
 export const getTrendingMovies = async (): Promise<Movie[]> => {
   const data = await fetchTMDB<TMDBResponse<Movie>>("/trending/movie/week");
   return data.results;
@@ -239,13 +238,11 @@ export const discoverMoviesByGenre = async (genreId: number): Promise<Movie[]> =
   return data.results;
 };
 
-// Discover movies with custom filters
 export const discoverMovies = async (params: Record<string, string>): Promise<Movie[]> => {
   const data = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", params);
   return data.results;
 };
 
-// Discover movies with streaming platform filter
 export const discoverMoviesByPlatform = async (
   providerIds: number[],
   region: string = "FR",
@@ -263,7 +260,6 @@ export const discoverMoviesByPlatform = async (
   return data.results;
 };
 
-// AI Search
 export interface AIFilters {
   with_genres?: string;
   without_genres?: string;
@@ -279,13 +275,12 @@ export interface AIFilters {
 export interface AISearchResult {
   type: "specific" | "discover";
   movies: Movie[];
-  title?: string; // For specific movie searches
+  title?: string;
 }
 
 export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> => {
   if (!prompt.trim()) return { type: "discover", movies: [] };
 
-  // Call the edge function to analyze the prompt
   const { data, error } = await supabase.functions.invoke("analyze-movie-prompt", {
     body: { prompt },
   });
@@ -295,9 +290,6 @@ export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> 
     throw new Error("Erreur lors de l'analyse IA");
   }
 
-  console.log("AI Response:", data);
-
-  // Handle specific movie search
   if (data?.type === "specific" && data?.title) {
     const searchResults = await searchMovies(data.title);
     if (data.original_title && data.original_title !== data.title) {
@@ -344,7 +336,6 @@ export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> 
   return { type: "discover", movies: movieData.results };
 };
 
-// Helper functions
 export const formatRuntime = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
