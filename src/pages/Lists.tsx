@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Header } from "../components/Header";
 import { BottomNav } from "../components/BottomNav";
 import { MovieCard, MovieCardSkeleton } from "../components/MovieCard";
@@ -8,31 +8,22 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Switch } from "../components/ui/switch";
 import { Label } from "../components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useUserLists } from "../hooks/useUserLists";
 import { useUserMovies } from "../hooks/useUserMovies";
 import { useAuth } from "../contexts/AuthContext";
 import { getMovieDetails, getImageUrl, Movie } from "../services/tmdb";
 import { AuthPlaceholder } from "../components/AuthPlaceholder";
+import { CreateListDialog, SpecialListCard, CustomListCard } from "../components/lists";
 import {
   Plus,
   ListVideo,
-  MoreVertical,
-  Pencil,
-  Trash2,
-  Globe,
-  Lock,
   Clock,
   Eye,
   Heart,
   ArrowLeft,
   Film,
+  Sparkles,
 } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
 import { cn } from "../lib/utils";
@@ -50,7 +41,7 @@ interface CategoryCard {
 export default function Lists() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { lists, loading: listsLoading, createList, updateList, deleteList } = useUserLists();
+  const { lists, loading: listsLoading, createList, updateList, deleteList, addMovieToList } = useUserLists();
   const { userMovies, loading: moviesLoading } = useUserMovies();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -61,7 +52,7 @@ export default function Lists() {
   const [movies, setMovies] = useState<Record<number, Movie>>({});
   const [loadingMovies, setLoadingMovies] = useState(true);
 
-  // Form state
+  // Form state for editing
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
@@ -155,17 +146,18 @@ export default function Lists() {
     return null;
   };
 
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setIsPublic(false);
-  };
-
-  const handleCreate = async () => {
-    if (!title.trim()) return;
-    await createList(title.trim(), description.trim(), isPublic);
-    resetForm();
-    setIsCreateOpen(false);
+  const handleCreateList = async (
+    listTitle: string,
+    listDescription: string,
+    listIsPublic: boolean,
+    selectedMovies: Array<{ tmdb_id: number; title: string; poster_path: string | null }>
+  ) => {
+    const newList = await createList(listTitle, listDescription, listIsPublic);
+    if (newList && selectedMovies.length > 0) {
+      for (const movie of selectedMovies) {
+        await addMovieToList(newList.id, movie);
+      }
+    }
   };
 
   const handleEdit = async (listId: string) => {
@@ -175,7 +167,6 @@ export default function Lists() {
       description: description.trim() || null,
       is_public: isPublic,
     });
-    resetForm();
     setEditingList(null);
   };
 
@@ -214,6 +205,7 @@ export default function Lists() {
     );
   }
 
+  // Detail view for special lists
   if (selectedSpecial) {
     const category = specialLists.find((c) => c.id === selectedSpecial)!;
     const categoryMovies = category.getMovies();
@@ -222,14 +214,21 @@ export default function Lists() {
       <div className="min-h-screen bg-background pb-20 md:pb-8">
         <Header />
 
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4 mb-6">
-            <Button variant="ghost" size="icon" onClick={() => setSelectedSpecial(null)} className="shrink-0">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center gap-4 mb-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSelectedSpecial(null)}
+              className="shrink-0 rounded-xl hover:bg-muted"
+            >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold">{category.title}</h1>
-              <p className="text-muted-foreground text-sm">{categoryMovies.length} films</p>
+              <h1 className="text-2xl md:text-3xl font-display font-bold">{category.title}</h1>
+              <p className="text-muted-foreground text-sm">
+                {categoryMovies.length} film{categoryMovies.length !== 1 ? "s" : ""}
+              </p>
             </div>
           </div>
 
@@ -255,208 +254,162 @@ export default function Lists() {
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Header />
 
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl md:text-2xl font-bold">Mes Listes</h1>
+      <div className="container mx-auto px-4 py-6">
+        {/* Page Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-display font-bold">Mes Listes</h1>
+            <p className="text-muted-foreground text-sm mt-1">Organisez vos films à votre façon</p>
+          </div>
 
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm} size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Nouvelle
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Créer une liste</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div>
-                  <Label htmlFor="title">Nom de la liste</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Ex: Mes comfort movies"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description">Description (optionnel)</Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Décrivez votre liste..."
-                    className="mt-1"
-                    rows={3}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Label htmlFor="public">Liste publique</Label>
-                    <p className="text-sm text-muted-foreground">Visible par tous les utilisateurs</p>
-                  </div>
-                  <Switch id="public" checked={isPublic} onCheckedChange={setIsPublic} />
-                </div>
-                <Button onClick={handleCreate} className="w-full" disabled={!title.trim()}>
-                  Créer la liste
-                </Button>
+          <Button
+            onClick={() => setIsCreateOpen(true)}
+            className="rounded-xl gap-2 shadow-lg hover:shadow-xl transition-shadow"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Nouvelle liste</span>
+          </Button>
+        </div>
+
+        {/* Special Lists - Bento Grid */}
+        <section className="mb-10">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+              Collections
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {specialLists.map((category, index) => (
+              <SpecialListCard
+                key={category.id}
+                title={category.title}
+                count={category.getCount()}
+                icon={category.icon}
+                backdrop={getCategoryBackdrop(category)}
+                onClick={() => setSelectedSpecial(category.id)}
+                loading={isLoading}
+                variant={index === 0 ? "featured" : "default"}
+                className={cn(
+                  "animate-fade-in-up",
+                  index === 0 && "stagger-1",
+                  index === 1 && "stagger-2",
+                  index === 2 && "stagger-3"
+                )}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Custom Lists */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <ListVideo className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+                Listes personnalisées
+              </h2>
+            </div>
+            {lists.length > 0 && (
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                {lists.length} liste{lists.length > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+
+          {listsLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-32 rounded-2xl" />
+              ))}
+            </div>
+          ) : lists.length === 0 ? (
+            <div className="text-center py-16 rounded-2xl glass-elevated animate-fade-in-up">
+              <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+                <ListVideo className="w-8 h-8 text-muted-foreground/50" />
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <div className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {specialLists.map((category) => {
-              const backdrop = getCategoryBackdrop(category);
-              const count = category.getCount();
-              const Icon = category.icon;
-
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedSpecial(category.id)}
-                  className="group relative h-20 rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary w-full shadow-card hover:shadow-elevated transition-all"
-                >
-                  {backdrop ? (
-                    <img
-                      src={getImageUrl(backdrop, "w500") || ""}
-                      alt={category.title}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-60 group-hover:opacity-50"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-muted flex items-center justify-center">
-                      <Film className="w-12 h-12 text-muted-foreground/10" />
-                    </div>
+              <h3 className="font-display font-semibold mb-2">Aucune liste personnalisée</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
+                Créez des listes thématiques pour organiser vos films préférés
+              </p>
+              <Button onClick={() => setIsCreateOpen(true)} variant="outline" className="rounded-xl gap-2">
+                <Plus className="w-4 h-4" />
+                Créer ma première liste
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {lists.map((list, index) => (
+                <CustomListCard
+                  key={list.id}
+                  id={list.id}
+                  title={list.title}
+                  description={list.description}
+                  isPublic={list.is_public}
+                  updatedAt={list.updated_at}
+                  onEdit={() => openEditDialog(list)}
+                  onDelete={() => handleDelete(list.id)}
+                  className={cn(
+                    "animate-fade-in-up",
+                    `stagger-${Math.min(index + 1, 6)}`
                   )}
-
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-transparent group-hover:from-black/95 group-hover:via-black/80 transition-all duration-300" />
-
-                  <div className="absolute inset-0 flex flex-row items-center px-4 gap-3 text-white">
-                    <div className="p-2 rounded-full bg-white/10 backdrop-blur-sm group-hover:bg-primary/20 transition-colors">
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <h2 className="text-base font-bold">{category.title}</h2>
-                      <p className="text-white/70 text-xs font-medium">
-                        {isLoading ? "..." : `${count} film${count !== 1 ? "s" : ""}`}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <h2 className="text-lg font-semibold mb-3">Listes personnalisées</h2>
-
-        {listsLoading ? (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 rounded-lg" />
-            ))}
-          </div>
-        ) : lists.length === 0 ? (
-          <div className="text-center py-8 border-2 border-dashed rounded-lg bg-muted/20">
-            <ListVideo className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
-            <h3 className="text-sm font-medium mb-1">Aucune liste personnalisée</h3>
-            <Button onClick={() => setIsCreateOpen(true)} variant="link" size="sm" className="h-auto p-0">
-              Créer une liste
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {lists.map((list) => (
-              <Link key={list.id} to={`/lists/${list.id}`} className="block group">
-                <div className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors h-full flex flex-col justify-between shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h3 className="font-semibold truncate group-hover:text-primary transition-colors text-sm">
-                          {list.title}
-                        </h3>
-                        {list.is_public && <Globe className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
-                        {!list.is_public && <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
-                      </div>
-                      {list.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-1">{list.description}</p>
-                      )}
-                    </div>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 -mr-2 -mt-1 text-muted-foreground hover:text-foreground"
-                        >
-                          <MoreVertical className="w-3 h-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.preventDefault();
-                            openEditDialog(list);
-                          }}
-                        >
-                          <Pencil className="w-4 h-4 mr-2" />
-                          Modifier
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleDelete(list.id);
-                          }}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Supprimer
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-2">
-                    Modifié le {new Date(list.updated_at).toLocaleDateString("fr-FR")}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
+      {/* Create List Dialog */}
+      <CreateListDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onCreateList={handleCreateList}
+      />
+
+      {/* Edit List Dialog */}
       <Dialog open={!!editingList} onOpenChange={(open) => !open && setEditingList(null)}>
-        <DialogContent>
+        <DialogContent className="glass-elevated border-border/50">
           <DialogHeader>
-            <DialogTitle>Modifier la liste</DialogTitle>
+            <DialogTitle className="font-display">Modifier la liste</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div>
-              <Label htmlFor="edit-title">Nom de la liste</Label>
-              <Input id="edit-title" value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1" />
+          <div className="space-y-5 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title" className="text-sm font-medium">Nom de la liste</Label>
+              <Input
+                id="edit-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="bg-background/50"
+              />
             </div>
-            <div>
-              <Label htmlFor="edit-description">Description</Label>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description" className="text-sm font-medium">Description</Label>
               <Textarea
                 id="edit-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="mt-1"
+                className="bg-background/50 resize-none"
                 rows={3}
               />
             </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label htmlFor="edit-public">Liste publique</Label>
-                <p className="text-sm text-muted-foreground">Visible par tous</p>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+              <div className="flex items-center gap-3">
+                <div>
+                  <Label htmlFor="edit-public" className="text-sm font-medium cursor-pointer">
+                    Liste publique
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Visible par tous</p>
+                </div>
               </div>
               <Switch id="edit-public" checked={isPublic} onCheckedChange={setIsPublic} />
             </div>
-            <Button onClick={() => editingList && handleEdit(editingList)} className="w-full" disabled={!title.trim()}>
+            <Button
+              onClick={() => editingList && handleEdit(editingList)}
+              className="w-full rounded-xl"
+              disabled={!title.trim()}
+            >
               Enregistrer
             </Button>
           </div>
@@ -470,10 +423,19 @@ export default function Lists() {
 
 function MovieGrid({ movies = [], loading = false }: { movies?: Movie[]; loading?: boolean }) {
   return (
-    <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">
+    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
       {loading
-        ? Array.from({ length: 20 }).map((_, i) => <MovieCardSkeleton key={i} size="sm" />)
-        : movies.map((movie) => <MovieCard key={movie.id} movie={movie} size="sm" />)}
+        ? Array.from({ length: 16 }).map((_, i) => (
+            <MovieCardSkeleton key={i} size="sm" />
+          ))
+        : movies.map((movie, index) => (
+            <div
+              key={movie.id}
+              className={cn("animate-fade-in-up", `stagger-${Math.min(index + 1, 6)}`)}
+            >
+              <MovieCard movie={movie} size="sm" />
+            </div>
+          ))}
     </div>
   );
 }
@@ -488,10 +450,12 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="text-center py-12">
-      <Icon className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-      <h3 className="font-medium mb-1 md:text-lg">{title}</h3>
-      <p className="text-sm text-muted-foreground md:text-base">{description}</p>
+    <div className="text-center py-16 rounded-2xl glass-elevated animate-fade-in-up">
+      <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+        <Icon className="w-10 h-10 text-muted-foreground/50" />
+      </div>
+      <h3 className="font-display font-semibold text-lg mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground max-w-sm mx-auto">{description}</p>
     </div>
   );
 }
