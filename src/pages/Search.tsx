@@ -119,6 +119,8 @@ export default function Search() {
     hasCollection,
     physicalMoviesCount,
     getMovieAvailability, // Utilisé pour vérifier les films standards
+    loadMore, // Pour la pagination
+    hasMore, // Pour savoir si on peut charger plus
     filterMoviesByAvailability,
   } = useAvailableMovies({
     enabled: availableForMeEnabled || !!user, // On active le hook si user est là pour avoir accès aux fonctions
@@ -840,6 +842,19 @@ export default function Search() {
                     ))}
                   </div>
 
+                  {/* Bouton Voir tous les films (Pagination) */}
+                  {availableForMeEnabled && hasMore && !debouncedQuery.trim() && (
+                    <div className="mt-8 flex justify-center">
+                      <Button onClick={loadMore} disabled={loadingAvailable} variant="outline" className="gap-2">
+                        {loadingAvailable ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <PlusCircle className="w-4 h-4" />
+                        )}
+                        Voir tous les films disponibles pour moi
+                      </Button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <EmptyState
