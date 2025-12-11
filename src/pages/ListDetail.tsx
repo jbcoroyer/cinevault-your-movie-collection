@@ -7,7 +7,7 @@ import { ArrowLeft, Plus, Calendar, Globe, Lock, Share2, Trash2, Layers } from "
 import { useState, useEffect } from "react";
 import { MovieCard } from "../components/MovieCard";
 import { MovieSearchDialog } from "../components/MovieSearchDialog";
-import { getMovieDetails, Movie } from "../services/tmdb";
+import { getMovieDetails, Movie, MovieDetails } from "../services/tmdb";
 import { toast } from "../components/ui/use-toast";
 import { cn } from "../lib/utils";
 
@@ -45,7 +45,7 @@ export default function ListDetail() {
         const moviePromises = listWithItems.items.map((m) => getMovieDetails(m.tmdb_id));
         const movies = await Promise.all(moviePromises);
         // Filtrer les films null en cas d'erreur
-        setListMovies(movies.filter((m): m is Movie => m !== null && m !== undefined));
+        setListMovies(movies.filter((m): m is MovieDetails => m !== null && m !== undefined));
       } catch (error) {
         console.error("Erreur lors du chargement des films:", error);
         toast({
@@ -87,7 +87,7 @@ export default function ListDetail() {
           setListItems(listWithItems.items);
           const moviePromises = listWithItems.items.map((m) => getMovieDetails(m.tmdb_id));
           const movies = await Promise.all(moviePromises);
-          setListMovies(movies.filter((m): m is Movie => m !== null && m !== undefined));
+          setListMovies(movies.filter((m): m is MovieDetails => m !== null && m !== undefined));
         }
         setIsSearchOpen(false);
       }
