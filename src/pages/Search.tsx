@@ -119,6 +119,12 @@ export default function Search() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchedUsers, setSearchedUsers] = useState(false);
 
+  // Correction : Utilisation de useMemo pour stabiliser l'objet additionalFilters
+  // Cela empêche la boucle infinie de re-rendu dans le hook useAvailableMovies
+  const additionalFilters = useMemo(() => {
+    return filters.genre ? { with_genres: filters.genre.toString() } : {};
+  }, [filters.genre]);
+
   const {
     movies: availableMoviesDefault,
     loading: loadingAvailable,
@@ -130,7 +136,7 @@ export default function Search() {
     filterMoviesByAvailability,
   } = useAvailableMovies({
     enabled: availableForMeEnabled,
-    additionalFilters: filters.genre ? { with_genres: filters.genre.toString() } : {},
+    additionalFilters, // On passe l'objet mémoïsé
   });
 
   const [availabilityMap, setAvailabilityMap] = useState<Map<number, AvailabilityInfo[]>>(new Map());
