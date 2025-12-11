@@ -1,73 +1,126 @@
+import { useParams, useNavigate } from "react-router-dom";
+import { Header } from "../components/Header";
+import { BottomNav } from "../components/BottomNav";
+import { Button } from "../components/ui/button";
+import { useUserLists } from "../hooks/useUserLists";
+import { ArrowLeft, Plus, Calendar, Globe, Lock, Share2, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { Header } from "@/components/Header";
-import { BottomNav } from "@/components/BottomNav";
-import { Button } from "@/components/ui/button";
-import { MovieCard, MovieCardSkeleton } from "@/components/MovieCard";
-import { useUserLists, ListWithItems } from "@/hooks/useUserLists";
-import { ArrowLeft, Globe, Lock, Trash2 } from "lucide-react";
-import { getImageUrl } from "@/services/tmdb";
+import { MovieCard } from "../components/MovieCard";
+import { MovieSearchDialog } from "../components/MovieSearchDialog";
+import { getMovieDetails, Movie } from "../services/tmdb";
+import { toast } from "../components/ui/use-toast";
+import { cn } from "../lib/utils";
+import { Layers } from "lucide-react";
 
 export default function ListDetail() {
-  const { id: listId } = useParams<{ id: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getListWithItems, removeMovieFromList } = useUserLists();
-  const [list, setList] = useState<ListWithItems | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { lists, addMovieToList, removeMovieFromList, loading: listsLoading } = useUserLists();
 
+  const [listMovies, setListMovies] = useState<Movie[]>([]);
+  const [loadingMovies, setLoadingMovies] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Trouver la liste actuelle
+  const currentList = lists.find((l) => l.id === id);
+
+  // Charger les détails des films de la liste
   useEffect(() => {
-    const fetchList = async () => {
-      if (!listId) return;
-      setLoading(true);
-      const data = await getListWithItems(listId);
-      setList(data);
-      setLoading(false);
-    };
-    fetchList();
-  }, [listId]);
+    const fetchMovies = async () => {
+      if (!currentList?.movies || currentList.movies.length === 0) {
+        setListMovies([]);
+        return;
+      }
 
-  const handleRemoveMovie = async (tmdbId: number) => {
-    if (!listId || !list) return;
-    const success = await removeMovieFromList(listId, tmdbId);
-    if (success) {
-      setList({
-        ...list,
-        items: list.items.filter((item) => item.tmdb_id !== tmdbId),
+      setLoadingMovies(true);
+      try {
+        // Supposons que currentList.movies contient des objets { tmdb_id: number, ... }
+        // On récupère les détails complets pour l'affichage
+        const moviePromises = currentList.movies.map((m) => getMovieDetails(m.tmdb_id));
+        const movies = await Promise.all(moviePromises);
+        setListMovies(movies);
+      } catch (error) {
+        console.error("Erreur lors du chargement des films:", error);
+        toast({
+          variant: "destructive",
+          title: "Erreur",
+          description: "Impossible de charger les détails des films.",
+        });
+      } finally {
+        setLoadingMovies(false);
+      }
+    };
+
+    if (currentList) {
+      fetchMovies();
+    }
+  }, [currentList]);
+
+  const handleAddMovie = async (movie: Movie) => {
+    if (!currentList) return;
+
+    try {
+      // Vérifier si le film est déjà dans la liste
+      if (currentList.movies?.some((m) => m.tmdb_id === movie.id)) {
+        toast({
+          title: "Déjà ajouté",
+          description: `${movie.title} est déjà dans cette liste.`,
+        });
+        return;
+      }
+
+      await addMovieToList(currentList.id, {
+        tmdb_id: movie.id,
+        title: movie.title,
+        poster_path: movie.poster_path,
+      });
+
+      toast({
+        title: "Film ajouté",
+        description: `${movie.title} a été ajouté à la liste.`,
+      });
+      setIsSearchOpen(false);
+    } catch (error) {
+      console.error("Erreur ajout film:", error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Impossible d'ajouter le film à la liste.",
       });
     }
   };
 
-  if (loading) {
+  const handleRemoveMovie = async (tmdbId: number, event: React.MouseEvent) => {
+    event.preventDefault(); // Empêcher la navigation si on clique sur le bouton supprimer
+    event.stopPropagation();
+
+    if (!currentList) return;
+
+    if (window.confirm("Retirer ce film de la liste ?")) {
+      await removeMovieFromList(currentList.id, tmdbId);
+      setListMovies((prev) => prev.filter((m) => m.id !== tmdbId));
+    }
+  };
+
+  if (listsLoading) {
     return (
-      <div className="min-h-screen bg-background pb-20 md:pb-8">
+      <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto px-4 py-4">
-          <div className="h-8 w-32 bg-muted animate-pulse rounded mb-4" />
-          <div className="h-6 w-48 bg-muted animate-pulse rounded mb-8" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <MovieCardSkeleton key={i} size="lg" />
-            ))}
-          </div>
+        <div className="container mx-auto p-4 pt-8 flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
         <BottomNav />
       </div>
     );
   }
 
-  if (!list) {
+  if (!currentList) {
     return (
-      <div className="min-h-screen bg-background pb-20 md:pb-8">
+      <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h2 className="text-xl font-semibold mb-2">Liste introuvable</h2>
-          <p className="text-muted-foreground mb-4">
-            Cette liste n'existe pas ou vous n'y avez pas accès.
-          </p>
-          <Button onClick={() => navigate("/lists")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour aux listes
-          </Button>
+        <div className="container mx-auto p-4 pt-20 text-center">
+          <h2 className="text-xl font-bold mb-4">Liste introuvable</h2>
+          <Button onClick={() => navigate("/lists")}>Retour aux listes</Button>
         </div>
         <BottomNav />
       </div>
@@ -75,81 +128,121 @@ export default function ListDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-24">
       <Header />
 
-      <div className="container mx-auto px-4 py-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/lists")}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Mes listes
-        </Button>
+      {/* Hero Header de la Liste */}
+      <div className="relative w-full bg-muted/20 border-b border-white/5 py-12 px-4">
+        <div className="container mx-auto max-w-7xl">
+          <Button
+            variant="ghost"
+            className="mb-6 pl-0 hover:bg-transparent hover:text-primary gap-2"
+            onClick={() => navigate("/lists")}
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Retour aux listes
+          </Button>
 
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <h1 className="text-2xl md:text-3xl font-bold">{list.title}</h1>
-            {list.is_public ? (
-              <Globe className="w-5 h-5 text-muted-foreground" />
-            ) : (
-              <Lock className="w-5 h-5 text-muted-foreground" />
-            )}
+          <div className="flex flex-col md:flex-row gap-8 items-start md:items-end justify-between">
+            <div className="space-y-4 max-w-2xl">
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5 bg-background/50 px-3 py-1 rounded-full border border-white/10">
+                  {currentList.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                  <span>{currentList.is_public ? "Publique" : "Privée"}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3 h-3" />
+                  <span>Créée le {new Date(currentList.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+
+              <h1 className="text-4xl md:text-5xl font-display font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">
+                {currentList.title}
+              </h1>
+
+              {currentList.description && (
+                <p className="text-lg text-muted-foreground leading-relaxed">{currentList.description}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3 w-full md:w-auto">
+              <Button
+                size="lg"
+                className="rounded-full gap-2 shadow-lg shadow-primary/20 flex-1 md:flex-none"
+                onClick={() => setIsSearchOpen(true)}
+              >
+                <Plus className="w-5 h-5" />
+                Ajouter un film
+              </Button>
+              <Button size="icon" variant="outline" className="rounded-full border-white/10 bg-background/50">
+                <Share2 className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
-          {list.description && (
-            <p className="text-muted-foreground">{list.description}</p>
-          )}
-          <p className="text-sm text-muted-foreground mt-2">
-            {list.items.length} film{list.items.length !== 1 ? "s" : ""}
-          </p>
+        </div>
+      </div>
+
+      {/* Contenu de la liste */}
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            Films
+            <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              {currentList.item_count || 0}
+            </span>
+          </h2>
         </div>
 
-        {list.items.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground mb-4">
-              Cette liste est vide. Ajoutez des films depuis leurs pages de détails.
-            </p>
-            <Button asChild>
-              <Link to="/search">Découvrir des films</Link>
-            </Button>
+        {loadingMovies ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="aspect-[2/3] bg-muted/30 rounded-xl animate-pulse" />
+            ))}
           </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {list.items.map((item) => (
-              <div key={item.id} className="relative group">
-                <Link to={`/movie/${item.tmdb_id}`}>
-                  <div className="aspect-[2/3] rounded-lg overflow-hidden bg-muted">
-                    {item.poster_path ? (
-                      <img
-                        src={getImageUrl(item.poster_path, "w300") || ""}
-                        alt={item.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                        {item.title}
-                      </div>
-                    )}
-                  </div>
-                  <p className="mt-2 text-sm font-medium line-clamp-2">{item.title}</p>
-                </Link>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleRemoveMovie(item.tmdb_id);
-                  }}
+        ) : listMovies.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {listMovies.map((movie) => (
+              <div key={movie.id} className="group relative">
+                <MovieCard movie={movie} />
+                {/* Bouton de suppression rapide au survol */}
+                <button
+                  onClick={(e) => handleRemoveMovie(movie.id, e)}
+                  className="absolute top-2 right-2 p-2 bg-black/60 backdrop-blur-sm text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-white border border-white/20 z-10"
+                  title="Retirer de la liste"
                 >
                   <Trash2 className="w-4 h-4" />
-                </Button>
+                </button>
               </div>
             ))}
+
+            {/* Carte "Ajouter" à la fin de la grille */}
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="aspect-[2/3] rounded-xl border-2 border-dashed border-muted hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-3 group"
+            >
+              <div className="w-12 h-12 rounded-full bg-muted group-hover:bg-primary/20 flex items-center justify-center transition-colors">
+                <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">Ajouter</span>
+            </button>
+          </div>
+        ) : (
+          <div className="text-center py-20 bg-muted/10 rounded-3xl border border-dashed border-white/10">
+            <div className="w-16 h-16 bg-muted/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Layers className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Cette liste est vide</h3>
+            <p className="text-muted-foreground mb-6">Commencez par ajouter quelques films à votre collection.</p>
+            <Button onClick={() => setIsSearchOpen(true)} variant="outline" className="gap-2">
+              <Plus className="w-4 h-4" />
+              Ajouter le premier film
+            </Button>
           </div>
         )}
       </div>
+
+      {/* Dialog de recherche */}
+      <MovieSearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} onMovieSelect={handleAddMovie} />
 
       <BottomNav />
     </div>
