@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 
 export interface Review {
   id: string;
@@ -15,7 +16,6 @@ export interface Review {
   contains_spoilers: boolean;
   created_at: string;
   updated_at: string;
-  // Joined from profiles
   username?: string;
   avatar_url?: string | null;
 }
@@ -38,21 +38,14 @@ interface UpdateReviewData {
 
 export function useReviews() {
   const { user } = useAuth();
+  const { checkBadges } = useBadgeNotification(); // Connexion aux badges
   const [loading, setLoading] = useState(false);
 
-  // Helper to fetch profiles for reviews
   const fetchProfilesForReviews = async (reviews: any[]): Promise<Review[]> => {
     if (reviews.length === 0) return [];
-    
     const userIds = [...new Set(reviews.map((r) => r.user_id))];
-    
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, username, avatar_url")
-      .in("id", userIds);
-    
+    const { data: profiles } = await supabase.from("profiles").select("id, username, avatar_url").in("id", userIds);
     const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
-    
     return reviews.map((r) => {
       const profile = profileMap.get(r.user_id);
       return {
@@ -64,7 +57,6 @@ export function useReviews() {
     });
   };
 
-  // Fetch all reviews (global feed)
   const fetchAllReviews = useCallback(async (): Promise<Review[]> => {
     setLoading(true);
     try {
@@ -73,9 +65,7 @@ export function useReviews() {
         .select("*")
         .order("created_at", { ascending: false })
         .limit(50);
-
       if (error) throw error;
-
       return await fetchProfilesForReviews(data || []);
     } catch (error) {
       console.error("Error fetching reviews:", error);
@@ -85,69 +75,46 @@ export function useReviews() {
     }
   }, []);
 
-  // Fetch reviews from followed users
   const fetchFollowingReviews = useCallback(async (): Promise<Review[]> => {
     if (!user) return [];
-
     setLoading(true);
     try {
-      // Get followed user IDs
-      const { data: follows, error: followsError } = await supabase
-        .from("follows")
-        .select("following_id")
-        .eq("follower_id", user.id);
-
-      if (followsError) throw followsError;
-
+      const { data: follows } = await supabase.from("follows").select("following_id").eq("follower_id", user.id);
       const followingIds = follows?.map((f) => f.following_id) || [];
-      
       if (followingIds.length === 0) return [];
-
       const { data, error } = await supabase
         .from("reviews")
         .select("*")
         .in("user_id", followingIds)
         .order("created_at", { ascending: false })
         .limit(50);
-
       if (error) throw error;
-
       return await fetchProfilesForReviews(data || []);
     } catch (error) {
-      console.error("Error fetching following reviews:", error);
       return [];
     } finally {
       setLoading(false);
     }
   }, [user]);
 
-  // Fetch reviews for a specific movie
-  const fetchMovieReviews = useCallback(
-    async (tmdbId: number, limit = 20): Promise<Review[]> => {
-      try {
-        const { data, error } = await supabase
-          .from("reviews")
-          .select("*")
-          .eq("tmdb_id", tmdbId)
-          .order("created_at", { ascending: false })
-          .limit(limit);
+  const fetchMovieReviews = useCallback(async (tmdbId: number, limit = 20): Promise<Review[]> => {
+    try {
+      const { data, error } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("tmdb_id", tmdbId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return await fetchProfilesForReviews(data || []);
+    } catch (error) {
+      return [];
+    }
+  }, []);
 
-        if (error) throw error;
-
-        return await fetchProfilesForReviews(data || []);
-      } catch (error) {
-        console.error("Error fetching movie reviews:", error);
-        return [];
-      }
-    },
-    []
-  );
-
-  // Get my review for a movie
   const getMyReview = useCallback(
     async (tmdbId: number): Promise<Review | null> => {
       if (!user) return null;
-
       try {
         const { data, error } = await supabase
           .from("reviews")
@@ -155,17 +122,13 @@ export function useReviews() {
           .eq("tmdb_id", tmdbId)
           .eq("user_id", user.id)
           .maybeSingle();
-
         if (error) throw error;
-
         if (!data) return null;
-
         const { data: profile } = await supabase
           .from("profiles")
           .select("username, avatar_url")
           .eq("id", user.id)
           .single();
-
         return {
           ...data,
           contains_spoilers: data.contains_spoilers ?? false,
@@ -173,21 +136,20 @@ export function useReviews() {
           avatar_url: profile?.avatar_url,
         };
       } catch (error) {
-        console.error("Error fetching my review:", error);
         return null;
       }
     },
-    [user]
+    [user],
   );
 
-  // Create a new review
+  // --- ACTIONS ---
+
   const createReview = useCallback(
     async (reviewData: CreateReviewData): Promise<Review | null> => {
       if (!user) {
         toast.error("Vous devez être connecté pour publier un avis");
         return null;
       }
-
       try {
         const { data, error } = await supabase
           .from("reviews")
@@ -206,7 +168,6 @@ export function useReviews() {
 
         if (error) throw error;
 
-        // Fetch profile separately
         const { data: profile } = await supabase
           .from("profiles")
           .select("username, avatar_url")
@@ -214,6 +175,7 @@ export function useReviews() {
           .single();
 
         toast.success("Avis publié avec succès !");
+        checkBadges(); // Déclenche la vérification des badges
 
         return {
           ...data,
@@ -227,17 +189,15 @@ export function useReviews() {
         return null;
       }
     },
-    [user]
+    [user, checkBadges],
   );
 
-  // Update an existing review
   const updateReview = useCallback(
     async (reviewId: string, reviewData: UpdateReviewData): Promise<boolean> => {
       if (!user) {
         toast.error("Vous devez être connecté pour modifier un avis");
         return false;
       }
-
       try {
         const { error } = await supabase
           .from("reviews")
@@ -251,44 +211,33 @@ export function useReviews() {
           .eq("user_id", user.id);
 
         if (error) throw error;
-
         toast.success("Avis modifié avec succès !");
         return true;
       } catch (error) {
-        console.error("Error updating review:", error);
         toast.error("Erreur lors de la modification de l'avis");
         return false;
       }
     },
-    [user]
+    [user],
   );
 
-  // Delete a review
   const deleteReview = useCallback(
     async (reviewId: string): Promise<boolean> => {
       if (!user) {
         toast.error("Vous devez être connecté pour supprimer un avis");
         return false;
       }
-
       try {
-        const { error } = await supabase
-          .from("reviews")
-          .delete()
-          .eq("id", reviewId)
-          .eq("user_id", user.id);
-
+        const { error } = await supabase.from("reviews").delete().eq("id", reviewId).eq("user_id", user.id);
         if (error) throw error;
-
         toast.success("Avis supprimé");
         return true;
       } catch (error) {
-        console.error("Error deleting review:", error);
         toast.error("Erreur lors de la suppression de l'avis");
         return false;
       }
     },
-    [user]
+    [user],
   );
 
   return {

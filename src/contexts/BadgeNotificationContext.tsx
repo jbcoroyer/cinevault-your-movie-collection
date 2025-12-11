@@ -22,7 +22,7 @@ interface BadgeNotificationContextType {
   nextLevelXp: number;
   progressPercent: number;
   triggerTestBadge: () => void;
-  refreshStats: () => void;
+  checkBadges: () => Promise<void>; // Nouvelle fonction exposée
 }
 
 const BadgeNotificationContext = createContext<BadgeNotificationContextType | null>(null);
@@ -42,33 +42,39 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
   const [notificationQueue, setNotificationQueue] = useState<BadgeNotification[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // 1. Fonction pour vérifier l'XP et tenter de débloquer les badges manquants
-  const refreshStats = useCallback(async () => {
+  // 1. Fonction centrale pour vérifier et débloquer les badges
+  const checkBadges = useCallback(async () => {
     if (!user) return;
 
-    // On lance la vérification : si des badges sont mérités, ils seront insérés en DB
+    // Vérifie les critères et insère les badges si mérités
     await checkAndUnlockBadges(user.id);
 
-    // On recharge l'XP
+    // Met à jour l'XP
     const { data: profile } = await supabase.from("profiles").select("total_xp").eq("id", user.id).single();
     if (profile) {
       setXp(profile.total_xp || 0);
     }
   }, [user]);
 
-  // 2. Écouter TOUT ce qui se passe (Badges, Films, Reviews)
+  // 2. Écouter les nouveaux badges en Temps Réel (pour l'affichage popup)
   useEffect(() => {
     if (!user) return;
 
-    refreshStats();
+    // Vérification initiale au chargement
+    checkBadges();
 
     const channel = supabase
-      .channel("game-events")
-      // A. Quand un badge est gagné (inséré en DB via badgeService ou Debug)
+      .channel("badge-notifications")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "user_badges", filter: `user_id=eq.${user.id}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "user_badges",
+          filter: `user_id=eq.${user.id}`,
+        },
         async (payload) => {
+          // Un badge a été inséré (soit par checkBadges, soit par un autre moyen)
           const newBadgeId = payload.new.badge_id;
           const rarity = payload.new.rarity;
 
@@ -76,6 +82,7 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
 
           if (def) {
             const IconComponent = ICON_MAP[def.icon_name] || Sparkles;
+
             const newNotif: BadgeNotification = {
               id: def.id,
               title: def.title,
@@ -84,28 +91,12 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
               xp: def.xp_reward || 0,
               rarity: rarity || def.base_rarity,
             };
+
             setNotificationQueue((prev) => [...prev, newNotif]);
-            // Petit délai pour mettre à jour l'XP affichée
-            setTimeout(refreshStats, 1000);
+
+            // On recharge l'XP pour être sûr d'être à jour
+            setTimeout(checkBadges, 1000);
           }
-        },
-      )
-      // B. Quand l'utilisateur modifie ses films (ajoute, note, change status) -> On revérifie les badges
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "user_movies", filter: `user_id=eq.${user.id}` },
-        () => {
-          console.log("Movie change detected, checking badges...");
-          refreshStats();
-        },
-      )
-      // C. Quand l'utilisateur poste une review -> On revérifie les badges
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "reviews", filter: `user_id=eq.${user.id}` },
-        () => {
-          console.log("Review change detected, checking badges...");
-          refreshStats();
         },
       )
       .subscribe();
@@ -113,9 +104,9 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, refreshStats]);
+  }, [user, checkBadges]);
 
-  // 3. Gestion de la file d'attente des popups
+  // 3. Gestion de la file d'attente
   useEffect(() => {
     if (notificationQueue.length > 0 && !isDialogOpen) {
       setIsDialogOpen(true);
@@ -156,7 +147,7 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
     nextLevelXp,
     progressPercent,
     triggerTestBadge,
-    refreshStats,
+    checkBadges, // On expose la fonction ici
   };
 
   const currentBadgeData = notificationQueue[0];

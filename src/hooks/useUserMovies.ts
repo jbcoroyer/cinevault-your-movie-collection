@@ -1,15 +1,16 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase, UserMovie } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase, UserMovie } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 
 export const useUserMovies = () => {
   const { user } = useAuth();
+  const { checkBadges } = useBadgeNotification(); // Connexion aux badges
   const [userMovies, setUserMovies] = useState<UserMovie[]>([]);
   const [loading, setLoading] = useState(true);
   const userMoviesRef = useRef<UserMovie[]>([]);
 
-  // Keep ref in sync with state
   useEffect(() => {
     userMoviesRef.current = userMovies;
   }, [userMovies]);
@@ -20,17 +21,12 @@ export const useUserMovies = () => {
       setLoading(false);
       return;
     }
-
     try {
-      const { data, error } = await supabase
-        .from('user_movies')
-        .select('*')
-        .eq('user_id', user.id);
-
+      const { data, error } = await supabase.from("user_movies").select("*").eq("user_id", user.id);
       if (error) throw error;
       setUserMovies(data || []);
     } catch (error) {
-      console.error('Error fetching user movies:', error);
+      console.error("Error fetching user movies:", error);
     } finally {
       setLoading(false);
     }
@@ -40,7 +36,6 @@ export const useUserMovies = () => {
     fetchUserMovies();
   }, [fetchUserMovies]);
 
-  // Use ref to always get latest data
   const getLatestUserMovie = (tmdbId: number): UserMovie | undefined => {
     return userMoviesRef.current.find((m) => m.tmdb_id === tmdbId);
   };
@@ -49,276 +44,199 @@ export const useUserMovies = () => {
     (tmdbId: number): UserMovie | undefined => {
       return userMovies.find((m) => m.tmdb_id === tmdbId);
     },
-    [userMovies]
+    [userMovies],
   );
+
+  // --- ACTIONS ---
 
   const addToWatchlist = async (tmdbId: number) => {
     if (!user) return;
-
     try {
       const existing = getLatestUserMovie(tmdbId);
-      
       if (existing) {
-        if (existing.status === 'watchlist') {
-          // Remove from watchlist
-          const { error } = await supabase
-            .from('user_movies')
-            .update({ status: 'none' })
-            .eq('id', existing.id);
-          
-          if (error) throw error;
-          await fetchUserMovies();
-          toast({ title: 'Retiré de la watchlist' });
+        if (existing.status === "watchlist") {
+          await supabase.from("user_movies").update({ status: "none" }).eq("id", existing.id);
+          toast({ title: "Retiré de la watchlist" });
         } else {
-          const { error } = await supabase
-            .from('user_movies')
-            .update({ status: 'watchlist' })
-            .eq('id', existing.id);
-          
-          if (error) throw error;
-          await fetchUserMovies();
-          toast({ title: 'Ajouté à la watchlist' });
+          await supabase.from("user_movies").update({ status: "watchlist" }).eq("id", existing.id);
+          toast({ title: "Ajouté à la watchlist" });
         }
       } else {
-        const { error } = await supabase.from('user_movies').insert({
+        await supabase.from("user_movies").insert({
           user_id: user.id,
           tmdb_id: tmdbId,
-          status: 'watchlist',
+          status: "watchlist",
           is_favorite: false,
         });
-        
-        if (error) throw error;
-        await fetchUserMovies();
-        toast({ title: 'Ajouté à la watchlist' });
+        toast({ title: "Ajouté à la watchlist" });
       }
+      await fetchUserMovies();
+      checkBadges(); // Vérification des badges
     } catch (error) {
-      console.error('Error toggling watchlist:', error);
-      toast({ title: 'Erreur', variant: 'destructive' });
+      console.error("Error toggling watchlist:", error);
+      toast({ title: "Erreur", variant: "destructive" });
     }
   };
 
   const markAsWatched = async (tmdbId: number) => {
     if (!user) return;
-
     try {
       const existing = getLatestUserMovie(tmdbId);
-      
       if (existing) {
-        if (existing.status === 'watched') {
-          // Remove from watched
-          const { error } = await supabase
-            .from('user_movies')
-            .update({ status: 'none', watched_at: null })
-            .eq('id', existing.id);
-          
-          if (error) throw error;
-          await fetchUserMovies();
-          toast({ title: 'Retiré des films vus' });
+        if (existing.status === "watched") {
+          await supabase.from("user_movies").update({ status: "none", watched_at: null }).eq("id", existing.id);
+          toast({ title: "Retiré des films vus" });
         } else {
-          const { error } = await supabase
-            .from('user_movies')
-            .update({ status: 'watched', watched_at: new Date().toISOString() })
-            .eq('id', existing.id);
-          
-          if (error) throw error;
-          await fetchUserMovies();
-          toast({ title: 'Marqué comme vu' });
+          await supabase
+            .from("user_movies")
+            .update({ status: "watched", watched_at: new Date().toISOString() })
+            .eq("id", existing.id);
+          toast({ title: "Marqué comme vu" });
         }
       } else {
-        const { error } = await supabase.from('user_movies').insert({
+        await supabase.from("user_movies").insert({
           user_id: user.id,
           tmdb_id: tmdbId,
-          status: 'watched',
+          status: "watched",
           is_favorite: false,
           watched_at: new Date().toISOString(),
         });
-        
-        if (error) throw error;
-        await fetchUserMovies();
-        toast({ title: 'Marqué comme vu' });
+        toast({ title: "Marqué comme vu" });
       }
+      await fetchUserMovies();
+      checkBadges(); // Vérification des badges
     } catch (error) {
-      console.error('Error toggling watched:', error);
-      toast({ title: 'Erreur', variant: 'destructive' });
+      console.error("Error toggling watched:", error);
+      toast({ title: "Erreur", variant: "destructive" });
     }
   };
 
   const markAsWatchedWithDetails = async (
     tmdbId: number,
-    details: { watchedDate?: string; rating?: number; review?: string }
+    details: { watchedDate?: string; rating?: number; review?: string },
   ) => {
     if (!user) return;
-
     try {
       const existing = getLatestUserMovie(tmdbId);
-      
+      const updateData = {
+        status: "watched",
+        watched_at: details.watchedDate ? new Date(details.watchedDate).toISOString() : new Date().toISOString(),
+        rating: details.rating,
+        review: details.review,
+      };
+
       if (existing) {
-        if (existing.status === 'watched' && !details.watchedDate && !details.rating && !details.review) {
-          // Remove from watched if no details provided (toggle off)
-          const { error } = await supabase
-            .from('user_movies')
-            .update({ status: 'none', watched_at: null })
-            .eq('id', existing.id);
-          
-          if (error) throw error;
-          await fetchUserMovies();
-          toast({ title: 'Retiré des films vus' });
+        if (existing.status === "watched" && !details.watchedDate && !details.rating && !details.review) {
+          // Cas toggle off
+          await supabase.from("user_movies").update({ status: "none", watched_at: null }).eq("id", existing.id);
+          toast({ title: "Retiré des films vus" });
         } else {
-          // Update with details
-          const { error } = await supabase
-            .from('user_movies')
-            .update({
-              status: 'watched',
-              watched_at: details.watchedDate ? new Date(details.watchedDate).toISOString() : new Date().toISOString(),
-              rating: details.rating || existing.rating,
-              review: details.review || existing.review,
-            })
-            .eq('id', existing.id);
-          
-          if (error) throw error;
-          await fetchUserMovies();
-          toast({ title: 'Marqué comme vu' });
+          await supabase.from("user_movies").update(updateData).eq("id", existing.id);
+          toast({ title: "Marqué comme vu" });
         }
       } else {
-        const { error } = await supabase.from('user_movies').insert({
+        await supabase.from("user_movies").insert({
           user_id: user.id,
           tmdb_id: tmdbId,
-          status: 'watched',
           is_favorite: false,
-          watched_at: details.watchedDate ? new Date(details.watchedDate).toISOString() : new Date().toISOString(),
-          rating: details.rating,
-          review: details.review,
+          ...updateData,
         });
-        
-        if (error) throw error;
-        await fetchUserMovies();
-        toast({ title: 'Marqué comme vu' });
+        toast({ title: "Marqué comme vu" });
       }
+      await fetchUserMovies();
+      checkBadges(); // Vérification des badges
     } catch (error) {
-      console.error('Error marking as watched:', error);
-      toast({ title: 'Erreur', variant: 'destructive' });
+      console.error("Error marking as watched:", error);
+      toast({ title: "Erreur", variant: "destructive" });
     }
   };
 
   const toggleFavorite = async (tmdbId: number) => {
     if (!user) return;
-
     try {
       const existing = getLatestUserMovie(tmdbId);
-      
       if (existing) {
         const newValue = !existing.is_favorite;
-        const { error } = await supabase
-          .from('user_movies')
-          .update({ is_favorite: newValue })
-          .eq('id', existing.id);
-        
-        if (error) throw error;
-        await fetchUserMovies();
-        toast({ title: newValue ? 'Ajouté aux favoris' : 'Retiré des favoris' });
+        await supabase.from("user_movies").update({ is_favorite: newValue }).eq("id", existing.id);
+        toast({ title: newValue ? "Ajouté aux favoris" : "Retiré des favoris" });
       } else {
-        const { error } = await supabase.from('user_movies').insert({
+        await supabase.from("user_movies").insert({
           user_id: user.id,
           tmdb_id: tmdbId,
-          status: 'none',
+          status: "none",
           is_favorite: true,
         });
-        
-        if (error) throw error;
-        await fetchUserMovies();
-        toast({ title: 'Ajouté aux favoris' });
+        toast({ title: "Ajouté aux favoris" });
       }
+      await fetchUserMovies();
+      // Pas forcément de badge pour favori, mais on peut laisser la vérif
+      checkBadges();
     } catch (error) {
-      console.error('Error toggling favorite:', error);
-      toast({ title: 'Erreur', variant: 'destructive' });
+      console.error("Error toggling favorite:", error);
+      toast({ title: "Erreur", variant: "destructive" });
     }
   };
 
   const updateRating = async (tmdbId: number, rating: number) => {
     if (!user) return;
-
     try {
       const existing = getUserMovie(tmdbId);
-      
       if (existing) {
-        const { error } = await supabase
-          .from('user_movies')
-          .update({ rating })
-          .eq('id', existing.id);
-        
-        if (error) throw error;
+        await supabase.from("user_movies").update({ rating }).eq("id", existing.id);
       } else {
-        const { error } = await supabase.from('user_movies').insert({
+        await supabase.from("user_movies").insert({
           user_id: user.id,
           tmdb_id: tmdbId,
-          status: 'none',
+          status: "none",
           is_favorite: false,
           rating,
         });
-        
-        if (error) throw error;
       }
-      
       await fetchUserMovies();
-      toast({ title: 'Note enregistrée' });
+      toast({ title: "Note enregistrée" });
+      checkBadges(); // Vérification des badges
     } catch (error) {
-      console.error('Error updating rating:', error);
-      toast({ title: 'Erreur', variant: 'destructive' });
+      console.error("Error updating rating:", error);
+      toast({ title: "Erreur", variant: "destructive" });
     }
   };
 
   const updateReview = async (tmdbId: number, review: string) => {
     if (!user) return;
-
     try {
       const existing = getUserMovie(tmdbId);
-      
       if (existing) {
-        const { error } = await supabase
-          .from('user_movies')
-          .update({ review })
-          .eq('id', existing.id);
-        
-        if (error) throw error;
+        await supabase.from("user_movies").update({ review }).eq("id", existing.id);
       } else {
-        const { error } = await supabase.from('user_movies').insert({
+        await supabase.from("user_movies").insert({
           user_id: user.id,
           tmdb_id: tmdbId,
-          status: 'none',
+          status: "none",
           is_favorite: false,
           review,
         });
-        
-        if (error) throw error;
       }
-      
       await fetchUserMovies();
-      toast({ title: 'Avis enregistré' });
+      toast({ title: "Avis enregistré" });
+      checkBadges(); // Vérification des badges
     } catch (error) {
-      console.error('Error updating review:', error);
-      toast({ title: 'Erreur', variant: 'destructive' });
+      console.error("Error updating review:", error);
+      toast({ title: "Erreur", variant: "destructive" });
     }
   };
 
   const removeMovie = async (tmdbId: number) => {
     if (!user) return;
-
     try {
       const existing = getUserMovie(tmdbId);
       if (!existing) return;
-
-      const { error } = await supabase
-        .from('user_movies')
-        .delete()
-        .eq('id', existing.id);
-      
-      if (error) throw error;
-      
+      await supabase.from("user_movies").delete().eq("id", existing.id);
       await fetchUserMovies();
-      toast({ title: 'Film supprimé de votre collection' });
+      toast({ title: "Film supprimé de votre collection" });
+      // On ne vérifie pas les badges à la suppression (on ne retire pas les badges acquis)
     } catch (error) {
-      console.error('Error removing movie:', error);
-      toast({ title: 'Erreur', variant: 'destructive' });
+      console.error("Error removing movie:", error);
+      toast({ title: "Erreur", variant: "destructive" });
     }
   };
 
