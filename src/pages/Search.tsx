@@ -90,22 +90,18 @@ export default function Search() {
   const debouncedQuery = useDebounce(query, 300);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // "Disponible pour moi" toggle
   const [availableForMeEnabled, setAvailableForMeEnabled] = useState(false);
 
-  // AI Search state
   const [aiSearchEnabled, setAiSearchEnabled] = useState(false);
   const [aiSearching, setAiSearching] = useState(false);
   const [aiSearchTitle, setAiSearchTitle] = useState<string | null>(null);
 
-  // Films state
   const [movieResults, setMovieResults] = useState<Movie[]>([]);
   const [popularMovies, setPopularMovies] = useState<Movie[]>([]);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [loadingMovies, setLoadingMovies] = useState(true);
   const [searchedMovies, setSearchedMovies] = useState(false);
 
-  // Filters state
   const [filters, setFilters] = useState<Filters>({
     genre: null,
     yearMin: 1900,
@@ -118,13 +114,11 @@ export default function Search() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
-  // Users state
   const [userResults, setUserResults] = useState<UserProfile[]>([]);
   const [popularUsers, setPopularUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchedUsers, setSearchedUsers] = useState(false);
 
-  // Hook pour les films disponibles
   const {
     movies: availableMoviesDefault,
     loading: loadingAvailable,
@@ -139,10 +133,8 @@ export default function Search() {
     additionalFilters: filters.genre ? { with_genres: filters.genre.toString() } : {},
   });
 
-  // Map pour stocker les infos de disponibilité des films recherchés
   const [availabilityMap, setAvailabilityMap] = useState<Map<number, AvailabilityInfo[]>>(new Map());
 
-  // Auto-detect user region on mount
   useEffect(() => {
     const detectRegion = async () => {
       try {
@@ -155,7 +147,6 @@ export default function Search() {
     detectRegion();
   }, []);
 
-  // Keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "/" && document.activeElement?.tagName !== "INPUT") {
@@ -167,7 +158,6 @@ export default function Search() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Fetch initial data
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoadingMovies(true);
@@ -184,7 +174,6 @@ export default function Search() {
     fetchInitialData();
   }, []);
 
-  // Fetch popular users
   useEffect(() => {
     const fetchPopularUsers = async () => {
       setLoadingUsers(true);
@@ -195,7 +184,6 @@ export default function Search() {
     fetchPopularUsers();
   }, []);
 
-  // Count active filters
   useEffect(() => {
     let count = 0;
     if (filters.genre) count++;
@@ -206,16 +194,22 @@ export default function Search() {
     setActiveFiltersCount(count);
   }, [filters]);
 
-  // Main Search & Filter Logic
+  // Sync loading state with available hook only if we have NO data yet
+  useEffect(() => {
+    if (availableForMeEnabled && !debouncedQuery.trim() && activeFiltersCount === 0) {
+      // Si on a déjà des films, on n'affiche pas le squelette de chargement, c'est plus fluide
+      if (availableMoviesDefault.length === 0) {
+        setLoadingMovies(loadingAvailable);
+      } else {
+        setLoadingMovies(false);
+      }
+    }
+  }, [loadingAvailable, availableForMeEnabled, debouncedQuery, activeFiltersCount, availableMoviesDefault.length]);
+
   useEffect(() => {
     if (activeTab !== "films") return;
 
-    // Si on est en mode "Disponible pour moi" ET qu'il n'y a pas de recherche active
-    // On s'assure juste que l'état de chargement reflète celui du hook
     if (availableForMeEnabled && !debouncedQuery.trim() && activeFiltersCount === 0) {
-      setLoadingMovies(loadingAvailable);
-      // On ne return PAS ici si on a besoin de mettre à jour searchedMovies,
-      // mais en général pour la vue par défaut c'est bon.
       return;
     }
 
@@ -227,7 +221,6 @@ export default function Search() {
         let results: Movie[] = [];
         let isSearch = false;
 
-        // 1. Récupération des résultats bruts
         if (debouncedQuery.trim()) {
           isSearch = true;
           if (aiSearchEnabled) {
@@ -274,19 +267,13 @@ export default function Search() {
           results = popularMovies;
         }
 
-        // 2. Filtrage "Disponible pour moi"
         if (availableForMeEnabled) {
-          // On filtre les résultats récupérés pour ne garder que ceux disponibles
-          // Note : ceci peut prendre un petit moment, d'où l'importance du loader
           const filteredResultsWithAvailability = await filterMoviesByAvailability(results);
-
-          // On met à jour la map pour afficher les badges
           const newMap = new Map(availabilityMap);
           filteredResultsWithAvailability.forEach((item) => {
             newMap.set(item.movie.id, item.availability);
           });
           setAvailabilityMap(newMap);
-
           results = filteredResultsWithAvailability.map((item) => item.movie);
           setSearchedMovies(true);
         } else {
@@ -297,9 +284,9 @@ export default function Search() {
       } catch (error) {
         console.error("Error searching movies:", error);
         toast({
-            title: "Erreur",
-            description: "Une erreur est survenue lors de la recherche.",
-            variant: "destructive"
+          title: "Erreur",
+          description: "Une erreur est survenue lors de la recherche.",
+          variant: "destructive",
         });
       } finally {
         setLoadingMovies(false);
@@ -315,11 +302,9 @@ export default function Search() {
     activeFiltersCount,
     aiSearchEnabled,
     availableForMeEnabled,
-    loadingAvailable, // Important pour déclencher la mise à jour quand le hook change d'état
-    filterMoviesByAvailability
+    filterMoviesByAvailability,
   ]);
 
-  // Search users
   useEffect(() => {
     if (activeTab !== "users") return;
 
@@ -392,14 +377,11 @@ export default function Search() {
     }
   };
 
-  // Déterminer les films à afficher
   const displayedMovies = useMemo(() => {
     if (availableForMeEnabled) {
-      // Si une recherche ou des filtres sont actifs, on utilise les résultats filtrés
       if (debouncedQuery.trim() || activeFiltersCount > 0) {
         return movieResults;
       }
-      // Sinon on affiche la liste par défaut fournie par le hook (Populaires disponibles + Collection)
       return availableMoviesDefault.map((am) => am.movie);
     }
     return searchedMovies || activeFiltersCount > 0 ? movieResults : popularMovies;
@@ -413,19 +395,13 @@ export default function Search() {
     debouncedQuery,
   ]);
 
-  // Obtenir les infos de disponibilité pour un film
   const getAvailabilityForMovie = (movieId: number): AvailabilityInfo[] | undefined => {
     if (!availableForMeEnabled) return undefined;
-
-    // 1. Chercher dans la map locale (prioritaire pour les résultats de recherche)
     if (availabilityMap.has(movieId)) {
       return availabilityMap.get(movieId);
     }
-
-    // 2. Chercher dans les résultats par défaut
     const available = availableMoviesDefault.find((am) => am.movie.id === movieId);
     if (available) return available.availability;
-
     return undefined;
   };
 
@@ -437,7 +413,6 @@ export default function Search() {
         <Header />
 
         <div className="bg-background/80 backdrop-blur-lg border-b border-border/50 p-4 sm:p-6 sticky top-14 z-30">
-          {/* Tabs */}
           <div className="flex p-1 bg-muted/50 rounded-xl mb-4 relative max-w-md mx-auto">
             <button
               onClick={() => {
@@ -471,7 +446,6 @@ export default function Search() {
             </button>
           </div>
 
-          {/* "Disponible pour moi" Toggle */}
           {activeTab === "films" && user && (
             <div className="max-w-2xl mx-auto mb-4">
               <button
@@ -537,7 +511,6 @@ export default function Search() {
             </div>
           )}
 
-          {/* Search Bar */}
           <div className="flex gap-2 max-w-2xl mx-auto">
             <div className="relative flex-1">
               {aiSearching ? (
@@ -610,7 +583,6 @@ export default function Search() {
                   </SheetHeader>
 
                   <div className="space-y-6 mt-6">
-                    {/* Streaming Platforms - Caché si "Disponible pour moi" est actif pour ne pas faire double emploi */}
                     {!availableForMeEnabled && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
@@ -648,7 +620,6 @@ export default function Search() {
                       </div>
                     )}
 
-                    {/* Genre */}
                     <div className="space-y-3">
                       <Label className="flex items-center gap-2">
                         <Film className="w-4 h-4" />
@@ -674,7 +645,6 @@ export default function Search() {
                       </Select>
                     </div>
 
-                    {/* Year Range */}
                     <div className="space-y-3">
                       <Label className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
@@ -703,7 +673,6 @@ export default function Search() {
                       </div>
                     </div>
 
-                    {/* Rating */}
                     <div className="space-y-3">
                       <Label className="flex items-center gap-2">
                         <Star className="w-4 h-4" />
@@ -718,7 +687,6 @@ export default function Search() {
                       />
                     </div>
 
-                    {/* Runtime */}
                     <div className="space-y-3">
                       <Label className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
@@ -734,7 +702,6 @@ export default function Search() {
                       />
                     </div>
 
-                    {/* Actions */}
                     <div className="flex gap-2 pt-4">
                       <Button variant="outline" onClick={resetFilters} className="flex-1">
                         Réinitialiser
@@ -749,7 +716,6 @@ export default function Search() {
             )}
           </div>
 
-          {/* Active filters chips & suggestions */}
           {activeTab === "films" && !availableForMeEnabled && (
             <div className="flex items-center gap-2 overflow-x-auto mt-4 pb-2 scrollbar-hide max-w-4xl mx-auto">
               {filters.platforms.length > 0 && (
@@ -790,7 +756,16 @@ export default function Search() {
                   className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground animate-fade-in flex-shrink-0 group"
                 >
                   <Clock className="w-3 h-3" />
-                  {Math.floor(filters.runtimeMax / 60)}h max
+                  &lt;{Math.floor(filters.runtimeMax / 60)}h{filters.runtimeMax % 60}
+                  <X className="w-3 h-3 opacity-70 group-hover:opacity-100 ml-1" />
+                </button>
+              )}
+              {filters.genre && (
+                <button
+                  onClick={() => removeFilter("genre")}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground animate-fade-in flex-shrink-0 group"
+                >
+                  {genres.find((g) => g.id === filters.genre)?.name}
                   <X className="w-3 h-3 opacity-70 group-hover:opacity-100 ml-1" />
                 </button>
               )}
@@ -798,89 +773,62 @@ export default function Search() {
           )}
         </div>
 
-        {/* Content */}
-        <div className="p-4 sm:p-6">
+        <main className="p-4 sm:p-6 container mx-auto max-w-7xl">
           {activeTab === "films" ? (
-            <div className="max-w-7xl mx-auto">
-              {/* AI Search Title */}
-              {aiSearchTitle && (
-                <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
-                  <p className="text-sm text-primary flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    Recherche IA : "{aiSearchTitle}"
-                  </p>
+            <>
+              {availableForMeEnabled && (
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="w-1 h-6 bg-primary rounded-full" />
+                  <h2 className="font-serif text-xl sm:text-2xl font-medium">
+                    {debouncedQuery
+                      ? `Résultats disponibles pour "${debouncedQuery}"`
+                      : activeFiltersCount > 0
+                        ? "Résultats filtrés disponibles"
+                        : "À regarder ce soir"}
+                  </h2>
+                  <span className="text-sm text-muted-foreground ml-2">({displayedMovies.length} films)</span>
                 </div>
               )}
 
-              {/* Section Title */}
-              <h2 className="text-lg font-semibold mb-4">
-                {availableForMeEnabled
-                  ? debouncedQuery.trim() || activeFiltersCount > 0
-                    ? "Résultats disponibles"
-                    : "Films disponibles pour moi"
-                  : searchedMovies || activeFiltersCount > 0
-                    ? "Résultats"
-                    : "Films populaires"}
-              </h2>
-
-              {/* Results */}
-              {loadingMovies || loadingAvailable ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {/* Logic améliorée : Si on a des films, on les affiche MÊME SI loading est true (chargement progressif) */}
+              {loadingMovies && displayedMovies.length === 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-4">
                   {Array.from({ length: 12 }).map((_, i) => (
-                    <MovieCardSkeleton key={i} />
+                    <MovieCardSkeleton key={i} size="lg" />
                   ))}
                 </div>
-              ) : displayedMovies.length === 0 ? (
+              ) : displayedMovies.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-4">
+                  {displayedMovies.map((movie, index) => (
+                    <div key={movie.id} className="animate-fade-in" style={{ animationDelay: `${index * 30}ms` }}>
+                      <MovieCard movie={movie} size="lg" showInfo availability={getAvailabilityForMovie(movie.id)} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
                 <EmptyState
-                  icon={Film}
-                  title={availableForMeEnabled ? "Aucun film disponible" : "Aucun résultat"}
+                  icon={availableForMeEnabled ? Eye : Film}
+                  title={availableForMeEnabled ? "Aucun film disponible" : "Aucun film trouvé"}
                   description={
                     availableForMeEnabled
-                      ? "Essayez d'ajuster vos filtres ou d'ajouter des plateformes de streaming dans vos paramètres."
-                      : "Essayez une autre recherche ou modifiez vos filtres."
+                      ? debouncedQuery
+                        ? `Le film "${debouncedQuery}" n'est pas disponible sur vos plateformes ou dans votre collection.`
+                        : "Aucun film ne correspond à vos critères dans vos disponibilités."
+                      : "Essayez de modifier vos termes de recherche ou vos filtres."
                   }
+                  actionLabel={availableForMeEnabled ? "Désactiver le filtre" : undefined}
+                  onAction={availableForMeEnabled ? () => setAvailableForMeEnabled(false) : undefined}
                 />
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {displayedMovies.map((movie) => (
-                    <MovieCard
-                      key={movie.id}
-                      movie={movie}
-                      availability={getAvailabilityForMovie(movie.id)}
-                    />
-                  ))}
-                </div>
               )}
-            </div>
+            </>
           ) : (
-            <div className="max-w-4xl mx-auto">
-              <h2 className="text-lg font-semibold mb-4">
-                {searchedUsers ? "Résultats" : "Utilisateurs populaires"}
-              </h2>
-
-              {loadingUsers ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <UserCardSkeleton key={i} />
-                  ))}
-                </div>
-              ) : (searchedUsers ? userResults : popularUsers).length === 0 ? (
-                <EmptyState
-                  icon={Users}
-                  title="Aucun utilisateur trouvé"
-                  description="Essayez une autre recherche."
-                />
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {(searchedUsers ? userResults : popularUsers).map((userProfile) => (
-                    <UserCard key={userProfile.id} user={userProfile} />
-                  ))}
-                </div>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {(searchedUsers ? userResults : popularUsers).map((user) => (
+                <UserCard key={user.id} user={user} />
+              ))}
             </div>
           )}
-        </div>
-
+        </main>
         <BottomNav />
       </div>
     </>
