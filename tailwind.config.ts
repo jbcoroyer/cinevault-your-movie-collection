@@ -70,6 +70,14 @@ export default {
         },
         // Gold for gamification
         gold: "hsl(var(--gold))",
+        // Video Club Néo-Rétro Colors
+        videoclub: {
+          bg: "hsl(240 10% 4%)",
+          surface: "hsl(240 10% 8%)",
+          cyan: "hsl(var(--videoclub-cyan))",
+          magenta: "hsl(var(--videoclub-magenta))",
+          gold: "hsl(var(--videoclub-gold))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
