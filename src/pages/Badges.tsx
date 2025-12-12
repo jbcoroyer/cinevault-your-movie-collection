@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchAllBadges, Badge } from "@/services/badgeService";
+import { getUserRewards, UserReward } from "@/services/gamificationService";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { PatchBadge } from "@/components/gamification/PatchBadge";
@@ -8,11 +9,13 @@ import { StreakDisplay } from "@/components/gamification/StreakDisplay";
 import { WeeklyChallenges } from "@/components/gamification/WeeklyChallenges";
 import { SeasonalEvents } from "@/components/gamification/SeasonalEvents";
 import { RewardsShowcase } from "@/components/gamification/RewardsShowcase";
+import { CinevaultMemberCard } from "@/components/gamification/CinevaultMemberCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Trophy, Disc, Archive, Sparkles, Film, Globe, Clock, Users, Flame, Clapperboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ICON_MAP, LORE_TERMINOLOGY } from "@/data/videoClubData";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
+import { supabase } from "@/lib/supabase";
 import type { Rarity } from "@/data/videoClubData";
 
 // Catégories pour les tabs
@@ -28,26 +31,42 @@ const BADGE_CATEGORIES = [
 ];
 
 export default function BadgesPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { currentXp, currentLevel } = useBadgeNotification();
   const [badges, setBadges] = useState<Badge[]>([]);
+  const [userRewards, setUserRewards] = useState<UserReward[]>([]);
+  const [movieCount, setMovieCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const totalUnlocked = badges.filter((b) => b.isUnlocked).length;
 
   useEffect(() => {
-    loadBadges();
+    loadData();
   }, [user]);
 
-  const loadBadges = async () => {
+  const loadData = async () => {
     setLoading(true);
+    
+    // Load badges
     if (user) {
-      const data = await fetchAllBadges(user.id);
-      setBadges(data);
+      const [badgesData, rewardsData] = await Promise.all([
+        fetchAllBadges(user.id),
+        getUserRewards(user.id),
+      ]);
+      setBadges(badgesData);
+      setUserRewards(rewardsData);
+
+      // Get movie count
+      const { count } = await supabase
+        .from("physical_movies")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      setMovieCount(count || 0);
     } else {
       const data = await fetchAllBadges(null);
       setBadges(data);
     }
+    
     setLoading(false);
   };
 
@@ -86,6 +105,24 @@ export default function BadgesPage() {
       </div>
 
       <main className="container mx-auto px-4 space-y-8">
+        {/* Member Card - Le trophée personnalisable */}
+        {user && profile && (
+          <div className="flex justify-center mb-8">
+            <CinevaultMemberCard
+              username={profile.username || "Membre"}
+              avatarUrl={profile.avatar_url || undefined}
+              totalXp={profile.total_xp || 0}
+              movieCount={movieCount}
+              joinDate={profile.created_at || undefined}
+              equippedTitle={profile.current_title}
+              equippedFrame={profile.equipped_frame}
+              equippedTheme={profile.equipped_theme}
+              userRewards={userRewards}
+              className="w-full max-w-md"
+            />
+          </div>
+        )}
+
         {/* Gamification Widgets - Only for logged in users */}
         {user && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
