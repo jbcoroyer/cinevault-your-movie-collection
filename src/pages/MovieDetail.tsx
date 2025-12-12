@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   getMovieDetails,
   getWatchProviders,
@@ -44,6 +45,7 @@ import { cn } from "@/lib/utils";
 export default function MovieDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+    const { user } = useAuth(); 
   const [movie, setMovie] = useState<MovieDetails | null>(null);
   const [watchProviders, setWatchProviders] = useState<WatchProviders | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,42 @@ export default function MovieDetail() {
 
   const { getUserMovie, addToWatchlist, markAsWatchedWithDetails, toggleFavorite, updateRating } = useUserMovies();
   const { createActivity } = useActivities();
+// Handlers avec vérification d'authentification
+const handleWatchlistClick = () => {
+  if (!user) {
+    navigate("/auth");
+    return;
+  }
+  addToWatchlist(movie!.id);
+};
 
+const handleWatchedClick = () => {
+  if (!user) {
+    navigate("/auth");
+    return;
+  }
+  if (isWatched) {
+    markAsWatchedWithDetails(movie!.id, {});
+  } else {
+    setWatchedDialogOpen(true);
+  }
+};
+
+const handleFavoriteClick = () => {
+  if (!user) {
+    navigate("/auth");
+    return;
+  }
+  toggleFavorite(movie!.id);
+};
+
+const handleAddToListClick = () => {
+  if (!user) {
+    navigate("/auth");
+    return;
+  }
+  setAddToListOpen(true);
+};
   const userMovie = movie ? getUserMovie(movie.id) : undefined;
   const isInWatchlist = userMovie?.status === "watchlist";
   const isWatched = userMovie?.status === "watched";
@@ -276,7 +313,40 @@ export default function MovieDetail() {
             </div>
           </div>
         )}
-
+{/* Action Buttons */}
+<div className="flex flex-wrap gap-2">
+  <Button
+    variant={isInWatchlist ? "default" : "secondary"}
+    size="sm"
+    onClick={handleWatchlistClick}  {/* <-- MODIFIÉ */}
+  >
+    {isInWatchlist ? <Check className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+    Watchlist
+  </Button>
+  <Button 
+    variant={isWatched ? "default" : "secondary"} 
+    size="sm" 
+    onClick={handleWatchedClick}  {/* <-- Déjà existant, vérifier qu'il utilise le nouveau handler */}
+  >
+    {isWatched ? <Check className="w-4 h-4 mr-2" /> : <Clock className="w-4 h-4 mr-2" />}
+    Vu
+  </Button>
+  <Button
+    variant="secondary"
+    size="sm"
+    onClick={handleFavoriteClick}  {/* <-- MODIFIÉ */}
+    className={cn(isFavorite && "text-primary")}
+  >
+    <Heart className={cn("w-4 h-4", isFavorite && "fill-primary")} />
+  </Button>
+  <Button 
+    variant="secondary" 
+    size="sm" 
+    onClick={handleAddToListClick}  {/* <-- MODIFIÉ */}
+  >
+    <ListPlus className="w-4 h-4" />
+  </Button>
+</div>
         {/* Cast */}
         {cast.length > 0 && (
           <div className="mb-6">
