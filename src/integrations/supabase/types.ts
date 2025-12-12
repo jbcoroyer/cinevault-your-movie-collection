@@ -451,7 +451,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_xp_for_format: { Args: { format_name: string }; Returns: number }
     }
     Enums: {
       [_ in never]: never

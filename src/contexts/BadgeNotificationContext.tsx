@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { useAuth } from "@/contexts/AuthContext";
 import { BadgeUnlockDialog } from "@/components/BadgeUnlockDialog";
 import { supabase } from "@/lib/supabase";
-import { ICON_MAP } from "@/data/gameData";
+import { ICON_MAP, getXpProgress, getTitleForLevel } from "@/data/videoClubData";
 import { Sparkles } from "lucide-react";
 import { checkAndUnlockBadges } from "@/services/badgeService";
 
@@ -19,10 +19,12 @@ interface BadgeNotification {
 interface BadgeNotificationContextType {
   currentXp: number;
   currentLevel: number;
+  currentTitle: string;
   nextLevelXp: number;
   progressPercent: number;
+  xpToNextLevel: number;
   triggerTestBadge: () => void;
-  checkBadges: () => Promise<void>; // Nouvelle fonction exposée
+  checkBadges: () => Promise<void>;
 }
 
 const BadgeNotificationContext = createContext<BadgeNotificationContextType | null>(null);
@@ -42,7 +44,7 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
   const [notificationQueue, setNotificationQueue] = useState<BadgeNotification[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // 1. Fonction centrale pour vérifier et débloquer les badges
+  // Fonction centrale pour vérifier et débloquer les badges
   const checkBadges = useCallback(async () => {
     if (!user) return;
 
@@ -56,7 +58,7 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
     }
   }, [user]);
 
-  // 2. Écouter les nouveaux badges en Temps Réel (pour l'affichage popup)
+  // Écouter les nouveaux badges en Temps Réel
   useEffect(() => {
     if (!user) return;
 
@@ -74,7 +76,6 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
-          // Un badge a été inséré (soit par checkBadges, soit par un autre moyen)
           const newBadgeId = payload.new.badge_id;
           const rarity = payload.new.rarity;
 
@@ -94,7 +95,7 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
 
             setNotificationQueue((prev) => [...prev, newNotif]);
 
-            // On recharge l'XP pour être sûr d'être à jour
+            // Recharge l'XP
             setTimeout(checkBadges, 1000);
           }
         },
@@ -106,7 +107,7 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
     };
   }, [user, checkBadges]);
 
-  // 3. Gestion de la file d'attente
+  // Gestion de la file d'attente
   useEffect(() => {
     if (notificationQueue.length > 0 && !isDialogOpen) {
       setIsDialogOpen(true);
@@ -129,25 +130,24 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
         description: "Ceci est une simulation.",
         icon: Sparkles,
         xp: 100,
-        rarity: "holographic",
+        rarity: "legendary",
       },
     ]);
   };
 
-  // Niveaux
-  const LEVEL_THRESHOLD = 1000;
-  const currentLevel = Math.floor(xp / LEVEL_THRESHOLD) + 1;
-  const nextLevelXp = currentLevel * LEVEL_THRESHOLD;
-  const xpInCurrentLevel = xp % LEVEL_THRESHOLD;
-  const progressPercent = (xpInCurrentLevel / LEVEL_THRESHOLD) * 100;
+  // Calculs basés sur la nouvelle formule XP
+  const progress = getXpProgress(xp);
+  const currentTitle = getTitleForLevel(progress.currentLevel);
 
   const value = {
     currentXp: xp,
-    currentLevel,
-    nextLevelXp,
-    progressPercent,
+    currentLevel: progress.currentLevel,
+    currentTitle,
+    nextLevelXp: progress.nextLevelXp,
+    progressPercent: progress.progressPercent,
+    xpToNextLevel: progress.xpToNextLevel,
     triggerTestBadge,
-    checkBadges, // On expose la fonction ici
+    checkBadges,
   };
 
   const currentBadgeData = notificationQueue[0];
@@ -165,7 +165,7 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
             description: currentBadgeData.description,
             xp: currentBadgeData.xp,
             icon: currentBadgeData.icon,
-            color: "text-amber-500",
+            color: "text-videoclub-cyan",
           }}
           onClose={handleCloseDialog}
         />
