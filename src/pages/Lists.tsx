@@ -290,6 +290,7 @@ export default function Lists() {
                 posters={list.getPosters()}
                 loading={isLoading}
                 onClick={() => setSelectedSpecial(list.id)}
+                type={list.id}
               />
             ))}
           </div>
@@ -322,13 +323,17 @@ export default function Lists() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {lists.map((list) => (
+              {lists.map((list, index) => (
                 <AnimatedListCard
                   key={list.id}
-                  list={list}
-                  onClick={() => navigate(`/lists/${list.id}`)}
+                  id={list.id}
+                  title={list.title}
+                  description={list.description}
+                  isPublic={list.is_public}
+                  itemCount={0}
                   onEdit={() => openEditDialog(list)}
                   onDelete={() => handleDelete(list.id)}
+                  index={index}
                 />
               ))}
             </div>
@@ -340,7 +345,7 @@ export default function Lists() {
       <CreateListDialog
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        onSubmit={handleCreateList}
+        onCreateList={handleCreateList}
       />
 
       {/* Edit Dialog */}
