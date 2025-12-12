@@ -126,13 +126,6 @@ const handleAddToListClick = () => {
     fetchProviders();
   }, [id]);
 
-  const handleWatchedClick = () => {
-    if (isWatched) {
-      markAsWatchedWithDetails(movie!.id, {});
-    } else {
-      setWatchedDialogOpen(true);
-    }
-  };
 
   const handleWatchedSave = async (data: { watchedDate?: string; rating?: number; review?: string }) => {
     if (!movie) return;
@@ -318,7 +311,7 @@ const handleAddToListClick = () => {
   <Button
     variant={isInWatchlist ? "default" : "secondary"}
     size="sm"
-    onClick={handleWatchlistClick}  {/* <-- MODIFIÉ */}
+    onClick={handleWatchlistClick}
   >
     {isInWatchlist ? <Check className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
     Watchlist
@@ -326,7 +319,7 @@ const handleAddToListClick = () => {
   <Button 
     variant={isWatched ? "default" : "secondary"} 
     size="sm" 
-    onClick={handleWatchedClick}  {/* <-- Déjà existant, vérifier qu'il utilise le nouveau handler */}
+    onClick={handleWatchedClick}
   >
     {isWatched ? <Check className="w-4 h-4 mr-2" /> : <Clock className="w-4 h-4 mr-2" />}
     Vu
@@ -334,7 +327,7 @@ const handleAddToListClick = () => {
   <Button
     variant="secondary"
     size="sm"
-    onClick={handleFavoriteClick}  {/* <-- MODIFIÉ */}
+    onClick={handleFavoriteClick}
     className={cn(isFavorite && "text-primary")}
   >
     <Heart className={cn("w-4 h-4", isFavorite && "fill-primary")} />
@@ -342,7 +335,7 @@ const handleAddToListClick = () => {
   <Button 
     variant="secondary" 
     size="sm" 
-    onClick={handleAddToListClick}  {/* <-- MODIFIÉ */}
+    onClick={handleAddToListClick}
   >
     <ListPlus className="w-4 h-4" />
   </Button>

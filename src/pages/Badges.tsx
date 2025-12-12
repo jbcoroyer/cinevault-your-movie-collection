@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserBadges, BadgeWithStatus } from "@/services/badgeService";
+import { fetchAllBadges, Badge } from "@/services/badgeService";
 import { getPhysicalMovies } from "@/services/physicalMovies";
 import { BadgesShowcase } from "@/components/guest/BadgesShowcase";
-import { PatchBadge, Rarity } from "@/components/gamification/PatchBadge";
+import { PatchBadge } from "@/components/gamification/PatchBadge";
+import { type Rarity } from "@/data/videoClubData";
 import { MemberCard3DModal } from "@/components/gamification/MemberCard3DModal";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -73,7 +74,7 @@ export default function Badges() {
   const { user, profile, loading: authLoading } = useAuth();
   const { currentLevel, currentXp, progressPercent, xpToNextLevel } = useBadgeNotification();
 
-  const [badges, setBadges] = useState<BadgeWithStatus[]>([]);
+  const [badges, setBadges] = useState<Badge[]>([]);
   const [loading, setLoading] = useState(true);
   const [movieCount, setMovieCount] = useState(0);
   const [isCard3DOpen, setIsCard3DOpen] = useState(false);
@@ -85,7 +86,7 @@ export default function Badges() {
       setLoading(true);
       try {
         const [badgesData, physicalMovies] = await Promise.all([
-          getUserBadges(user.id),
+          fetchAllBadges(user.id),
           getPhysicalMovies(user.id),
         ]);
         setBadges(badgesData);

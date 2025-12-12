@@ -54,7 +54,7 @@ export default function Profile() {
   const { topMovies, setTopMovie } = useUserTopMovies(targetUserId);
   const { isFollowing, stats, loading: followLoading, toggleFollow } = useFollows(targetUserId);
   const { currentLevel, currentXp } = useBadgeNotification();
-  const { stats: destinyStats } = useDestinyStats();
+  const destinyStats = useDestinyStats(physicalMovies, []);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedUsername, setEditedUsername] = useState("");
@@ -209,8 +209,8 @@ export default function Profile() {
             <div className="flex-shrink-0">
               {isOwnProfile && isEditing ? (
                 <AvatarUpload
-                  currentUrl={profileData.avatar_url}
-                  onUpload={async (url) => {
+                  currentAvatarUrl={profileData.avatar_url}
+                  onUploadComplete={async (url) => {
                     await updateProfile({ avatar_url: url });
                     await refreshProfile();
                     setProfileData((prev) => prev ? { ...prev, avatar_url: url } : null);
@@ -274,10 +274,10 @@ export default function Profile() {
                   )}
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                     <button onClick={() => setFollowersOpen(true)} className="hover:text-foreground">
-                      <strong className="text-foreground">{stats.followersCount}</strong> abonnés
+                      <strong className="text-foreground">{stats.followers}</strong> abonnés
                     </button>
                     <button onClick={() => setFollowingOpen(true)} className="hover:text-foreground">
-                      <strong className="text-foreground">{stats.followingCount}</strong> abonnements
+                      <strong className="text-foreground">{stats.following}</strong> abonnements
                     </button>
                   </div>
                 </>
@@ -355,11 +355,8 @@ export default function Profile() {
           <div className="mb-6">
             <MemberCard
               username={profileData.username || "Membre"}
-              avatarUrl={profileData.avatar_url || undefined}
               totalXp={profileData.total_xp || currentXp}
               movieCount={physicalCount}
-              badgeCount={badgeCount}
-              equippedTitle={profileData.current_title}
             />
           </div>
         )}
@@ -368,8 +365,8 @@ export default function Profile() {
         <div className="mb-6">
           <Top5Section
             topMovies={topMovies}
-            onSetTopMovie={isOwnProfile ? setTopMovie : undefined}
-            isEditable={isOwnProfile}
+            onSetMovie={isOwnProfile ? setTopMovie : async () => ({ error: null })}
+            editable={isOwnProfile}
           />
         </div>
       </main>
@@ -382,12 +379,14 @@ export default function Profile() {
             onOpenChange={setFollowersOpen}
             userId={targetUserId}
             type="followers"
+            title="Abonnés"
           />
           <FollowListDialog
             open={followingOpen}
             onOpenChange={setFollowingOpen}
             userId={targetUserId}
             type="following"
+            title="Abonnements"
           />
         </>
       )}
