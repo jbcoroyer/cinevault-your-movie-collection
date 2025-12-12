@@ -108,7 +108,7 @@ export function PatchBadge({
           {/* Title */}
           <h3
             className={cn(
-              "font-display font-bold text-sm uppercase tracking-wider leading-tight",
+              "font-display font-bold text-base md:text-lg uppercase tracking-wider leading-tight",
               isLocked ? "text-muted-foreground/50" : "text-foreground",
             )}
           >
@@ -118,7 +118,7 @@ export function PatchBadge({
           {/* Description */}
           <p
             className={cn(
-              "text-[10px] mt-1 font-mono leading-tight",
+              "text-xs md:text-sm mt-1.5 font-mono leading-tight",
               isLocked ? "text-muted-foreground/30" : "text-muted-foreground",
             )}
           >

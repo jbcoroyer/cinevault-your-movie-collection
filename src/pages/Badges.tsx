@@ -25,19 +25,21 @@ export default function BadgesPage() {
   const [loading, setLoading] = useState(true);
 
   const totalUnlocked = badges.filter((b) => b.isUnlocked).length;
-  const totalXP = badges.reduce((acc, b) => (b.isUnlocked ? acc + (b.xp_reward || 0) : acc), 0);
 
   useEffect(() => {
-    if (user) {
-      loadBadges();
-    }
+    loadBadges();
   }, [user]);
 
   const loadBadges = async () => {
-    if (!user) return;
     setLoading(true);
-    const data = await fetchAllBadges(user.id);
-    setBadges(data);
+    if (user) {
+      const data = await fetchAllBadges(user.id);
+      setBadges(data);
+    } else {
+      // Load badge definitions without user unlock status
+      const data = await fetchAllBadges(null);
+      setBadges(data);
+    }
     setLoading(false);
   };
 
