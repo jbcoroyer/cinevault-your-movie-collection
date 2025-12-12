@@ -42,8 +42,26 @@ const getUserStats = async (userId: string) => {
   };
 };
 
-export const fetchAllBadges = async (userId: string): Promise<Badge[]> => {
+export const fetchAllBadges = async (userId: string | null): Promise<Badge[]> => {
   try {
+    // If no user, just return badge definitions without unlock status
+    if (!userId) {
+      const { data: definitions, error } = await supabase
+        .from("badge_definitions")
+        .select("*");
+      
+      if (error) throw error;
+      
+      return definitions.map((def) => ({
+        ...def,
+        criteria: def.criteria as any,
+        isUnlocked: false,
+        progress: 0,
+        currentVal: 0,
+        targetVal: (def.criteria as any)?.count || 1,
+      }));
+    }
+
     const [definitionsRes, userBadgesRes, stats] = await Promise.all([
       supabase.from("badge_definitions").select("*"),
       supabase.from("user_badges").select("*").eq("user_id", userId),

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Disc, Info } from "lucide-react";
+import { Search, Plus, Disc, Info, X, Package } from "lucide-react";
 import { searchMovies, Movie, getImageUrl } from "@/services/tmdb";
 import { 
   PhysicalFormat, 
@@ -20,11 +20,21 @@ import { LootBoxReveal } from "@/components/gamification/LootBoxReveal";
 import { getXpForFormat, calculateRarity } from "@/services/xpService";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 import { LORE_TERMINOLOGY } from "@/data/videoClubData";
+import { Badge } from "@/components/ui/badge";
 
 interface AddPhysicalMovieDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onMovieAdded: () => void;
+}
+
+interface SelectedMovieWithDetails {
+  movie: Movie;
+  format: PhysicalFormat;
+  condition: PhysicalCondition;
+  price: string;
+  purchaseDate: string;
+  notes: string;
 }
 
 export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({ 
@@ -38,9 +48,12 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Movie[]>([]);
   const [searching, setSearching] = useState(false);
-  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   
-  // Form fields
+  // Multiple movies selection
+  const [selectedMovies, setSelectedMovies] = useState<SelectedMovieWithDetails[]>([]);
+  const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
+  
+  // Form fields for current movie
   const [format, setFormat] = useState<PhysicalFormat>("bluray");
   const [condition, setCondition] = useState<PhysicalCondition>("good");
   const [price, setPrice] = useState("");
@@ -56,6 +69,8 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
     format: string;
     xpGained: number;
     rarity: "common" | "rare" | "epic" | "legendary" | "grail";
+    isMultiple?: boolean;
+    totalCount?: number;
   } | null>(null);
 
   // Reset form when dialog closes
@@ -64,14 +79,19 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
       setStep("search");
       setQuery("");
       setSearchResults([]);
-      setSelectedMovie(null);
-      setFormat("bluray");
-      setCondition("good");
-      setPrice("");
-      setPurchaseDate("");
-      setNotes("");
+      setSelectedMovies([]);
+      setCurrentMovieIndex(0);
+      resetForm();
     }
   }, [open]);
+
+  const resetForm = () => {
+    setFormat("bluray");
+    setCondition("good");
+    setPrice("");
+    setPurchaseDate("");
+    setNotes("");
+  };
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -87,59 +107,156 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
     }
   };
 
-  const handleSelectMovie = (movie: Movie) => {
-    setSelectedMovie(movie);
+  const handleAddToQueue = (movie: Movie) => {
+    // Check if already in queue
+    if (selectedMovies.some(m => m.movie.id === movie.id)) {
+      toast({
+        title: "Film déjà ajouté",
+        description: "Ce film est déjà dans votre liste d'ajout.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedMovies(prev => [...prev, {
+      movie,
+      format: "bluray",
+      condition: "good",
+      price: "",
+      purchaseDate: "",
+      notes: "",
+    }]);
+    
+    toast({
+      title: "Film ajouté à la liste",
+      description: `${movie.title} ajouté. ${selectedMovies.length + 1} film(s) en attente.`,
+    });
+  };
+
+  const handleRemoveFromQueue = (movieId: number) => {
+    setSelectedMovies(prev => prev.filter(m => m.movie.id !== movieId));
+  };
+
+  const handleGoToDetails = () => {
+    if (selectedMovies.length === 0) {
+      toast({
+        title: "Aucun film sélectionné",
+        description: "Ajoutez au moins un film à la liste.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCurrentMovieIndex(0);
+    loadMovieDetails(0);
     setStep("details");
   };
 
-  const handleSave = async () => {
-    if (!user || !selectedMovie) return;
+  const loadMovieDetails = (index: number) => {
+    const movieData = selectedMovies[index];
+    if (movieData) {
+      setFormat(movieData.format);
+      setCondition(movieData.condition);
+      setPrice(movieData.price);
+      setPurchaseDate(movieData.purchaseDate);
+      setNotes(movieData.notes);
+    }
+  };
+
+  const saveCurrentMovieDetails = () => {
+    setSelectedMovies(prev => prev.map((m, i) => 
+      i === currentMovieIndex 
+        ? { ...m, format, condition, price, purchaseDate, notes }
+        : m
+    ));
+  };
+
+  const handleNextMovie = () => {
+    saveCurrentMovieDetails();
+    const nextIndex = currentMovieIndex + 1;
+    if (nextIndex < selectedMovies.length) {
+      setCurrentMovieIndex(nextIndex);
+      loadMovieDetails(nextIndex);
+    }
+  };
+
+  const handlePreviousMovie = () => {
+    saveCurrentMovieDetails();
+    const prevIndex = currentMovieIndex - 1;
+    if (prevIndex >= 0) {
+      setCurrentMovieIndex(prevIndex);
+      loadMovieDetails(prevIndex);
+    }
+  };
+
+  const handleSaveAll = async () => {
+    if (!user || selectedMovies.length === 0) return;
 
     setSaving(true);
-    try {
-      await addPhysicalMovie(user.id, {
-        tmdb_id: selectedMovie.id,
-        format,
-        condition,
-        price: price ? parseFloat(price) : null,
-        purchase_date: purchaseDate || null,
-        notes: notes || null,
-      });
+    saveCurrentMovieDetails();
+    
+    let totalXp = 0;
+    let successCount = 0;
+    let highestRarity: "common" | "rare" | "epic" | "legendary" | "grail" = "common";
+    const rarityOrder = ["common", "rare", "epic", "legendary", "grail"];
+    
+    // Get updated movies with current form values
+    const moviesToSave = selectedMovies.map((m, i) => 
+      i === currentMovieIndex 
+        ? { ...m, format, condition, price, purchaseDate, notes }
+        : m
+    );
 
-      // Calculate XP and rarity for loot box
-      const xpGained = getXpForFormat(format);
-      const rarity = calculateRarity(format);
+    for (const movieData of moviesToSave) {
+      try {
+        await addPhysicalMovie(user.id, {
+          tmdb_id: movieData.movie.id,
+          format: movieData.format,
+          condition: movieData.condition,
+          price: movieData.price ? parseFloat(movieData.price) : null,
+          purchase_date: movieData.purchaseDate || null,
+          notes: movieData.notes || null,
+        });
 
-      // Set loot box data and show animation
+        const xp = getXpForFormat(movieData.format);
+        totalXp += xp;
+        successCount++;
+
+        const rarity = calculateRarity(movieData.format);
+        if (rarityOrder.indexOf(rarity) > rarityOrder.indexOf(highestRarity)) {
+          highestRarity = rarity;
+        }
+      } catch (error: any) {
+        if (error.code === "23505") {
+          toast({
+            title: "Film déjà existant",
+            description: `${movieData.movie.title} existe déjà dans votre ${LORE_TERMINOLOGY.collection}.`,
+            variant: "destructive",
+          });
+        }
+      }
+    }
+
+    if (successCount > 0) {
+      const firstMovie = moviesToSave[0];
       setLootBoxData({
-        movieTitle: selectedMovie.title,
-        moviePoster: selectedMovie.poster_path || undefined,
-        format: formatLabels[format],
-        xpGained,
-        rarity,
+        movieTitle: successCount > 1 
+          ? `${successCount} films ajoutés !` 
+          : firstMovie.movie.title,
+        moviePoster: successCount === 1 ? firstMovie.movie.poster_path || undefined : undefined,
+        format: successCount > 1 
+          ? `Pack de ${successCount} films` 
+          : formatLabels[firstMovie.format],
+        xpGained: totalXp,
+        rarity: highestRarity,
+        isMultiple: successCount > 1,
+        totalCount: successCount,
       });
-      
-      // Close dialog and show loot box
+
       onOpenChange(false);
       setShowLootBox(true);
-      
-      // Check for new badges
       await checkBadges();
-    } catch (error: any) {
+    } else {
       setSaving(false);
-      if (error.code === "23505") {
-        toast({
-          title: "Ce film existe déjà",
-          description: `Vous possédez déjà ce film dans votre ${LORE_TERMINOLOGY.collection}.`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Erreur",
-          description: "Impossible d'ajouter le film",
-          variant: "destructive",
-        });
-      }
     }
   };
 
@@ -150,6 +267,8 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
     onMovieAdded();
   };
 
+  const currentMovie = selectedMovies[currentMovieIndex]?.movie;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -158,6 +277,11 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
             <DialogTitle className="flex items-center gap-2 text-foreground">
               <Disc className="w-5 h-5 text-videoclub-cyan" />
               Ajouter à l'{LORE_TERMINOLOGY.collection}
+              {selectedMovies.length > 0 && (
+                <Badge variant="secondary" className="ml-2 bg-videoclub-cyan/20 text-videoclub-cyan">
+                  {selectedMovies.length} film{selectedMovies.length > 1 ? 's' : ''}
+                </Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
 
@@ -177,37 +301,84 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
                 </Button>
               </div>
 
+              {/* Selected movies queue */}
+              {selectedMovies.length > 0 && (
+                <div className="p-3 bg-videoclub-cyan/10 rounded-lg border border-videoclub-cyan/20">
+                  <p className="text-sm font-mono text-videoclub-cyan mb-2 flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Films à ajouter ({selectedMovies.length})
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedMovies.map((m) => (
+                      <Badge 
+                        key={m.movie.id} 
+                        variant="outline" 
+                        className="border-videoclub-cyan/30 bg-background/50 pr-1"
+                      >
+                        <span className="truncate max-w-[120px]">{m.movie.title}</span>
+                        <button
+                          onClick={() => handleRemoveFromQueue(m.movie.id)}
+                          className="ml-1 p-0.5 hover:bg-videoclub-magenta/20 rounded"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <Button 
+                    onClick={handleGoToDetails}
+                    className="w-full mt-3 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta hover:opacity-90"
+                  >
+                    Configurer les {selectedMovies.length} film{selectedMovies.length > 1 ? 's' : ''}
+                  </Button>
+                </div>
+              )}
+
               {/* Search results */}
-              <div className="max-h-[400px] overflow-y-auto space-y-2">
+              <div className="max-h-[350px] overflow-y-auto space-y-2">
                 {searching ? (
                   <p className="text-center text-muted-foreground py-4 font-mono">Recherche...</p>
                 ) : searchResults.length > 0 ? (
-                  searchResults.map((movie) => (
-                    <button
-                      key={movie.id}
-                      onClick={() => handleSelectMovie(movie)}
-                      className="w-full flex items-center gap-3 p-3 bg-background/50 hover:bg-videoclub-cyan/10 rounded-lg transition-colors text-left border border-transparent hover:border-videoclub-cyan/30"
-                    >
-                      {movie.poster_path ? (
-                        <img
-                          src={getImageUrl(movie.poster_path, "w200")!}
-                          alt={movie.title}
-                          className="w-12 h-18 object-cover rounded"
-                        />
-                      ) : (
-                        <div className="w-12 h-18 bg-muted rounded flex items-center justify-center">
-                          <Disc className="w-6 h-6 text-muted-foreground" />
+                  searchResults.map((movie) => {
+                    const isInQueue = selectedMovies.some(m => m.movie.id === movie.id);
+                    return (
+                      <button
+                        key={movie.id}
+                        onClick={() => handleAddToQueue(movie)}
+                        disabled={isInQueue}
+                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left border ${
+                          isInQueue 
+                            ? "bg-videoclub-cyan/10 border-videoclub-cyan/30 opacity-60"
+                            : "bg-background/50 hover:bg-videoclub-cyan/10 border-transparent hover:border-videoclub-cyan/30"
+                        }`}
+                      >
+                        {movie.poster_path ? (
+                          <img
+                            src={getImageUrl(movie.poster_path, "w200")!}
+                            alt={movie.title}
+                            className="w-12 h-18 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-18 bg-muted rounded flex items-center justify-center">
+                            <Disc className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{movie.title}</p>
+                          <p className="text-sm text-muted-foreground font-mono">
+                            {movie.release_date?.split("-")[0] || "Date inconnue"}
+                          </p>
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{movie.title}</p>
-                        <p className="text-sm text-muted-foreground font-mono">
-                          {movie.release_date?.split("-")[0] || "Date inconnue"}
-                        </p>
-                      </div>
-                      <Plus className="w-5 h-5 text-videoclub-cyan" />
-                    </button>
-                  ))
+                        {isInQueue ? (
+                          <Badge variant="outline" className="border-videoclub-cyan text-videoclub-cyan">
+                            Ajouté
+                          </Badge>
+                        ) : (
+                          <Plus className="w-5 h-5 text-videoclub-cyan" />
+                        )}
+                      </button>
+                    );
+                  })
                 ) : query ? (
                   <p className="text-center text-muted-foreground py-4 font-mono">Aucun résultat</p>
                 ) : (
@@ -219,13 +390,34 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Selected movie preview */}
-              {selectedMovie && (
+              {/* Progress indicator */}
+              {selectedMovies.length > 1 && (
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  {selectedMovies.map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        i === currentMovieIndex 
+                          ? "bg-videoclub-cyan" 
+                          : i < currentMovieIndex 
+                            ? "bg-videoclub-magenta" 
+                            : "bg-muted"
+                      }`}
+                    />
+                  ))}
+                  <span className="ml-2 text-sm font-mono text-muted-foreground">
+                    {currentMovieIndex + 1} / {selectedMovies.length}
+                  </span>
+                </div>
+              )}
+
+              {/* Current movie preview */}
+              {currentMovie && (
                 <div className="flex gap-3 p-3 bg-background/50 rounded-lg border border-videoclub-cyan/20">
-                  {selectedMovie.poster_path ? (
+                  {currentMovie.poster_path ? (
                     <img
-                      src={getImageUrl(selectedMovie.poster_path, "w200")!}
-                      alt={selectedMovie.title}
+                      src={getImageUrl(currentMovie.poster_path, "w200")!}
+                      alt={currentMovie.title}
                       className="w-16 h-24 object-cover rounded"
                     />
                   ) : (
@@ -234,9 +426,9 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
                     </div>
                   )}
                   <div className="flex-1">
-                    <p className="font-semibold">{selectedMovie.title}</p>
+                    <p className="font-semibold">{currentMovie.title}</p>
                     <p className="text-sm text-muted-foreground font-mono">
-                      {selectedMovie.release_date?.split("-")[0]}
+                      {currentMovie.release_date?.split("-")[0]}
                     </p>
                   </div>
                 </div>
@@ -322,16 +514,47 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
 
               {/* Actions */}
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" onClick={() => setStep("search")} className="flex-1 border-videoclub-cyan/30">
-                  Retour
-                </Button>
-                <Button 
-                  onClick={handleSave} 
-                  disabled={saving} 
-                  className="flex-1 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta hover:opacity-90"
-                >
-                  {saving ? "Ajout..." : "Ajouter"}
-                </Button>
+                {selectedMovies.length > 1 ? (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      onClick={handlePreviousMovie} 
+                      disabled={currentMovieIndex === 0}
+                      className="border-videoclub-cyan/30"
+                    >
+                      Précédent
+                    </Button>
+                    {currentMovieIndex < selectedMovies.length - 1 ? (
+                      <Button 
+                        onClick={handleNextMovie}
+                        className="flex-1 bg-videoclub-cyan hover:bg-videoclub-cyan/80 text-background"
+                      >
+                        Suivant
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={handleSaveAll} 
+                        disabled={saving} 
+                        className="flex-1 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta hover:opacity-90"
+                      >
+                        {saving ? "Ajout..." : `Ajouter ${selectedMovies.length} films`}
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={() => setStep("search")} className="flex-1 border-videoclub-cyan/30">
+                      Retour
+                    </Button>
+                    <Button 
+                      onClick={handleSaveAll} 
+                      disabled={saving} 
+                      className="flex-1 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta hover:opacity-90"
+                    >
+                      {saving ? "Ajout..." : "Ajouter"}
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           )}
