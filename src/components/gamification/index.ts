@@ -13,3 +13,4 @@ export { SeasonalEvents } from "./SeasonalEvents";
 export { RewardsShowcase } from "./RewardsShowcase";
 export { StreakDisplay } from "./StreakDisplay";
 export { CinevaultMemberCard } from "./CinevaultMemberCard";
+export { MemberCard3DModal } from "./MemberCard3DModal";

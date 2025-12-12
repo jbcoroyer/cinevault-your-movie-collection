@@ -17,6 +17,7 @@ interface PatchBadgeProps {
   progress?: number;
   onClick?: () => void;
   className?: string;
+  compact?: boolean;
 }
 
 export function PatchBadge({
@@ -28,6 +29,7 @@ export function PatchBadge({
   progress = 0,
   onClick,
   className,
+  compact = false,
 }: PatchBadgeProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -79,19 +81,23 @@ export function PatchBadge({
         />
 
         {/* Content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+        <div className={cn(
+          "absolute inset-0 flex flex-col items-center justify-center text-center",
+          compact ? "p-2" : "p-4"
+        )}>
           {/* Icon */}
           <div
             className={cn(
-              "relative p-3 rounded-full mb-3",
+              "relative rounded-full",
+              compact ? "p-2 mb-1.5" : "p-3 mb-3",
               isLocked ? "bg-muted/10" : "bg-black/30",
             )}
           >
             {isLocked ? (
-              <Lock className="w-8 h-8 text-muted-foreground/50" />
+              <Lock className={cn(compact ? "w-5 h-5" : "w-8 h-8", "text-muted-foreground/50")} />
             ) : (
               <Icon
-                className="w-8 h-8"
+                className={compact ? "w-5 h-5" : "w-8 h-8"}
                 style={{ color: rarityConfig.color }}
               />
             )}
@@ -108,27 +114,30 @@ export function PatchBadge({
           {/* Title */}
           <h3
             className={cn(
-              "font-display font-bold text-base md:text-lg uppercase tracking-wider leading-tight",
+              "font-display font-bold uppercase tracking-wider leading-tight",
+              compact ? "text-[10px] md:text-xs" : "text-base md:text-lg",
               isLocked ? "text-muted-foreground/50" : "text-foreground",
             )}
           >
             {title}
           </h3>
 
-          {/* Description */}
-          <p
-            className={cn(
-              "text-xs md:text-sm mt-1.5 font-mono leading-tight",
-              isLocked ? "text-muted-foreground/30" : "text-muted-foreground",
-            )}
-          >
-            {description}
-          </p>
+          {/* Description - hidden in compact */}
+          {!compact && (
+            <p
+              className={cn(
+                "text-xs md:text-sm mt-1.5 font-mono leading-tight",
+                isLocked ? "text-muted-foreground/30" : "text-muted-foreground",
+              )}
+            >
+              {description}
+            </p>
+          )}
 
           {/* Rarity label or progress */}
-          <div className="mt-3">
+          <div className={compact ? "mt-1.5" : "mt-3"}>
             {isLocked ? (
-              <div className="w-16 h-1.5 bg-muted/20 rounded-full overflow-hidden">
+              <div className={cn(compact ? "w-10 h-1" : "w-16 h-1.5", "bg-muted/20 rounded-full overflow-hidden")}>
                 <div
                   className="h-full bg-videoclub-cyan/50 rounded-full transition-all duration-500"
                   style={{ width: `${progress}%` }}
@@ -137,8 +146,9 @@ export function PatchBadge({
             ) : (
               <span
                 className={cn(
-                  "px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-widest",
+                  "rounded-full font-mono font-bold uppercase tracking-widest",
                   "border bg-black/20",
+                  compact ? "px-1.5 py-0.5 text-[7px]" : "px-2 py-0.5 text-[9px]",
                 )}
                 style={{
                   borderColor: `${rarityConfig.color}50`,
