@@ -254,7 +254,12 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
 
       onOpenChange(false);
       setShowLootBox(true);
-      await checkBadges();
+      
+      // Attendre un peu avant de vérifier les badges pour laisser le temps à la DB
+      setTimeout(async () => {
+        console.log("[AddPhysicalMovieDialog] Checking badges after adding movies...");
+        await checkBadges();
+      }, 1000);
     } else {
       setSaving(false);
     }
