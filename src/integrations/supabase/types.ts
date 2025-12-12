@@ -83,6 +83,85 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_bonuses: {
+        Row: {
+          bonus_type: string
+          claimed_date: string
+          created_at: string | null
+          id: string
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          bonus_type?: string
+          claimed_date?: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          bonus_type?: string
+          claimed_date?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_bonuses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_badges: {
+        Row: {
+          created_at: string | null
+          criteria: Json
+          description: string
+          event_id: string
+          icon_name: string
+          id: string
+          rarity: string
+          title: string
+          xp_reward: number
+        }
+        Insert: {
+          created_at?: string | null
+          criteria: Json
+          description: string
+          event_id: string
+          icon_name: string
+          id: string
+          rarity?: string
+          title: string
+          xp_reward?: number
+        }
+        Update: {
+          created_at?: string | null
+          criteria?: Json
+          description?: string
+          event_id?: string
+          icon_name?: string
+          id?: string
+          rarity?: string
+          title?: string
+          xp_reward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_badges_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "seasonal_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follows: {
         Row: {
           created_at: string
@@ -250,6 +329,8 @@ export type Database = {
           bio: string | null
           created_at: string | null
           current_title: string | null
+          equipped_frame: string | null
+          equipped_theme: string | null
           id: string
           popcorn_points: number | null
           streaming_services: string[] | null
@@ -261,6 +342,8 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           current_title?: string | null
+          equipped_frame?: string | null
+          equipped_theme?: string | null
           id: string
           popcorn_points?: number | null
           streaming_services?: string[] | null
@@ -272,6 +355,8 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           current_title?: string | null
+          equipped_frame?: string | null
+          equipped_theme?: string | null
           id?: string
           popcorn_points?: number | null
           streaming_services?: string[] | null
@@ -322,6 +407,81 @@ export type Database = {
         }
         Relationships: []
       }
+      reward_definitions: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          is_active: boolean | null
+          name: string
+          preview_data: Json
+          rarity: string
+          reward_type: string
+          unlock_criteria: Json
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id: string
+          is_active?: boolean | null
+          name: string
+          preview_data?: Json
+          rarity?: string
+          reward_type: string
+          unlock_criteria: Json
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          preview_data?: Json
+          rarity?: string
+          reward_type?: string
+          unlock_criteria?: Json
+        }
+        Relationships: []
+      }
+      seasonal_events: {
+        Row: {
+          created_at: string | null
+          description: string
+          end_date: string
+          event_type: string
+          icon_name: string
+          id: string
+          is_active: boolean | null
+          start_date: string
+          theme_color: string
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          end_date: string
+          event_type: string
+          icon_name: string
+          id: string
+          is_active?: boolean | null
+          start_date: string
+          theme_color?: string
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          end_date?: string
+          event_type?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean | null
+          start_date?: string
+          theme_color?: string
+          title?: string
+        }
+        Relationships: []
+      }
       user_badges: {
         Row: {
           badge_id: string
@@ -357,6 +517,57 @@ export type Database = {
           },
           {
             foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_challenges: {
+        Row: {
+          challenge_id: string
+          completed_at: string | null
+          created_at: string | null
+          current_progress: number
+          id: string
+          is_completed: boolean | null
+          reward_claimed: boolean | null
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          challenge_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          current_progress?: number
+          id?: string
+          is_completed?: boolean | null
+          reward_claimed?: boolean | null
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          challenge_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          current_progress?: number
+          id?: string
+          is_completed?: boolean | null
+          reward_claimed?: boolean | null
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_challenges_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_challenges_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -408,6 +619,88 @@ export type Database = {
           },
         ]
       }
+      user_rewards: {
+        Row: {
+          id: string
+          is_equipped: boolean | null
+          reward_data: Json | null
+          reward_id: string
+          reward_name: string
+          reward_type: string
+          unlocked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_equipped?: boolean | null
+          reward_data?: Json | null
+          reward_id: string
+          reward_name: string
+          reward_type: string
+          unlocked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_equipped?: boolean | null
+          reward_data?: Json | null
+          reward_id?: string
+          reward_name?: string
+          reward_type?: string
+          unlocked_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_rewards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_streaks: {
+        Row: {
+          created_at: string | null
+          current_streak: number
+          id: string
+          last_login_date: string | null
+          longest_streak: number
+          streak_frozen_until: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_streak?: number
+          id?: string
+          last_login_date?: string | null
+          longest_streak?: number
+          streak_frozen_until?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_streak?: number
+          id?: string
+          last_login_date?: string | null
+          longest_streak?: number
+          streak_frozen_until?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_top_movies: {
         Row: {
           created_at: string
@@ -445,6 +738,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      weekly_challenges: {
+        Row: {
+          challenge_type: string
+          created_at: string | null
+          description: string
+          icon_name: string
+          id: string
+          is_active: boolean | null
+          popcorn_reward: number
+          target_count: number
+          target_value: string | null
+          title: string
+          xp_reward: number
+        }
+        Insert: {
+          challenge_type: string
+          created_at?: string | null
+          description: string
+          icon_name: string
+          id: string
+          is_active?: boolean | null
+          popcorn_reward?: number
+          target_count?: number
+          target_value?: string | null
+          title: string
+          xp_reward?: number
+        }
+        Update: {
+          challenge_type?: string
+          created_at?: string | null
+          description?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean | null
+          popcorn_reward?: number
+          target_count?: number
+          target_value?: string | null
+          title?: string
+          xp_reward?: number
+        }
+        Relationships: []
       }
     }
     Views: {
