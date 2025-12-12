@@ -4,8 +4,12 @@ import { fetchAllBadges, Badge } from "@/services/badgeService";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { PatchBadge } from "@/components/gamification/PatchBadge";
+import { StreakDisplay } from "@/components/gamification/StreakDisplay";
+import { WeeklyChallenges } from "@/components/gamification/WeeklyChallenges";
+import { SeasonalEvents } from "@/components/gamification/SeasonalEvents";
+import { RewardsShowcase } from "@/components/gamification/RewardsShowcase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Trophy, Disc, Archive, Sparkles, Film } from "lucide-react";
+import { Loader2, Trophy, Disc, Archive, Sparkles, Film, Globe, Clock, Users, Flame, Clapperboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ICON_MAP, LORE_TERMINOLOGY } from "@/data/videoClubData";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
@@ -15,7 +19,12 @@ import type { Rarity } from "@/data/videoClubData";
 const BADGE_CATEGORIES = [
   { id: "collection", title: "Collection", icon: Archive, color: "videoclub-cyan" },
   { id: "format", title: "Formats", icon: Disc, color: "videoclub-magenta" },
-  { id: "secret", title: "Secrets", icon: Sparkles, color: "videoclub-gold" },
+  { id: "genre", title: "Genres", icon: Film, color: "videoclub-gold" },
+  { id: "decade", title: "Décennies", icon: Clock, color: "videoclub-cyan" },
+  { id: "director", title: "Réalisateurs", icon: Clapperboard, color: "videoclub-magenta" },
+  { id: "world", title: "Monde", icon: Globe, color: "videoclub-gold" },
+  { id: "community", title: "Communauté", icon: Users, color: "videoclub-cyan" },
+  { id: "streak", title: "Streaks", icon: Flame, color: "videoclub-magenta" },
 ];
 
 export default function BadgesPage() {
@@ -36,7 +45,6 @@ export default function BadgesPage() {
       const data = await fetchAllBadges(user.id);
       setBadges(data);
     } else {
-      // Load badge definitions without user unlock status
       const data = await fetchAllBadges(null);
       setBadges(data);
     }
@@ -54,9 +62,8 @@ export default function BadgesPage() {
     <div className="min-h-screen bg-background pb-32">
       <Header />
 
-      {/* Hero Section - Style Néo-Rétro */}
+      {/* Hero Section */}
       <div className="relative pt-8 pb-12 overflow-hidden">
-        {/* Glow effect */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-64 bg-videoclub-cyan/10 blur-[120px] rounded-full pointer-events-none" />
 
         <div className="container mx-auto px-4 text-center relative z-10">
@@ -78,22 +85,41 @@ export default function BadgesPage() {
         </div>
       </div>
 
-      <main className="container mx-auto px-4">
+      <main className="container mx-auto px-4 space-y-8">
+        {/* Gamification Widgets - Only for logged in users */}
+        {user && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="lg:col-span-1">
+              <StreakDisplay />
+            </div>
+            <div className="lg:col-span-2">
+              <WeeklyChallenges />
+            </div>
+          </div>
+        )}
+
+        {/* Seasonal Events */}
+        {user && <SeasonalEvents />}
+
+        {/* Rewards Showcase */}
+        {user && <RewardsShowcase />}
+
+        {/* Badges Tabs */}
         <Tabs defaultValue="collection" className="w-full space-y-8">
           {/* Navigation */}
-          <div className="flex justify-center">
-            <TabsList className="bg-videoclub-surface border border-videoclub-cyan/20 p-1.5 h-auto rounded-full backdrop-blur-md">
+          <div className="flex justify-center overflow-x-auto pb-2">
+            <TabsList className="bg-videoclub-surface border border-videoclub-cyan/20 p-1.5 h-auto rounded-full backdrop-blur-md flex-wrap justify-center">
               {BADGE_CATEGORIES.map((cat) => (
                 <TabsTrigger
                   key={cat.id}
                   value={cat.id}
                   className={cn(
-                    "rounded-full px-6 py-3 font-mono transition-all gap-2",
+                    "rounded-full px-4 py-2 font-mono transition-all gap-2 text-xs sm:text-sm sm:px-6 sm:py-3",
                     "data-[state=active]:bg-videoclub-cyan/20 data-[state=active]:text-videoclub-cyan"
                   )}
                 >
                   <cat.icon className="w-4 h-4" />
-                  {cat.title}
+                  <span className="hidden sm:inline">{cat.title}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
