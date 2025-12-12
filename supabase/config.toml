@@ -1,4 +1,7 @@
 project_id = "excnpqcvjixmwqbkocum"
 
+[functions.gamification-engine]
+verify_jwt = false
+
 [functions.analyze-movie-prompt]
 verify_jwt = true
