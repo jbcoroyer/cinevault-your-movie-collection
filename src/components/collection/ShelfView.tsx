@@ -185,54 +185,44 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                   onMouseLeave={() => setActiveId(null)}
                   onClick={() => onMovieClick(pm, details || null)}
                   className={cn(
-                    // Base de la tranche
-                    "relative group cursor-pointer transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] origin-bottom",
+                    // Base de la tranche - GPU accelerated
+                    "relative group cursor-pointer origin-bottom",
+                    "transition-transform duration-150 ease-out",
                     SPINE_WIDTHS[pm.format],
                     "h-48 sm:h-64 rounded-[2px] overflow-hidden",
                     // Bordures subtiles pour définir l'objet
                     "border-l border-white/5 border-r border-black/50",
-                    // Effet de profondeur au repos (ombre légère)
+                    // Effet de profondeur au repos
                     "shadow-[inset_2px_0_5px_rgba(255,255,255,0.05),inset_-2px_0_10px_rgba(0,0,0,0.8)]",
-
-                    // --- ÉTAT ACTIF (HOVER) : LE VOLUME APPARAÎT ---
-                    isActive
-                      ? [
-                          "z-50 scale-110 -translate-y-4 brightness-110",
-                          "shadow-[4px_0_0_#080808,8px_20px_30px_rgba(0,0,0,0.8)]",
-                        ]
-                      : [
-                          "hover:z-50 hover:scale-110 hover:-translate-y-4 hover:brightness-110",
-                          "hover:shadow-[4px_0_0_#080808,8px_20px_30px_rgba(0,0,0,0.8)]",
-                        ],
+                    // État actif
+                    isActive && "z-50",
                   )}
                   style={{
                     height: `${16 + (pm.format === "dvd" ? 0.8 : 0)}rem`,
-                    transform: `translateY(${randomHeight}px) ${isActive ? "scale(1.1) translateY(-24px)" : ""}`,
-                    marginBottom: isActive ? "12px" : "0px",
+                    transform: isActive 
+                      ? `translateY(${randomHeight - 16}px) scale(1.08) translateZ(0)` 
+                      : `translateY(${randomHeight}px) scale(1) translateZ(0)`,
+                    willChange: 'transform',
                   }}
                 >
-                  {/* === COUCHE 1 : FOND VISUEL (Affiche) === */}
+                  {/* === COUCHE 1 : FOND VISUEL (Affiche) - No blur transitions === */}
                   <div
                     className={cn(
-                      "absolute inset-0 z-0 bg-cover bg-center transition-all duration-500 saturate-[0.8]",
-                      isActive
-                        ? "blur-[0.5px] opacity-50"
-                        : "blur-[2px] opacity-30 group-hover:blur-[0.5px] group-hover:opacity-50",
+                      "absolute inset-0 z-0 bg-cover bg-center saturate-[0.8]",
+                      isActive ? "opacity-50" : "opacity-30",
                     )}
                     style={{
                       backgroundImage: poster ? `url(${poster})` : undefined,
                       backgroundColor: "#2a2a2a",
+                      filter: isActive ? 'blur(0.5px)' : 'blur(2px)',
                     }}
                   />
 
                   {/* === COUCHE 2 : VOLUME & LUMIÈRE (Le Relief 2D) === */}
-                  {/* Reflet spéculaire (plastique) */}
+                  {/* Reflet spéculaire (plastique) - Simplified for performance */}
                   <div
                     className={cn(
-                      "absolute inset-0 z-10 pointer-events-none bg-gradient-to-r",
-                      isSteelbook
-                        ? "from-transparent via-white/30 to-transparent bg-[length:200%_100%] bg-left group-hover:bg-right transition-[background-position] duration-700 ease-in-out mix-blend-overlay opacity-70"
-                        : "from-white/20 via-transparent to-black/60 opacity-80",
+                      "absolute inset-0 z-10 pointer-events-none bg-gradient-to-r from-white/20 via-transparent to-black/60 opacity-80",
                     )}
                   />
 
