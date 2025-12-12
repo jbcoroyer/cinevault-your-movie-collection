@@ -74,7 +74,9 @@ export const PhysicalMoviePoster: React.FC<PhysicalMoviePosterProps> = ({
               <img
                 src={posterUrl}
                 alt={movieDetails?.title || "Film"}
-                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-150 ease-out group-hover:scale-[1.03]"
+                style={{ willChange: 'transform' }}
+                loading="lazy"
               />
             ) : (
               <div className="w-full h-full bg-muted flex items-center justify-center">
@@ -82,8 +84,8 @@ export const PhysicalMoviePoster: React.FC<PhysicalMoviePosterProps> = ({
               </div>
             )}
 
-            {/* Overlay on hover */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            {/* Overlay on hover - GPU accelerated */}
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center">
               <span className="text-white text-xs font-medium px-2 text-center line-clamp-2">
                 {movieDetails?.title}
               </span>

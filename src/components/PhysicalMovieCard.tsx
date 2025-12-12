@@ -68,7 +68,7 @@ export const PhysicalMovieCard: React.FC<PhysicalMovieCardProps> = ({
   return (
     <>
       <div
-        className="bg-card rounded-lg overflow-hidden group relative cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+        className="bg-card rounded-lg overflow-hidden group relative cursor-pointer ring-0 hover:ring-2 hover:ring-primary/50 transition-shadow duration-150"
         onClick={handleCardClick}
       >
         {posterUrl ? (
