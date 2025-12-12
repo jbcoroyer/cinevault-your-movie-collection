@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, Profile } from '@/lib/supabase';
+import { processDailyLogin, DailyLoginResult } from '@/services/gamificationService';
+import { DailyBonusDialog } from '@/components/gamification/DailyBonusDialog';
 
 interface AuthContextType {
   user: User | null;
@@ -21,7 +23,6 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    // Return a default context instead of throwing to prevent crashes during initialization
     return {
       user: null,
       session: null,
@@ -44,6 +45,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Daily bonus dialog state
+  const [showDailyBonus, setShowDailyBonus] = useState(false);
+  const [dailyLoginResult, setDailyLoginResult] = useState<DailyLoginResult | null>(null);
+  const [hasProcessedLogin, setHasProcessedLogin] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -60,6 +66,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Process daily login when user is authenticated
+  const handleDailyLogin = async (userId: string) => {
+    if (hasProcessedLogin) return;
+    
+    try {
+      setHasProcessedLogin(true);
+      const result = await processDailyLogin(userId);
+      
+      if (result && !result.alreadyLoggedIn) {
+        setDailyLoginResult(result);
+        setShowDailyBonus(true);
+        // Refresh profile to get updated XP
+        await fetchProfile(userId);
+      }
+    } catch (error) {
+      console.error('Error processing daily login:', error);
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
@@ -68,9 +93,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         setTimeout(() => {
           fetchProfile(session.user.id);
+          handleDailyLogin(session.user.id);
         }, 0);
       } else {
         setProfile(null);
+        setHasProcessedLogin(false);
       }
       
       setLoading(false);
@@ -82,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (session?.user) {
         fetchProfile(session.user.id);
+        handleDailyLogin(session.user.id);
       }
       
       setLoading(false);
@@ -122,6 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setSession(null);
     setProfile(null);
+    setHasProcessedLogin(false);
   };
 
   const resetPassword = async (email: string) => {
@@ -169,6 +198,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }}
     >
       {children}
+      
+      {/* Daily Bonus Dialog */}
+      {dailyLoginResult && (
+        <DailyBonusDialog
+          open={showDailyBonus}
+          onOpenChange={setShowDailyBonus}
+          streak={dailyLoginResult.streak?.current_streak || 1}
+          xpEarned={dailyLoginResult.bonus?.xpEarned || 25}
+          popcornEarned={dailyLoginResult.bonus?.popcornEarned || 5}
+          streakBroken={dailyLoginResult.streakBroken}
+          newBadges={dailyLoginResult.newBadges}
+        />
+      )}
     </AuthContext.Provider>
   );
 };
