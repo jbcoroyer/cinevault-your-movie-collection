@@ -7,6 +7,7 @@ import { useFollows } from "@/hooks/useFollows";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
+import { ProfileShowcase } from "@/components/guest/ProfileShowcase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,34 +54,41 @@ export default function Profile() {
   const { topMovies, setTopMovie } = useUserTopMovies(targetUserId);
   const { isFollowing, stats, loading: followLoading, toggleFollow } = useFollows(targetUserId);
   const { currentLevel, currentXp } = useBadgeNotification();
+  const { stats: destinyStats } = useDestinyStats();
 
-  const [editing, setEditing] = useState(false);
-  const [username, setUsername] = useState("");
-  const [bio, setBio] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedUsername, setEditedUsername] = useState("");
+  const [editedBio, setEditedBio] = useState("");
 
-  const [followDialogOpen, setFollowDialogOpen] = useState(false);
-  const [followDialogType, setFollowDialogType] = useState<"followers" | "following">("followers");
+  // Follow list dialogs
+  const [followersOpen, setFollowersOpen] = useState(false);
+  const [followingOpen, setFollowingOpen] = useState(false);
 
-  // Destiny stats
-  const destinyStats = useDestinyStats(physicalMovies, []);
+  // Loader pendant le chargement de l'auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
+      </div>
+    );
+  }
 
-  // Sync state
+  // Si non connecté et pas de userId dans l'URL, afficher le showcase
+  if (!user && !userId) {
+    return (
+      <div className="min-h-screen bg-background pb-20 md:pb-8">
+        <Header />
+        <main className="pt-14 md:pt-0">
+          <ProfileShowcase />
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // Load profile data
   useEffect(() => {
-    if (myProfile && isOwnProfile) {
-      setUsername(myProfile.username || "");
-      setBio(myProfile.bio || "");
-      setAvatarUrl(myProfile.avatar_url || null);
-    } else if (profileData && !isOwnProfile) {
-      setAvatarUrl(profileData.avatar_url || null);
-    }
-  }, [myProfile, profileData, isOwnProfile]);
-
-  // Fetch logic
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (authLoading) return;
+    const loadProfile = async () => {
       if (!targetUserId) {
         setLoadingProfile(false);
         return;
@@ -88,358 +96,303 @@ export default function Profile() {
 
       setLoadingProfile(true);
       try {
-        if (!isOwnProfile) {
-          const { data, error } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", targetUserId)
-            .single();
-          if (error) throw error;
-          setProfileData(data);
+        // Fetch profile
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", targetUserId)
+          .single();
+
+        if (error) throw error;
+        setProfileData(profile);
+        setEditedUsername(profile?.username || "");
+        setEditedBio(profile?.bio || "");
+
+        // Fetch physical movies
+        const movies = await getPhysicalMovies(targetUserId);
+        setPhysicalCount(movies.length);
+        setPhysicalMovies(movies);
+
+        // Get last physical movie poster
+        if (movies.length > 0) {
+          const lastMovie = movies[0];
+          const { getImageUrl } = await import("@/services/tmdb");
+          // Fetch movie details for poster
+          const response = await fetch(
+            `https://api.themoviedb.org/3/movie/${lastMovie.tmdb_id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=fr-FR`
+          );
+          const movieData = await response.json();
+          setLastPhysicalPoster(getImageUrl(movieData.poster_path, "w185"));
         }
 
-        const physical = await getPhysicalMovies(targetUserId);
-        setPhysicalMovies(physical);
-        setPhysicalCount(physical.length);
-
-        // Badge count
+        // Fetch badge count
         const { count } = await supabase
           .from("user_badges")
           .select("*", { count: "exact", head: true })
           .eq("user_id", targetUserId);
         setBadgeCount(count || 0);
 
-        // Posters fetching logic
-        const fetchPoster = async (tmdbId: number) => {
-          try {
-            const res = await fetch(
-              `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=2218a5f1d1ccce0122e4be6c67cc7a90`,
-            );
-            const data = await res.json();
-            return data.poster_path ? `https://image.tmdb.org/t/p/w154${data.poster_path}` : null;
-          } catch {
-            return null;
-          }
-        };
-
-        if (physical.length > 0) setLastPhysicalPoster(await fetchPoster(physical[0].tmdb_id));
-
-        const { data: watchedData } = await supabase
-          .from("user_movies")
-          .select("tmdb_id")
-          .eq("user_id", targetUserId)
-          .eq("status", "watched")
-          .order("watched_at", { ascending: false })
-          .limit(1);
-        if (watchedData?.[0]) setLastWatchedPoster(await fetchPoster(watchedData[0].tmdb_id));
-
-        const { data: favoriteData } = await supabase
-          .from("user_movies")
-          .select("tmdb_id")
-          .eq("user_id", targetUserId)
-          .eq("is_favorite", true)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        if (favoriteData?.[0]) setLastFavoritePoster(await fetchPoster(favoriteData[0].tmdb_id));
       } catch (error) {
-        console.error(error);
+        console.error("Error loading profile:", error);
       } finally {
         setLoadingProfile(false);
       }
     };
-    fetchProfile();
-  }, [targetUserId, isOwnProfile, authLoading]);
 
-  const currentProfile = isOwnProfile ? myProfile : profileData;
-  const currentAvatarUrl = isOwnProfile ? avatarUrl : profileData?.avatar_url;
-  const totalXp = isOwnProfile ? currentXp : (profileData?.total_xp || 0);
+    loadProfile();
+  }, [targetUserId]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    const { error } = await updateProfile({ username, bio });
-    if (!error) {
-      toast({ title: "Profil mis à jour" });
-      setEditing(false);
+  // Save profile changes
+  const handleSaveProfile = async () => {
+    if (!user) return;
+
+    try {
+      await updateProfile({
+        username: editedUsername.trim(),
+        bio: editedBio.trim(),
+      });
+      await refreshProfile();
+      setIsEditing(false);
+      toast({ title: "Profil mis à jour !" });
+    } catch (error) {
+      toast({ title: "Erreur", description: "Impossible de mettre à jour le profil", variant: "destructive" });
     }
-    setSaving(false);
   };
 
-  const handleAvatarUpload = (newUrl: string) => {
-    setAvatarUrl(newUrl);
-    refreshProfile();
-  };
+  // Calculate stats
+  const watchedCount = userMovies.filter((m) => m.status === "watched").length;
+  const watchlistCount = userMovies.filter((m) => m.status === "watchlist").length;
+  const favoritesCount = userMovies.filter((m) => m.is_favorite).length;
 
-  const getDisplayName = () => currentProfile?.username || (isOwnProfile ? user?.email?.split("@")[0] : LORE_TERMINOLOGY.user);
-
-  // Stats
-  const watchedCount = isOwnProfile ? userMovies.filter((m) => m.status === "watched").length : 0;
-  const favoritesCount = isOwnProfile ? userMovies.filter((m) => m.is_favorite).length : 0;
-
-  if (authLoading || loadingProfile)
+  if (loadingProfile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse space-y-6">
+            <div className="h-32 bg-muted rounded-2xl" />
+            <div className="flex gap-6">
+              <div className="w-32 h-32 bg-muted rounded-full" />
+              <div className="flex-1 space-y-4">
+                <div className="h-8 bg-muted rounded w-1/3" />
+                <div className="h-4 bg-muted rounded w-2/3" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <BottomNav />
       </div>
     );
+  }
+
+  if (!profileData) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8 text-center">
+          <p className="text-muted-foreground">Profil non trouvé</p>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Header />
 
-      <main className="container mx-auto px-4 pt-20 max-w-6xl space-y-12">
-        {/* --- SECTION HÉROS --- */}
-        <section className="relative">
-          {/* Background décoratif néon */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-screen h-[400px] bg-gradient-to-b from-videoclub-cyan/5 via-background to-background -z-10 pointer-events-none" />
-
-          <div className="flex flex-col md:flex-row gap-8 items-start md:items-center justify-between">
-            {/* Colonne Gauche: Avatar & Infos */}
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-6 flex-1 text-center md:text-left w-full">
-              <div className="relative group">
+      <main className="container mx-auto px-4 py-6 max-w-4xl">
+        {/* Profile Header */}
+        <GlassCard className="p-6 mb-6">
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Avatar */}
+            <div className="flex-shrink-0">
+              {isOwnProfile && isEditing ? (
                 <AvatarUpload
-                  currentAvatarUrl={currentAvatarUrl}
-                  onUploadComplete={handleAvatarUpload}
-                  size="xl"
-                  editable={isOwnProfile}
-                  userId={targetUserId}
-                  username={currentProfile?.username || ""}
+                  currentUrl={profileData.avatar_url}
+                  onUpload={async (url) => {
+                    await updateProfile({ avatar_url: url });
+                    await refreshProfile();
+                    setProfileData((prev) => prev ? { ...prev, avatar_url: url } : null);
+                  }}
                 />
-                {isOwnProfile && (
-                  <div className="absolute -bottom-2 -right-2 bg-background rounded-full p-1.5 shadow-md border border-videoclub-cyan/30">
-                    <Settings className="w-5 h-5 text-videoclub-cyan" />
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3 max-w-md">
-                {isOwnProfile && editing ? (
-                  <div className="space-y-3 bg-videoclub-surface p-4 rounded-2xl border border-videoclub-cyan/20 animate-in fade-in slide-in-from-left-4">
-                    <Input
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Pseudo"
-                      className="font-bold text-lg bg-background/50"
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-amber-500/20 border-4 border-amber-500/30 flex items-center justify-center overflow-hidden">
+                  {profileData.avatar_url ? (
+                    <img
+                      src={profileData.avatar_url}
+                      alt={profileData.username || "Avatar"}
+                      className="w-full h-full object-cover"
                     />
-                    <Textarea
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                      placeholder="Votre bio..."
-                      className="bg-background/50 h-20 resize-none"
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSave} disabled={saving}>
-                        <Check className="w-4 h-4 mr-1" /> Sauvegarder
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
-                        Annuler
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <div className="flex items-center justify-center md:justify-start gap-3">
-                        <h1 className="text-4xl font-bold font-display tracking-tight">{getDisplayName()}</h1>
-                        {isOwnProfile && (
-                          <button
-                            onClick={() => setEditing(true)}
-                            className="p-1.5 hover:bg-muted rounded-full transition-colors text-muted-foreground/50 hover:text-primary"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-muted-foreground mt-2 leading-relaxed">
-                        {currentProfile?.bio || "Pas de bio renseignée."}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-center md:justify-start gap-6 pt-1">
-                      <button
-                        onClick={() => {
-                          setFollowDialogType("followers");
-                          setFollowDialogOpen(true);
-                        }}
-                        className="flex items-baseline gap-1.5 group"
-                      >
-                        <span className="text-xl font-bold text-foreground group-hover:text-videoclub-cyan transition-colors">
-                          {stats.followers}
-                        </span>
-                        <span className="text-sm text-muted-foreground">Abonnés</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setFollowDialogType("following");
-                          setFollowDialogOpen(true);
-                        }}
-                        className="flex items-baseline gap-1.5 group"
-                      >
-                        <span className="text-xl font-bold text-foreground group-hover:text-videoclub-cyan transition-colors">
-                          {stats.following}
-                        </span>
-                        <span className="text-sm text-muted-foreground">Abonnements</span>
-                      </button>
-                    </div>
-
-                    {!isOwnProfile && user && (
-                      <Button
-                        onClick={toggleFollow}
-                        disabled={followLoading}
-                        variant={isFollowing ? "secondary" : "default"}
-                        className="rounded-full px-6"
-                      >
-                        {isFollowing ? (
-                          <>
-                            <UserMinus className="w-4 h-4 mr-2" /> Abonné
-                          </>
-                        ) : (
-                          <>
-                            <UserPlus className="w-4 h-4 mr-2" /> Suivre
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
+                  ) : (
+                    <span className="text-4xl font-bold text-amber-500">
+                      {(profileData.username || "U").slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Colonne Droite: CARTE DE MEMBRE */}
-            <div className="w-full md:w-auto flex justify-center md:justify-end animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150">
-              <div className="w-full max-w-sm md:w-[360px]">
-                <MemberCard
-                  username={getDisplayName()}
-                  avatarUrl={currentAvatarUrl || undefined}
-                  totalXp={totalXp}
-                  movieCount={physicalCount}
-                  joinDate={currentProfile?.created_at}
-                  className="shadow-2xl"
-                />
-              </div>
+            {/* Info */}
+            <div className="flex-1">
+              {isEditing ? (
+                <div className="space-y-4">
+                  <Input
+                    value={editedUsername}
+                    onChange={(e) => setEditedUsername(e.target.value)}
+                    placeholder="Nom d'utilisateur"
+                    className="text-xl font-bold"
+                  />
+                  <Textarea
+                    value={editedBio}
+                    onChange={(e) => setEditedBio(e.target.value)}
+                    placeholder="Bio"
+                    rows={3}
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={handleSaveProfile} className="gap-2">
+                      <Check className="w-4 h-4" />
+                      Enregistrer
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                      Annuler
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-2xl font-bold">@{profileData.username}</h1>
+                    {profileData.current_title && (
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                        {profileData.current_title}
+                      </span>
+                    )}
+                  </div>
+                  {profileData.bio && (
+                    <p className="text-muted-foreground mb-4">{profileData.bio}</p>
+                  )}
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <button onClick={() => setFollowersOpen(true)} className="hover:text-foreground">
+                      <strong className="text-foreground">{stats.followersCount}</strong> abonnés
+                    </button>
+                    <button onClick={() => setFollowingOpen(true)} className="hover:text-foreground">
+                      <strong className="text-foreground">{stats.followingCount}</strong> abonnements
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              {isOwnProfile ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(!isEditing)}
+                    className="gap-2"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    {isEditing ? "Annuler" : "Modifier"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/settings")}
+                    className="gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  onClick={toggleFollow}
+                  disabled={followLoading}
+                  variant={isFollowing ? "outline" : "default"}
+                  className="gap-2"
+                >
+                  {isFollowing ? (
+                    <>
+                      <UserMinus className="w-4 h-4" />
+                      Se désabonner
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      S'abonner
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
-        </section>
+        </GlassCard>
 
-        {/* --- DESTINY MATRIX --- */}
-        {isOwnProfile && physicalCount > 0 && (
-          <section className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-            <h2 className="text-xl font-display font-bold mb-6 text-center">
-              <span className="text-videoclub-cyan">Votre</span> Destinée
-            </h2>
-            <div className="max-w-md mx-auto">
-              <DestinyMatrix stats={destinyStats} />
-            </div>
-          </section>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {[
+            { icon: Disc, value: physicalCount, label: "Collection", onClick: () => navigate("/collection") },
+            { icon: Eye, value: watchedCount, label: "Films vus", onClick: () => navigate("/lists") },
+            { icon: Heart, value: favoritesCount, label: "Favoris", onClick: () => navigate("/lists") },
+            { icon: Trophy, value: badgeCount, label: "Badges", onClick: () => navigate("/badges") },
+          ].map((stat) => (
+            <GlassCard
+              key={stat.label}
+              className="p-4 text-center cursor-pointer hover:border-amber-500/30 transition-colors"
+              onClick={stat.onClick}
+            >
+              <stat.icon className="w-6 h-6 mx-auto mb-2 text-amber-500" />
+              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-xs text-muted-foreground">{stat.label}</div>
+            </GlassCard>
+          ))}
+        </div>
+
+        {/* Member Card */}
+        {isOwnProfile && (
+          <div className="mb-6">
+            <MemberCard
+              username={profileData.username || "Membre"}
+              avatarUrl={profileData.avatar_url || undefined}
+              totalXp={profileData.total_xp || currentXp}
+              movieCount={physicalCount}
+              badgeCount={badgeCount}
+              equippedTitle={profileData.current_title}
+            />
+          </div>
         )}
 
-        {/* --- STATS GRID --- */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-          {/* Carte Inventaire (Collection) */}
-          <div
-            onClick={() => navigate(isOwnProfile ? "/collection" : "#")}
-            className="col-span-2 row-span-2 group cursor-pointer"
-          >
-            <GlassCard className="h-full p-0 overflow-hidden relative border-videoclub-cyan/20 hover:border-videoclub-cyan/50 transition-colors">
-              <div className="absolute inset-0 bg-videoclub-cyan/5 group-hover:bg-videoclub-cyan/10 transition-colors" />
-              <div className="p-6 h-full flex flex-col relative z-10">
-                <div className="w-12 h-12 rounded-xl bg-videoclub-cyan/20 text-videoclub-cyan flex items-center justify-center mb-4">
-                  <Disc className="w-6 h-6" />
-                </div>
-                <div className="mt-auto">
-                  <span className="text-5xl font-bold font-display text-foreground">{physicalCount}</span>
-                  <p className="text-videoclub-cyan/80 font-medium mt-1">{LORE_TERMINOLOGY.collection}</p>
-                </div>
-              </div>
-              {lastPhysicalPoster && (
-                <img
-                  src={lastPhysicalPoster}
-                  className="absolute right-0 top-0 h-full w-1/2 object-cover opacity-20 mask-image-linear-to-l group-hover:scale-110 transition-transform duration-700"
-                  alt="background"
-                />
-              )}
-            </GlassCard>
-          </div>
-
-          {/* Carte Vus */}
-          <div onClick={() => navigate(isOwnProfile ? "/lists/watched" : "#")} className="group cursor-pointer">
-            <GlassCard className="h-full relative overflow-hidden border-emerald-500/20 hover:border-emerald-500/50">
-              <div className="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors" />
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400">
-                    <Eye className="w-5 h-5" />
-                  </div>
-                  <span className="text-3xl font-bold font-display">{watchedCount}</span>
-                </div>
-                <p className="text-sm text-muted-foreground font-medium">Films Vus</p>
-              </div>
-            </GlassCard>
-          </div>
-
-          {/* Carte Favoris */}
-          <div onClick={() => navigate(isOwnProfile ? "/lists/favorites" : "#")} className="group cursor-pointer">
-            <GlassCard className="h-full relative overflow-hidden border-rose-500/20 hover:border-rose-500/50">
-              <div className="absolute inset-0 bg-rose-500/5 group-hover:bg-rose-500/10 transition-colors" />
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-2 bg-rose-500/20 rounded-lg text-rose-400">
-                    <Heart className="w-5 h-5" />
-                  </div>
-                  <span className="text-3xl font-bold font-display">{favoritesCount}</span>
-                </div>
-                <p className="text-sm text-muted-foreground font-medium">Favoris</p>
-              </div>
-            </GlassCard>
-          </div>
-
-          {/* Carte Écussons (Badges) */}
-          <div onClick={() => navigate("/badges")} className="group cursor-pointer">
-            <GlassCard className="h-full relative overflow-hidden border-videoclub-magenta/20 hover:border-videoclub-magenta/50">
-              <div className="absolute inset-0 bg-videoclub-magenta/5 group-hover:bg-videoclub-magenta/10 transition-colors" />
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-2 bg-videoclub-magenta/20 rounded-lg text-videoclub-magenta">
-                    <Trophy className="w-5 h-5" />
-                  </div>
-                  <span className="text-3xl font-bold font-display">{badgeCount}</span>
-                </div>
-                <p className="text-sm text-muted-foreground font-medium">{LORE_TERMINOLOGY.badges}</p>
-              </div>
-            </GlassCard>
-          </div>
-
-          {/* Carte Listes */}
-          <div onClick={() => navigate("/lists")} className="group cursor-pointer">
-            <GlassCard className="h-full relative overflow-hidden border-sky-500/20 hover:border-sky-500/50">
-              <div className="absolute inset-0 bg-sky-500/5 group-hover:bg-sky-500/10 transition-colors" />
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-2 bg-sky-500/20 rounded-lg text-sky-400">
-                    <ListVideo className="w-5 h-5" />
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground font-medium">Listes</p>
-              </div>
-            </GlassCard>
-          </div>
-        </section>
-
-        {/* --- TOP 5 SECTION --- */}
-        <Top5Section
-          topMovies={topMovies}
-          onSetMovie={setTopMovie}
-        />
+        {/* Top 5 Movies */}
+        <div className="mb-6">
+          <Top5Section
+            topMovies={topMovies}
+            onSetTopMovie={isOwnProfile ? setTopMovie : undefined}
+            isEditable={isOwnProfile}
+          />
+        </div>
       </main>
 
-      <BottomNav />
+      {/* Follow Dialogs */}
+      {targetUserId && (
+        <>
+          <FollowListDialog
+            open={followersOpen}
+            onOpenChange={setFollowersOpen}
+            userId={targetUserId}
+            type="followers"
+          />
+          <FollowListDialog
+            open={followingOpen}
+            onOpenChange={setFollowingOpen}
+            userId={targetUserId}
+            type="following"
+          />
+        </>
+      )}
 
-      <FollowListDialog
-        open={followDialogOpen}
-        onOpenChange={setFollowDialogOpen}
-        type={followDialogType}
-        userId={targetUserId!}
-        title={followDialogType === "followers" ? "Abonnés" : "Abonnements"}
-      />
+      <BottomNav />
     </div>
   );
 }

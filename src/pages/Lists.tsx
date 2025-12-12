@@ -12,7 +12,7 @@ import { useUserLists } from "@/hooks/useUserLists";
 import { useUserMovies } from "@/hooks/useUserMovies";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMovieDetails, Movie } from "@/services/tmdb";
-import { AuthPlaceholder } from "@/components/AuthPlaceholder";
+import { ListsShowcase } from "@/components/guest/ListsShowcase";
 import { CreateListDialog } from "@/components/lists/CreateListDialog";
 import { SpecialListCard } from "@/components/lists/SpecialListCard";
 import { AnimatedListCard } from "@/components/lists/AnimatedListCard";
@@ -35,7 +35,7 @@ interface CategoryCard {
 
 export default function Lists() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { lists, loading: listsLoading, createList, updateList, deleteList, addMovieToList } = useUserLists();
   const { userMovies, loading: moviesLoading } = useUserMovies();
 
@@ -185,22 +185,22 @@ export default function Lists() {
     setEditingList(list.id);
   };
 
+  // Loader pendant le chargement de l'auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
+      </div>
+    );
+  }
+
+  // Si non connecté, afficher le showcase
   if (!user) {
     return (
       <div className="min-h-screen bg-background pb-20 md:pb-8">
         <Header />
-        <main className="container mx-auto p-4">
-          <AuthPlaceholder
-            icon={ListVideo}
-            title="Vos Listes Personnalisées"
-            description="Créez et partagez des listes de films pour chaque occasion. Ne perdez plus jamais une recommandation."
-            features={[
-              "Gérez votre Watchlist",
-              "Créez des listes à thèmes (ex: 'Soirée Frisson')",
-              "Suivez les films que vous avez vus",
-              "Partagez vos listes avec vos amis",
-            ]}
-          />
+        <main className="pt-14 md:pt-0">
+          <ListsShowcase />
         </main>
         <BottomNav />
       </div>
@@ -266,122 +266,84 @@ export default function Lists() {
 
           <Button
             onClick={() => setIsCreateOpen(true)}
-            className="rounded-full gap-2 shadow-lg hover:shadow-xl transition-all h-12 px-6 bg-gradient-to-r from-primary to-amber-600 hover:scale-105"
+            className="rounded-full gap-2 shadow-lg hover:shadow-xl transition-all"
           >
-            <Plus className="w-5 h-5" />
-            <span>Nouvelle liste</span>
+            <Plus className="w-4 h-4" />
+            Nouvelle liste
           </Button>
         </div>
 
-        {/* Special Lists - Bento Grid Style */}
-        <section className="mb-16">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            <h2 className="text-xl font-display font-semibold">Collections Principales</h2>
-          </div>
+        {/* Special Lists */}
+        <section className="mb-12">
+          <h2 className="font-display text-xl font-semibold mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-500" />
+            Listes automatiques
+          </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {specialLists.map((category, index) => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {specialLists.map((list) => (
               <SpecialListCard
-                key={category.id}
-                title={category.title}
-                count={category.getCount()}
-                icon={category.icon}
-                posters={category.getPosters()}
-                onClick={() => setSelectedSpecial(category.id)}
+                key={list.id}
+                title={list.title}
+                icon={list.icon}
+                count={list.getCount()}
+                posters={list.getPosters()}
                 loading={isLoading}
-                type={category.id as "watchlist" | "watched" | "favorites"}
-                className={cn("animate-fade-in-up", `stagger-${index + 1}`)}
+                onClick={() => setSelectedSpecial(list.id)}
               />
             ))}
           </div>
         </section>
 
-        {/* Custom Lists - Nouvelle grille avec cartes animées */}
+        {/* Custom Lists */}
         <section>
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-muted">
-                <ListVideo className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <h2 className="text-xl font-display font-semibold">Vos Listes</h2>
-            </div>
-            {lists.length > 0 && (
-              <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-3 py-1 rounded-full border border-border/50">
-                {lists.length} listes
-              </span>
-            )}
-          </div>
+          <h2 className="font-display text-xl font-semibold mb-4 flex items-center gap-2">
+            <FolderPlus className="w-5 h-5 text-amber-500" />
+            Mes listes personnalisées
+          </h2>
 
           {listsLoading ? (
-            <div className="grid gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="pt-12">
-                  <Skeleton className="w-full h-40 rounded-2xl" />
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-40 rounded-xl" />
               ))}
             </div>
           ) : lists.length === 0 ? (
-            <div className="text-center py-24 rounded-3xl border border-dashed border-border/50 bg-card/30 animate-fade-in-up">
-              <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
-                <FolderPlus className="w-10 h-10 text-muted-foreground/50" />
-              </div>
-              <h3 className="font-display font-semibold text-lg mb-2">Aucune liste personnalisée</h3>
-              <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-                Créez des listes thématiques pour organiser vos films préférés (ex: "Soirée Halloween", "Comédies 90s")
+            <div className="text-center py-12 bg-card/50 rounded-2xl border border-dashed border-border">
+              <ListVideo className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="font-semibold mb-2">Aucune liste personnalisée</h3>
+              <p className="text-muted-foreground text-sm mb-4">
+                Créez des listes thématiques pour organiser vos films
               </p>
-              <Button
-                onClick={() => setIsCreateOpen(true)}
-                variant="outline"
-                className="rounded-full gap-2 border-primary/20 hover:border-primary/50 hover:bg-primary/5"
-              >
+              <Button onClick={() => setIsCreateOpen(true)} variant="outline" className="gap-2">
                 <Plus className="w-4 h-4" />
                 Créer ma première liste
               </Button>
             </div>
           ) : (
-            // GRILLE POUR LES NOUVELLES CARTES
-            // Utilisation de gap-y important car les cartes "débordent" vers le haut
-            <div className="grid gap-x-6 gap-y-8 sm:gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {lists.map((list, index) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {lists.map((list) => (
                 <AnimatedListCard
                   key={list.id}
-                  id={list.id}
-                  title={list.title}
-                  description={list.description}
-                  isPublic={list.is_public}
-                  itemCount={list.item_count || 0}
-                  posters={list.posters}
+                  list={list}
+                  onClick={() => navigate(`/lists/${list.id}`)}
                   onEdit={() => openEditDialog(list)}
                   onDelete={() => handleDelete(list.id)}
-                  className={cn("animate-fade-in-up", `stagger-${Math.min(index + 1, 6)}`)}
-                  index={index}
                 />
               ))}
-
-              {/* Carte "Créer" à la fin de la grille */}
-              <button
-                onClick={() => setIsCreateOpen(true)}
-                className="group relative w-full pt-12 pb-4 cursor-pointer flex flex-col h-full min-h-[200px]"
-              >
-                <div className="relative w-full h-full min-h-[220px] bg-muted/10 border-2 border-dashed border-border rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300">
-                  <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
-                    <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary" />
-                  </div>
-                  <span className="font-medium text-muted-foreground group-hover:text-foreground">Nouvelle liste</span>
-                </div>
-              </button>
             </div>
           )}
         </section>
       </div>
 
       {/* Create List Dialog */}
-      <CreateListDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} onCreateList={handleCreateList} />
+      <CreateListDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onSubmit={handleCreateList}
+      />
 
-      {/* Edit List Dialog */}
+      {/* Edit Dialog */}
       <Dialog open={!!editingList} onOpenChange={(open) => !open && setEditingList(null)}>
         <DialogContent className="glass-elevated border-border/50 sm:max-w-lg">
           <DialogHeader>
@@ -462,12 +424,12 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="text-center py-24 rounded-3xl border border-dashed border-border/50 bg-card/30 animate-fade-in-up">
-      <div className="p-5 rounded-full bg-muted/50 w-fit mx-auto mb-6 ring-8 ring-muted/20">
-        <Icon className="w-10 h-10 text-muted-foreground/50" />
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+        <Icon className="w-8 h-8 text-muted-foreground" />
       </div>
-      <h3 className="font-display font-semibold text-xl mb-2">{title}</h3>
-      <p className="text-muted-foreground max-w-sm mx-auto leading-relaxed">{description}</p>
+      <h3 className="font-semibold text-lg mb-2">{title}</h3>
+      <p className="text-muted-foreground">{description}</p>
     </div>
   );
 }

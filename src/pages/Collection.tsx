@@ -1,54 +1,39 @@
-import { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BottomNav } from "@/components/BottomNav";
-import { PhysicalMovieListItem } from "@/components/PhysicalMovieListItem";
-import { PhysicalMoviePoster, PhysicalMoviePosterSkeleton } from "@/components/PhysicalMoviePoster";
-import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
-import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
-import { CollectionFiltersDrawer, ActiveFiltersBar } from "@/components/collection/CollectionFilters";
-import { CollectionStats } from "@/components/collection/CollectionStats";
-import { CollectionTimeline } from "@/components/collection/CollectionTimeline";
-import { CollectionTopCreators } from "@/components/collection/CollectionTopCreators";
-import { ShelfView } from "@/components/collection/ShelfView";
-import { useAuth } from "@/contexts/AuthContext";
-import { getMovieDetails, Movie, MovieDetails } from "@/services/tmdb";
-import {
-  getPhysicalMovies,
-  getPhysicalMovieStats,
-  getGenreStats,
-  getDecadeStats,
-  getDirectorStats,
-  getActorStats,
-  getTimelineStats,
-  getMultiEditions,
-  PhysicalMovie,
-} from "@/services/physicalMovies";
-import { useCollectionFilters } from "@/hooks/useCollectionFilters";
-import {
-  Disc,
-  Plus,
-  List,
-  Image,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Search,
-  X,
-  BarChart3,
-  Calendar,
-  Star,
-  Trophy,
-  Library,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { EmptyState } from "@/components/EmptyState";
+import { BottomNav } from "@/components/BottomNav";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { getPhysicalMovies, PhysicalMovie, deletePhysicalMovie, updatePhysicalMovie } from "@/services/physicalMovies";
+import { getMovieDetails, MovieDetails, Movie } from "@/services/tmdb";
+import { CollectionShowcase } from "@/components/guest/CollectionShowcase";
+import { ShelfView } from "@/components/collection/ShelfView";
+import { GridView } from "@/components/collection/GridView";
+import { ListView } from "@/components/collection/ListView";
+import { CollectionFilters } from "@/components/collection/CollectionFilters";
+import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
+import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
+import { useCollectionFilters } from "@/hooks/useCollectionFilters";
+import { cn } from "@/lib/utils";
+import {
+  Plus,
+  Grid3X3,
+  List,
+  SlidersHorizontal,
+  ArrowUpDown,
+  Library,
+  ChevronDown,
+  Layers,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
-type ViewMode = "list" | "posters" | "shelf";
+type ViewMode = "shelf" | "grid" | "list";
 type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition";
 type SortOrder = "asc" | "desc";
 
@@ -69,7 +54,8 @@ const sortLabels: Record<SortBy, string> = {
 const conditionOrder = { mint: 1, very_good: 2, good: 3, acceptable: 4 };
 
 export default function Collection() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [physicalMovies, setPhysicalMovies] = useState<PhysicalMovie[]>([]);
   const [physicalMovieDetails, setPhysicalMovieDetails] = useState<Record<number, ExtendedMovieDetails>>({});
   const [loading, setLoading] = useState(true);
@@ -128,7 +114,9 @@ export default function Collection() {
   };
 
   useEffect(() => {
-    fetchPhysicalMovies();
+    if (user) {
+      fetchPhysicalMovies();
+    }
   }, [user]);
 
   // Handle edit
@@ -143,438 +131,304 @@ export default function Collection() {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
-  // Calculate stats
-  const physicalStats = useMemo(() => getPhysicalMovieStats(physicalMovies), [physicalMovies]);
-  const genreStats = useMemo(
-    () => getGenreStats(physicalMovies, physicalMovieDetails),
-    [physicalMovies, physicalMovieDetails],
-  );
-  const decadeStats = useMemo(
-    () => getDecadeStats(physicalMovies, physicalMovieDetails),
-    [physicalMovies, physicalMovieDetails],
-  );
-  const directorStats = useMemo(
-    () => getDirectorStats(physicalMovies, physicalMovieDetails),
-    [physicalMovies, physicalMovieDetails],
-  );
-  const actorStats = useMemo(
-    () => getActorStats(physicalMovies, physicalMovieDetails),
-    [physicalMovies, physicalMovieDetails],
-  );
-  const timelineStats = useMemo(() => getTimelineStats(physicalMovies), [physicalMovies]);
-  const multiEditions = useMemo(() => getMultiEditions(physicalMovies), [physicalMovies]);
+  // Sort movies
+  const sortedMovies = [...filteredMovies].sort((a, b) => {
+    const detailsA = physicalMovieDetails[a.tmdb_id];
+    const detailsB = physicalMovieDetails[b.tmdb_id];
+    let compare = 0;
 
-  // Get edition count for a movie
-  const getEditionCount = (tmdbId: number) => {
-    const group = multiEditions.find((g) => g.tmdb_id === tmdbId);
-    return group ? group.editions.length : 1;
-  };
+    switch (sortBy) {
+      case "title":
+        compare = (detailsA?.title || "").localeCompare(detailsB?.title || "");
+        break;
+      case "year":
+        const yearA = detailsA?.release_date ? new Date(detailsA.release_date).getFullYear() : 0;
+        const yearB = detailsB?.release_date ? new Date(detailsB.release_date).getFullYear() : 0;
+        compare = yearA - yearB;
+        break;
+      case "price":
+        compare = (a.price || 0) - (b.price || 0);
+        break;
+      case "added":
+        compare = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        break;
+      case "condition":
+        const condA = conditionOrder[a.condition as keyof typeof conditionOrder] || 99;
+        const condB = conditionOrder[b.condition as keyof typeof conditionOrder] || 99;
+        compare = condA - condB;
+        break;
+      default:
+        compare = 0;
+    }
 
-  // Sorted movies
-  const sortedMovies = useMemo(() => {
-    const movies = [...filteredMovies];
+    return sortOrder === "asc" ? compare : -compare;
+  });
 
-    movies.sort((a, b) => {
-      const detailsA = physicalMovieDetails[a.tmdb_id];
-      const detailsB = physicalMovieDetails[b.tmdb_id];
+  // Loader pendant le chargement de l'auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
+      </div>
+    );
+  }
 
-      let comparison = 0;
+  // Si non connecté, afficher le showcase
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background pb-20 md:pb-8">
+        <Header />
+        <main className="pt-14 md:pt-0">
+          <CollectionShowcase />
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
 
-      switch (sortBy) {
-        case "title":
-          const titleA = detailsA?.title || "";
-          const titleB = detailsB?.title || "";
-          comparison = titleA.localeCompare(titleB, "fr");
-          break;
-
-        case "year":
-          const yearA = detailsA?.release_date ? new Date(detailsA.release_date).getFullYear() : 0;
-          const yearB = detailsB?.release_date ? new Date(detailsB.release_date).getFullYear() : 0;
-          comparison = yearA - yearB;
-          break;
-
-        case "price":
-          const priceA = a.price || 0;
-          const priceB = b.price || 0;
-          comparison = priceA - priceB;
-          break;
-
-        case "genre":
-          const genreA = detailsA?.genres?.[0]?.name || "";
-          const genreB = detailsB?.genres?.[0]?.name || "";
-          comparison = genreA.localeCompare(genreB, "fr");
-          break;
-
-        case "director":
-          const dirA = detailsA?.director || "";
-          const dirB = detailsB?.director || "";
-          comparison = dirA.localeCompare(dirB, "fr");
-          break;
-
-        case "added":
-          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          break;
-
-        case "condition":
-          const condA = conditionOrder[a.condition || "good"];
-          const condB = conditionOrder[b.condition || "good"];
-          comparison = condA - condB;
-          break;
-      }
-
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-
-    return movies;
-  }, [filteredMovies, physicalMovieDetails, sortBy, sortOrder]);
-
-  // Handle director click from top creators
-  const handleDirectorClick = (director: string) => {
-    toggleDirector(director);
-  };
-
+  // Contenu pour les utilisateurs connectés
   return (
-    <div className="min-h-dvh bg-background pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Header />
 
-      <main className="container mx-auto px-4 pt-20 md:pt-6 pb-6 space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-serif font-bold flex items-center gap-2">
-              <Disc className="w-8 h-8 text-primary" />
+            <h1 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-3">
+              <Library className="w-8 h-8 text-amber-500" />
               Ma Collection
             </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              {physicalStats.totalMovies} film{physicalStats.totalMovies > 1 ? "s" : ""} physique
-              {physicalStats.totalMovies > 1 ? "s" : ""}
+            <p className="text-muted-foreground mt-1">
+              {physicalMovies.length} film{physicalMovies.length !== 1 ? "s" : ""} dans votre vidéothèque
             </p>
           </div>
-          <Button onClick={() => setAddDialogOpen(true)} className="gap-2 shadow-glow-sm w-full sm:w-auto">
+
+          <Button onClick={() => setAddDialogOpen(true)} className="gap-2 rounded-full">
             <Plus className="w-4 h-4" />
             Ajouter un film
           </Button>
         </div>
 
-        {/* Dashboard Widgets Row */}
-        {physicalMovies.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            {/* 1. Statistiques */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <button className="flex flex-col items-center justify-center p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group active:scale-95">
-                  <div className="p-2.5 rounded-full bg-primary/10 text-primary mb-2 group-hover:scale-110 transition-transform">
-                    <BarChart3 className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs sm:text-sm font-medium text-center">Statistiques</span>
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-4 border-b bg-background/50 backdrop-blur-sm z-10 shrink-0">
-                  <DialogTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-primary" />
-                    Statistiques de la collection
-                  </DialogTitle>
-                </DialogHeader>
-                <ScrollArea className="h-[70vh] w-full bg-background/50">
-                  <div className="p-6">
-                    <CollectionStats
-                      stats={physicalStats}
-                      genreStats={genreStats}
-                      decadeStats={decadeStats}
-                      timelineStats={timelineStats}
-                    />
-                  </div>
-                </ScrollArea>
-              </DialogContent>
-            </Dialog>
-
-            {/* 2. Favoris (Top Creators) */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <button className="flex flex-col items-center justify-center p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group active:scale-95">
-                  <div className="p-2.5 rounded-full bg-yellow-500/10 text-yellow-500 mb-2 group-hover:scale-110 transition-transform">
-                    <Trophy className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs sm:text-sm font-medium text-center">Favoris</span>
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-4 border-b bg-background/50 backdrop-blur-sm z-10 shrink-0">
-                  <DialogTitle className="flex items-center gap-2">
-                    <Star className="w-5 h-5 text-yellow-500" />
-                    Réalisateurs & Acteurs favoris
-                  </DialogTitle>
-                </DialogHeader>
-                <ScrollArea className="h-[70vh] w-full bg-background/50">
-                  <div className="p-6">
-                    <CollectionTopCreators
-                      directorStats={directorStats}
-                      actorStats={actorStats}
-                      onDirectorClick={(director) => {
-                        handleDirectorClick(director);
-                      }}
-                    />
-                  </div>
-                </ScrollArea>
-              </DialogContent>
-            </Dialog>
-
-            {/* 3. Timeline */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <button className="flex flex-col items-center justify-center p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 shadow-sm group active:scale-95">
-                  <div className="p-2.5 rounded-full bg-blue-500/10 text-blue-500 mb-2 group-hover:scale-110 transition-transform">
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs sm:text-sm font-medium text-center">Timeline</span>
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-4 border-b bg-background/50 backdrop-blur-sm z-10 shrink-0">
-                  <DialogTitle className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-blue-500" />
-                    Historique des achats
-                  </DialogTitle>
-                </DialogHeader>
-                <ScrollArea className="h-[70vh] w-full bg-background/50">
-                  <div className="p-6">
-                    <CollectionTimeline
-                      timelineStats={timelineStats}
-                      movieDetailsMap={physicalMovieDetails}
-                      onMovieClick={handleEdit}
-                    />
-                  </div>
-                </ScrollArea>
-              </DialogContent>
-            </Dialog>
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          {/* View Mode Toggle */}
+          <div className="flex items-center bg-muted rounded-lg p-1">
+            <button
+              onClick={() => setViewMode("shelf")}
+              className={cn(
+                "p-2 rounded-md transition-colors",
+                viewMode === "shelf" ? "bg-background shadow text-amber-500" : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Vue étagère"
+            >
+              <Layers className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("grid")}
+              className={cn(
+                "p-2 rounded-md transition-colors",
+                viewMode === "grid" ? "bg-background shadow text-amber-500" : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Vue grille"
+            >
+              <Grid3X3 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "p-2 rounded-md transition-colors",
+                viewMode === "list" ? "bg-background shadow text-amber-500" : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Vue liste"
+            >
+              <List className="w-4 h-4" />
+            </button>
           </div>
-        )}
 
-        {loading ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="bg-card p-4 rounded-lg border animate-pulse h-24" />
+          {/* Sort Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                {sortLabels[sortBy]}
+                <ChevronDown className="w-3 h-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {Object.entries(sortLabels).map(([key, label]) => (
+                <DropdownMenuItem
+                  key={key}
+                  onClick={() => {
+                    if (sortBy === key) {
+                      toggleSortOrder();
+                    } else {
+                      setSortBy(key as SortBy);
+                    }
+                  }}
+                  className={cn(sortBy === key && "bg-accent")}
+                >
+                  {label}
+                  {sortBy === key && (
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {sortOrder === "asc" ? "↑" : "↓"}
+                    </span>
+                  )}
+                </DropdownMenuItem>
               ))}
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <PhysicalMoviePosterSkeleton key={i} />
-              ))}
-            </div>
-          </div>
-        ) : physicalMovies.length > 0 ? (
-          <>
-            {/* STICKY TOOLBAR (Glassmorphism & Harmonized) */}
-            <div className="sticky top-14 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50 p-4 sm:p-6 mb-6 -mx-4 sm:-mx-6 shadow-sm">
-              <div className="container mx-auto flex flex-col gap-4">
-                {/* Ligne 1: Recherche & Vue */}
-                <div className="flex flex-wrap gap-2 items-center">
-                  {/* Barre de recherche */}
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Rechercher dans la collection..."
-                      value={filters.search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9 pr-9 h-10 bg-muted/30 border-transparent focus:bg-background focus:border-primary/50 transition-all rounded-lg"
-                    />
-                    {filters.search && (
-                      <button
-                        onClick={() => setSearch("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-                  {/* Bouton Filtres */}
-                  <CollectionFiltersDrawer
-                    filters={filters}
-                    filterOptions={filterOptions}
-                    toggleFormat={toggleFormat}
-                    toggleCondition={toggleCondition}
-                    toggleGenre={toggleGenre}
-                    toggleDecade={toggleDecade}
-                    toggleDirector={toggleDirector}
-                    setPriceRange={setPriceRange}
-                    resetFilters={resetFilters}
-                    hasActiveFilters={hasActiveFilters}
-                    activeFilterCount={activeFilterCount}
-                  />
-
-                  {/* Tri */}
-                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
-                    <SelectTrigger className="w-[140px] h-10 bg-muted/30 border-transparent hover:bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <ArrowUpDown className="w-3.5 h-3.5 opacity-70" />
-                        <SelectValue />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(sortLabels).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleSortOrder}
-                    className="h-10 w-10 flex-shrink-0 bg-muted/30 hover:bg-muted/50 rounded-lg"
-                  >
-                    {sortOrder === "asc" ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-                  </Button>
-
-                  <div className="w-px h-6 bg-border mx-1 hidden md:block" />
-
-                  {/* Toggle Vue (Segmented Control style) */}
-                  <div className="flex bg-muted/50 rounded-lg p-1 border border-transparent">
-                    <button
-                      onClick={() => setViewMode("shelf")}
-                      className={cn(
-                        "p-1.5 rounded-md transition-all duration-200 active:scale-95",
-                        viewMode === "shelf"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                      title="Étagère"
-                    >
-                      <Library className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setViewMode("posters")}
-                      className={cn(
-                        "p-1.5 rounded-md transition-all duration-200 active:scale-95",
-                        viewMode === "posters"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                      title="Affiches"
-                    >
-                      <Image className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setViewMode("list")}
-                      className={cn(
-                        "p-1.5 rounded-md transition-all duration-200 active:scale-95",
-                        viewMode === "list"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                      title="Liste"
-                    >
-                      <List className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Ligne 2: Chips de filtres actifs */}
-                <ActiveFiltersBar
+          {/* Filters Sheet (Mobile) */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 md:hidden">
+                <SlidersHorizontal className="w-4 h-4" />
+                Filtres
+                {activeFilterCount > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 text-xs font-bold rounded-full bg-amber-500 text-white">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Filtres</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6">
+                <CollectionFilters
                   filters={filters}
-                  toggleFormat={toggleFormat}
-                  toggleCondition={toggleCondition}
-                  toggleGenre={toggleGenre}
-                  toggleDecade={toggleDecade}
-                  toggleDirector={toggleDirector}
-                  setPriceRange={setPriceRange}
-                  resetFilters={resetFilters}
+                  filterOptions={filterOptions}
+                  onSearchChange={setSearch}
+                  onToggleFormat={toggleFormat}
+                  onToggleCondition={toggleCondition}
+                  onToggleGenre={toggleGenre}
+                  onToggleDecade={toggleDecade}
+                  onToggleDirector={toggleDirector}
+                  onPriceRangeChange={setPriceRange}
+                  onReset={resetFilters}
                   hasActiveFilters={hasActiveFilters}
                 />
               </div>
-            </div>
+            </SheetContent>
+          </Sheet>
 
-            {/* Results count */}
-            <div className="flex justify-between items-end px-1">
-              {hasActiveFilters && (
-                <p className="text-sm text-muted-foreground animate-fade-in">
-                  {sortedMovies.length} résultat{sortedMovies.length > 1 ? "s" : ""}
-                  {sortedMovies.length !== physicalMovies.length && ` sur ${physicalMovies.length}`}
-                </p>
-              )}
-            </div>
+          {/* Reset Filters */}
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={resetFilters} className="text-muted-foreground">
+              Réinitialiser
+            </Button>
+          )}
+        </div>
 
-            {/* Movies display */}
-            {sortedMovies.length === 0 ? (
-              <EmptyState
-                icon={Search}
-                title="Aucun résultat"
-                description="Essayez de modifier vos filtres ou d'ajouter de nouveaux films."
-                actionLabel="Réinitialiser les filtres"
-                onAction={resetFilters}
+        {/* Main Content with Sidebar */}
+        <div className="flex gap-6">
+          {/* Desktop Filters Sidebar */}
+          <aside className="hidden md:block w-64 flex-shrink-0">
+            <div className="sticky top-20">
+              <CollectionFilters
+                filters={filters}
+                filterOptions={filterOptions}
+                onSearchChange={setSearch}
+                onToggleFormat={toggleFormat}
+                onToggleCondition={toggleCondition}
+                onToggleGenre={toggleGenre}
+                onToggleDecade={toggleDecade}
+                onToggleDirector={toggleDirector}
+                onPriceRangeChange={setPriceRange}
+                onReset={resetFilters}
+                hasActiveFilters={hasActiveFilters}
               />
-            ) : (
-              <div className="min-h-[50vh]">
-                {viewMode === "posters" && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3 sm:gap-4 animate-fade-in">
-                    {sortedMovies.map((pm) => (
-                      <PhysicalMoviePoster
-                        key={pm.id}
-                        physicalMovie={pm}
-                        movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
-                        onDeleted={fetchPhysicalMovies}
-                        onEdit={handleEdit}
-                        editionCount={getEditionCount(pm.tmdb_id)}
-                      />
-                    ))}
-                  </div>
-                )}
+            </div>
+          </aside>
 
-                {viewMode === "list" && (
-                  <div className="space-y-2 animate-fade-in">
-                    {sortedMovies.map((pm) => (
-                      <PhysicalMovieListItem
-                        key={pm.id}
-                        physicalMovie={pm}
-                        movieDetails={physicalMovieDetails[pm.tmdb_id] || null}
-                        director={physicalMovieDetails[pm.tmdb_id]?.director}
-                        onDeleted={fetchPhysicalMovies}
-                        onEdit={handleEdit}
-                        editionCount={getEditionCount(pm.tmdb_id)}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {viewMode === "shelf" && (
-                  <div className="animate-fade-in space-y-4">
-                    <ShelfView movies={sortedMovies} movieDetailsMap={physicalMovieDetails} onMovieClick={handleEdit} />
-                    <p className="text-center text-xs text-muted-foreground italic">
-                      Survolez les tranches pour voir les détails.
-                    </p>
-                  </div>
+          {/* Collection Content */}
+          <div className="flex-1 min-w-0">
+            {loading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="aspect-[2/3] rounded-xl bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : sortedMovies.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Library className="w-16 h-16 text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {hasActiveFilters ? "Aucun résultat" : "Votre collection est vide"}
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  {hasActiveFilters
+                    ? "Essayez de modifier vos filtres"
+                    : "Commencez à ajouter des films à votre collection"}
+                </p>
+                {!hasActiveFilters && (
+                  <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Ajouter un film
+                  </Button>
                 )}
               </div>
+            ) : (
+              <>
+                {viewMode === "shelf" && (
+                  <ShelfView
+                    movies={sortedMovies}
+                    movieDetailsMap={physicalMovieDetails}
+                    onMovieClick={(movie) => navigate(`/movie/${movie.tmdb_id}`)}
+                    onEdit={handleEdit}
+                  />
+                )}
+                {viewMode === "grid" && (
+                  <GridView
+                    movies={sortedMovies}
+                    movieDetailsMap={physicalMovieDetails}
+                    onMovieClick={(movie) => navigate(`/movie/${movie.tmdb_id}`)}
+                    onEdit={handleEdit}
+                  />
+                )}
+                {viewMode === "list" && (
+                  <ListView
+                    movies={sortedMovies}
+                    movieDetailsMap={physicalMovieDetails}
+                    onMovieClick={(movie) => navigate(`/movie/${movie.tmdb_id}`)}
+                    onEdit={handleEdit}
+                  />
+                )}
+              </>
             )}
-          </>
-        ) : (
-          <EmptyState
-            icon={Disc}
-            title="Votre collection est vide"
-            description="Commencez à ajouter vos DVD et Blu-ray pour construire votre vidéothèque numérique ultime."
-            actionLabel="Ajouter mon premier film"
-            onAction={() => setAddDialogOpen(true)}
-            className="mt-12"
-          />
-        )}
-      </main>
+          </div>
+        </div>
+      </div>
 
-      {/* Add Dialog */}
-      <AddPhysicalMovieDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onMovieAdded={fetchPhysicalMovies} />
-
-      {/* Edit Dialog */}
-      <EditPhysicalMovieDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        physicalMovie={editingMovie}
-        movieDetails={editingMovieDetails}
-        onMovieUpdated={fetchPhysicalMovies}
+      {/* Dialogs */}
+      <AddPhysicalMovieDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onSuccess={fetchPhysicalMovies}
       />
+
+      {editingMovie && (
+        <EditPhysicalMovieDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          physicalMovie={editingMovie}
+          movieDetails={editingMovieDetails}
+          onSuccess={() => {
+            setEditDialogOpen(false);
+            setEditingMovie(null);
+            fetchPhysicalMovies();
+          }}
+          onDelete={async () => {
+            if (editingMovie) {
+              await deletePhysicalMovie(editingMovie.id);
+              setEditDialogOpen(false);
+              setEditingMovie(null);
+              fetchPhysicalMovies();
+            }
+          }}
+        />
+      )}
 
       <BottomNav />
     </div>
