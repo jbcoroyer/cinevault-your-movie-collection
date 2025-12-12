@@ -15,10 +15,11 @@ import { Edit2, Check, UserPlus, UserMinus, Eye, Heart, ListVideo, Trophy, Disc,
 import { Top5Section } from "@/components/Top5Section";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { FollowListDialog } from "@/components/FollowListDialog";
-import { MemberCard } from "@/components/MemberCard"; // Import du nouveau composant
+import { MemberCard, DestinyMatrix, useDestinyStats } from "@/components/gamification";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 import { getPhysicalMovies } from "@/services/physicalMovies";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { LORE_TERMINOLOGY } from "@/data/videoClubData";
 
 interface ProfileData {
   id: string;
@@ -26,7 +27,9 @@ interface ProfileData {
   bio: string | null;
   avatar_url: string | null;
   created_at: string;
-  streaming_services?: string[]; // Ajout pour la carte
+  total_xp?: number;
+  current_title?: string;
+  streaming_services?: string[];
 }
 
 export default function Profile() {
@@ -40,14 +43,16 @@ export default function Profile() {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [physicalCount, setPhysicalCount] = useState(0);
+  const [physicalMovies, setPhysicalMovies] = useState<any[]>([]);
   const [lastPhysicalPoster, setLastPhysicalPoster] = useState<string | null>(null);
   const [lastWatchedPoster, setLastWatchedPoster] = useState<string | null>(null);
   const [lastFavoritePoster, setLastFavoritePoster] = useState<string | null>(null);
+  const [badgeCount, setBadgeCount] = useState(0);
 
   const { userMovies } = useUserMovies();
   const { topMovies, setTopMovie } = useUserTopMovies(targetUserId);
   const { isFollowing, stats, loading: followLoading, toggleFollow } = useFollows(targetUserId);
-  const { currentLevel } = useBadgeNotification();
+  const { currentLevel, currentXp } = useBadgeNotification();
 
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState("");
@@ -57,6 +62,9 @@ export default function Profile() {
 
   const [followDialogOpen, setFollowDialogOpen] = useState(false);
   const [followDialogType, setFollowDialogType] = useState<"followers" | "following">("followers");
+
+  // Destiny stats
+  const destinyStats = useDestinyStats(physicalMovies, []);
 
   // Sync state
   useEffect(() => {
@@ -81,15 +89,27 @@ export default function Profile() {
       setLoadingProfile(true);
       try {
         if (!isOwnProfile) {
-          const { data, error } = await supabase.from("profiles").select("*").eq("id", targetUserId).single();
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", targetUserId)
+            .single();
           if (error) throw error;
           setProfileData(data);
         }
 
         const physical = await getPhysicalMovies(targetUserId);
+        setPhysicalMovies(physical);
         setPhysicalCount(physical.length);
 
-        // Posters fetching logic (simplifié pour la lisibilité)
+        // Badge count
+        const { count } = await supabase
+          .from("user_badges")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", targetUserId);
+        setBadgeCount(count || 0);
+
+        // Posters fetching logic
         const fetchPoster = async (tmdbId: number) => {
           try {
             const res = await fetch(
@@ -132,6 +152,7 @@ export default function Profile() {
 
   const currentProfile = isOwnProfile ? myProfile : profileData;
   const currentAvatarUrl = isOwnProfile ? avatarUrl : profileData?.avatar_url;
+  const totalXp = isOwnProfile ? currentXp : (profileData?.total_xp || 0);
 
   const handleSave = async () => {
     setSaving(true);
@@ -148,20 +169,15 @@ export default function Profile() {
     refreshProfile();
   };
 
-  const getDisplayName = () => currentProfile?.username || (isOwnProfile ? user?.email?.split("@")[0] : "Utilisateur");
+  const getDisplayName = () => currentProfile?.username || (isOwnProfile ? user?.email?.split("@")[0] : LORE_TERMINOLOGY.user);
 
-  // Stats & Level Calculation
-  const watchedCount = isOwnProfile ? userMovies.filter((m) => m.status === "watched").length : 0; // Note: pour profil public, faudrait fetch count
+  // Stats
+  const watchedCount = isOwnProfile ? userMovies.filter((m) => m.status === "watched").length : 0;
   const favoritesCount = isOwnProfile ? userMovies.filter((m) => m.is_favorite).length : 0;
-
-  // Calcul du niveau (formule arbitraire pour la gamification)
-  // Niveau 1 de base. +1 niveau tous les 5 films vus ou physiques ajoutés.
-  const totalActivity = watchedCount + physicalCount;
-  const userLevel = Math.floor(totalActivity / 5) + 1;
 
   if (authLoading || loadingProfile)
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
@@ -173,8 +189,8 @@ export default function Profile() {
       <main className="container mx-auto px-4 pt-20 max-w-6xl space-y-12">
         {/* --- SECTION HÉROS --- */}
         <section className="relative">
-          {/* Background décoratif */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-screen h-[400px] bg-gradient-to-b from-primary/5 via-background to-background -z-10 pointer-events-none" />
+          {/* Background décoratif néon */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-screen h-[400px] bg-gradient-to-b from-videoclub-cyan/5 via-background to-background -z-10 pointer-events-none" />
 
           <div className="flex flex-col md:flex-row gap-8 items-start md:items-center justify-between">
             {/* Colonne Gauche: Avatar & Infos */}
@@ -189,15 +205,15 @@ export default function Profile() {
                   username={currentProfile?.username || ""}
                 />
                 {isOwnProfile && (
-                  <div className="absolute -bottom-2 -right-2 bg-background rounded-full p-1.5 shadow-md">
-                    <Settings className="w-5 h-5 text-muted-foreground" />
+                  <div className="absolute -bottom-2 -right-2 bg-background rounded-full p-1.5 shadow-md border border-videoclub-cyan/30">
+                    <Settings className="w-5 h-5 text-videoclub-cyan" />
                   </div>
                 )}
               </div>
 
               <div className="space-y-3 max-w-md">
                 {isOwnProfile && editing ? (
-                  <div className="space-y-3 bg-muted/40 p-4 rounded-2xl border border-white/10 animate-in fade-in slide-in-from-left-4">
+                  <div className="space-y-3 bg-videoclub-surface p-4 rounded-2xl border border-videoclub-cyan/20 animate-in fade-in slide-in-from-left-4">
                     <Input
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
@@ -246,7 +262,7 @@ export default function Profile() {
                         }}
                         className="flex items-baseline gap-1.5 group"
                       >
-                        <span className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+                        <span className="text-xl font-bold text-foreground group-hover:text-videoclub-cyan transition-colors">
                           {stats.followers}
                         </span>
                         <span className="text-sm text-muted-foreground">Abonnés</span>
@@ -258,7 +274,7 @@ export default function Profile() {
                         }}
                         className="flex items-baseline gap-1.5 group"
                       >
-                        <span className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+                        <span className="text-xl font-bold text-foreground group-hover:text-videoclub-cyan transition-colors">
                           {stats.following}
                         </span>
                         <span className="text-sm text-muted-foreground">Abonnements</span>
@@ -288,39 +304,50 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Colonne Droite: CARTE VIP */}
+            {/* Colonne Droite: CARTE DE MEMBRE */}
             <div className="w-full md:w-auto flex justify-center md:justify-end animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150">
-              <div className="w-full max-w-sm md:w-[340px] perspective-1000">
-                <div className="transform md:rotate-y-[-10deg] md:rotate-x-[5deg] hover:rotate-0 transition-all duration-500 ease-out hover:scale-105 hover:z-50 cursor-pointer">
-                  <MemberCard
-                    username={getDisplayName()}
-                    joinDate={currentProfile?.created_at}
-                    level={userLevel}
-                    streamingServices={currentProfile?.streaming_services}
-                    className="shadow-2xl"
-                  />
-                </div>
+              <div className="w-full max-w-sm md:w-[360px]">
+                <MemberCard
+                  username={getDisplayName()}
+                  avatarUrl={currentAvatarUrl || undefined}
+                  totalXp={totalXp}
+                  movieCount={physicalCount}
+                  joinDate={currentProfile?.created_at}
+                  className="shadow-2xl"
+                />
               </div>
             </div>
           </div>
         </section>
 
+        {/* --- DESTINY MATRIX --- */}
+        {isOwnProfile && physicalCount > 0 && (
+          <section className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
+            <h2 className="text-xl font-display font-bold mb-6 text-center">
+              <span className="text-videoclub-cyan">Votre</span> Destinée
+            </h2>
+            <div className="max-w-md mx-auto">
+              <DestinyMatrix stats={destinyStats} />
+            </div>
+          </section>
+        )}
+
         {/* --- STATS GRID --- */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-          {/* Carte Collection */}
+          {/* Carte Inventaire (Collection) */}
           <div
             onClick={() => navigate(isOwnProfile ? "/collection" : "#")}
             className="col-span-2 row-span-2 group cursor-pointer"
           >
-            <GlassCard className="h-full p-0 overflow-hidden relative border-indigo-500/20 hover:border-indigo-500/50 transition-colors">
-              <div className="absolute inset-0 bg-indigo-500/5 group-hover:bg-indigo-500/10 transition-colors" />
+            <GlassCard className="h-full p-0 overflow-hidden relative border-videoclub-cyan/20 hover:border-videoclub-cyan/50 transition-colors">
+              <div className="absolute inset-0 bg-videoclub-cyan/5 group-hover:bg-videoclub-cyan/10 transition-colors" />
               <div className="p-6 h-full flex flex-col relative z-10">
-                <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4">
+                <div className="w-12 h-12 rounded-xl bg-videoclub-cyan/20 text-videoclub-cyan flex items-center justify-center mb-4">
                   <Disc className="w-6 h-6" />
                 </div>
                 <div className="mt-auto">
                   <span className="text-5xl font-bold font-display text-foreground">{physicalCount}</span>
-                  <p className="text-indigo-200/80 font-medium mt-1">Collection Physique</p>
+                  <p className="text-videoclub-cyan/80 font-medium mt-1">{LORE_TERMINOLOGY.collection}</p>
                 </div>
               </div>
               {lastPhysicalPoster && (
@@ -365,18 +392,18 @@ export default function Profile() {
             </GlassCard>
           </div>
 
-          {/* Carte Badges */}
+          {/* Carte Écussons (Badges) */}
           <div onClick={() => navigate("/badges")} className="group cursor-pointer">
-            <GlassCard className="h-full relative overflow-hidden border-amber-500/20 hover:border-amber-500/50">
-              <div className="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition-colors" />
+            <GlassCard className="h-full relative overflow-hidden border-videoclub-magenta/20 hover:border-videoclub-magenta/50">
+              <div className="absolute inset-0 bg-videoclub-magenta/5 group-hover:bg-videoclub-magenta/10 transition-colors" />
               <div className="relative z-10">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="p-2 bg-amber-500/20 rounded-lg text-amber-400">
+                  <div className="p-2 bg-videoclub-magenta/20 rounded-lg text-videoclub-magenta">
                     <Trophy className="w-5 h-5" />
                   </div>
-                  <span className="text-3xl font-bold font-display">0</span>
+                  <span className="text-3xl font-bold font-display">{badgeCount}</span>
                 </div>
-                <p className="text-sm text-muted-foreground font-medium">Badges</p>
+                <p className="text-sm text-muted-foreground font-medium">{LORE_TERMINOLOGY.badges}</p>
               </div>
             </GlassCard>
           </div>
@@ -390,7 +417,6 @@ export default function Profile() {
                   <div className="p-2 bg-sky-500/20 rounded-lg text-sky-400">
                     <ListVideo className="w-5 h-5" />
                   </div>
-                  <span className="text-3xl font-bold font-display">0</span>
                 </div>
                 <p className="text-sm text-muted-foreground font-medium">Listes</p>
               </div>
@@ -398,23 +424,22 @@ export default function Profile() {
           </div>
         </section>
 
-        {/* --- TOP 5 --- */}
-        <section className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
-          <Top5Section topMovies={topMovies} onSetMovie={setTopMovie} editable={isOwnProfile} />
-        </section>
+        {/* --- TOP 5 SECTION --- */}
+        <Top5Section
+          topMovies={topMovies}
+          onSetMovie={setTopMovie}
+        />
       </main>
 
       <BottomNav />
 
-      {targetUserId && (
-        <FollowListDialog
-          open={followDialogOpen}
-          onOpenChange={setFollowDialogOpen}
-          userId={targetUserId}
-          type={followDialogType}
-          title={followDialogType === "followers" ? "Abonnés" : "Abonnements"}
-        />
-      )}
+      <FollowListDialog
+        open={followDialogOpen}
+        onOpenChange={setFollowDialogOpen}
+        type={followDialogType}
+        userId={targetUserId!}
+        title={followDialogType === "followers" ? "Abonnés" : "Abonnements"}
+      />
     </div>
   );
 }
