@@ -6,27 +6,38 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "./ui/button";
+import { useGamificationNotifications } from "@/hooks/useGamificationNotifications";
 
 /**
  * Header - Navigation desktop épurée
  * - Ligne dorée sous l'onglet actif
  * - Collection mis en avant avec fond ambre
  * - Bouton "Se connecter" quand non authentifié
+ * - Notification badge pour badges/rewards
  */
-
-const navItems = [
-  { to: "/", icon: Home, label: "Accueil", exact: true },
-  { to: "/search", icon: Search, label: "Recherche" },
-  { to: "/collection", icon: Library, label: "Collection", isMain: true },
-  { to: "/lists", icon: ListVideo, label: "Listes" },
-  { to: "/badges", icon: Trophy, label: "Badges" },
-];
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading } = useAuth();
   const [collectionCount, setCollectionCount] = useState(0);
+  const { totalNotifications, markBadgesAsSeen, markRewardsAsSeen } = useGamificationNotifications();
+
+  // Mark as seen when visiting badges page
+  useEffect(() => {
+    if (location.pathname === "/badges") {
+      markBadgesAsSeen();
+      markRewardsAsSeen();
+    }
+  }, [location.pathname, markBadgesAsSeen, markRewardsAsSeen]);
+
+  const navItems = [
+    { to: "/", icon: Home, label: "Accueil", exact: true },
+    { to: "/search", icon: Search, label: "Recherche" },
+    { to: "/collection", icon: Library, label: "Collection", isMain: true },
+    { to: "/lists", icon: ListVideo, label: "Listes" },
+    { to: "/badges", icon: Trophy, label: "Badges", hasBadge: totalNotifications > 0 },
+  ];
 
   useEffect(() => {
     if (!user) return setCollectionCount(0);
@@ -69,7 +80,7 @@ export const Header: React.FC = () => {
 
         {/* Nav */}
         <nav className="flex items-center">
-          {navItems.map(({ to, icon: Icon, label, exact, isMain }) => {
+          {navItems.map(({ to, icon: Icon, label, exact, isMain, hasBadge }) => {
             const active = isActive(to, exact);
 
             if (isMain) {
@@ -105,7 +116,13 @@ export const Header: React.FC = () => {
                   active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <Icon className="w-4 h-4" />
+                <div className="relative">
+                  <Icon className="w-4 h-4" />
+                  {/* Notification badge */}
+                  {hasBadge && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
+                  )}
+                </div>
                 <span>{label}</span>
                 {active && <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-amber-500 rounded-full" />}
               </NavLink>

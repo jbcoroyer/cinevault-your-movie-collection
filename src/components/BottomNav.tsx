@@ -1,6 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import { Home, Search, Library, Trophy, ListVideo } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGamificationNotifications } from "@/hooks/useGamificationNotifications";
+import { useEffect } from "react";
 
 /**
  * BottomNav - Navigation mobile
@@ -11,32 +13,46 @@ import { cn } from "@/lib/utils";
 
 export const BottomNav = () => {
   const { pathname } = useLocation();
+  const { totalNotifications, markBadgesAsSeen, markChallengesAsSeen, markRewardsAsSeen } = useGamificationNotifications();
+
+  // Mark as seen when visiting badges page
+  useEffect(() => {
+    if (pathname === "/badges") {
+      markBadgesAsSeen();
+      markRewardsAsSeen();
+    }
+  }, [pathname, markBadgesAsSeen, markRewardsAsSeen]);
 
   const navItems = [
     {
       icon: Home,
       label: "Accueil",
       path: "/",
+      showBadge: false,
     },
     {
       icon: Search,
       label: "Recherche",
       path: "/search",
+      showBadge: false,
     },
     {
       icon: Library,
       label: "Collection",
       path: "/collection",
+      showBadge: false,
     },
     {
       icon: ListVideo,
       label: "Listes",
       path: "/lists",
+      showBadge: false,
     },
     {
       icon: Trophy,
       label: "Badges",
       path: "/badges",
+      showBadge: totalNotifications > 0,
     },
   ];
 
@@ -53,15 +69,21 @@ export const BottomNav = () => {
               key={item.label}
               to={item.path}
               className={cn(
-                "flex flex-col items-center justify-center w-full h-full gap-1",
+                "relative flex flex-col items-center justify-center w-full h-full gap-1",
                 "transition-all duration-200 active:scale-95",
                 isActive ? "text-amber-500" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <item.icon
-                className={cn("w-5 h-5 transition-all duration-300", isActive && "fill-current scale-110")}
-                strokeWidth={isActive ? 2.5 : 2}
-              />
+              <div className="relative">
+                <item.icon
+                  className={cn("w-5 h-5 transition-all duration-300", isActive && "fill-current scale-110")}
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
+                {/* Notification badge */}
+                {item.showBadge && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+                )}
+              </div>
               <span
                 className={cn(
                   "text-[10px] font-medium transition-all duration-200",

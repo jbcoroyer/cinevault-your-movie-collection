@@ -19,6 +19,11 @@ export type Profile = {
   avatar_url: string | null;
   created_at: string;
   streaming_services?: string[] | null;
+  total_xp?: number | null;
+  popcorn_points?: number | null;
+  current_title?: string | null;
+  equipped_frame?: string | null;
+  equipped_theme?: string | null;
 };
 
 export type UserMovie = {

@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, Profile } from '@/lib/supabase';
-import { processDailyLogin, DailyLoginResult } from '@/services/gamificationService';
-import { DailyBonusDialog } from '@/components/gamification/DailyBonusDialog';
+import { processDailyLogin } from '@/services/gamificationService';
 
 interface AuthContextType {
   user: User | null;
@@ -45,10 +44,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Daily bonus dialog state
-  const [showDailyBonus, setShowDailyBonus] = useState(false);
-  const [dailyLoginResult, setDailyLoginResult] = useState<DailyLoginResult | null>(null);
   const [hasProcessedLogin, setHasProcessedLogin] = useState(false);
 
   const fetchProfile = async (userId: string) => {
@@ -66,20 +61,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Process daily login when user is authenticated
+  // Process daily login silently (no popup)
   const handleDailyLogin = async (userId: string) => {
     if (hasProcessedLogin) return;
     
     try {
       setHasProcessedLogin(true);
-      const result = await processDailyLogin(userId);
-      
-      if (result && !result.alreadyLoggedIn) {
-        setDailyLoginResult(result);
-        setShowDailyBonus(true);
-        // Refresh profile to get updated XP
-        await fetchProfile(userId);
-      }
+      await processDailyLogin(userId);
+      // Refresh profile to get updated XP
+      await fetchProfile(userId);
     } catch (error) {
       console.error('Error processing daily login:', error);
     }
@@ -198,19 +188,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }}
     >
       {children}
-      
-      {/* Daily Bonus Dialog */}
-      {dailyLoginResult && (
-        <DailyBonusDialog
-          open={showDailyBonus}
-          onOpenChange={setShowDailyBonus}
-          streak={dailyLoginResult.streak?.current_streak || 1}
-          xpEarned={dailyLoginResult.bonus?.xpEarned || 25}
-          popcornEarned={dailyLoginResult.bonus?.popcornEarned || 5}
-          streakBroken={dailyLoginResult.streakBroken}
-          newBadges={dailyLoginResult.newBadges}
-        />
-      )}
     </AuthContext.Provider>
   );
 };
