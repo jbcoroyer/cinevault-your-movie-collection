@@ -5,14 +5,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { fetchAllBadges, Badge } from "@/services/badgeService";
 import { getPhysicalMovies } from "@/services/physicalMovies";
 import { BadgesShowcase } from "@/components/guest/BadgesShowcase";
-import { PatchBadge } from "@/components/gamification/PatchBadge";
-import { type Rarity } from "@/data/videoClubData";
 import { MemberCard3DModal } from "@/components/gamification/MemberCard3DModal";
+import { WeeklyChallenges } from "@/components/gamification/WeeklyChallenges";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 import { cn } from "@/lib/utils";
+import { type Rarity, RARITY_CONFIG } from "@/data/videoClubData";
 import {
   Trophy,
   Film,
@@ -33,6 +33,8 @@ import {
   Tv,
   Clock,
   Gift,
+  Lock,
+  ChevronRight,
 } from "lucide-react";
 
 // Map des icônes pour les badges
@@ -69,6 +71,180 @@ const BADGE_CATEGORIES = [
   { id: "social", label: "Social", icon: Users },
   { id: "secret", label: "Secrets", icon: Sparkles },
 ];
+
+// Composant Badge Mobile
+function MobileBadgeCard({ badge }: { badge: Badge }) {
+  const IconComponent = ICON_MAP[badge.icon_name] || Film;
+  const rarity = (badge.rarity || badge.base_rarity || "common") as Rarity;
+  const rarityConfig = RARITY_CONFIG[rarity] || RARITY_CONFIG.common;
+  const isLocked = !badge.isUnlocked;
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 p-3 rounded-xl border transition-all",
+        isLocked
+          ? "bg-muted/20 border-muted/30"
+          : "bg-card/50 border-border/50",
+      )}
+    >
+      {/* Icon */}
+      <div
+        className={cn(
+          "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+          "border-2",
+          isLocked ? "bg-muted/20 border-muted/30" : "bg-black/20",
+        )}
+        style={{
+          borderColor: isLocked ? undefined : rarityConfig.color,
+          boxShadow: isLocked ? undefined : `0 0 12px ${rarityConfig.glowColor}`,
+        }}
+      >
+        {isLocked ? (
+          <Lock className="w-5 h-5 text-muted-foreground/50" />
+        ) : (
+          <IconComponent className="w-5 h-5" style={{ color: rarityConfig.color }} />
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h4
+            className={cn(
+              "font-semibold text-sm truncate",
+              isLocked && "text-muted-foreground/60",
+            )}
+          >
+            {badge.title}
+          </h4>
+          {!isLocked && (
+            <span
+              className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase shrink-0"
+              style={{
+                backgroundColor: `${rarityConfig.color}20`,
+                color: rarityConfig.color,
+              }}
+            >
+              {rarityConfig.label}
+            </span>
+          )}
+        </div>
+        <p
+          className={cn(
+            "text-xs mt-0.5 line-clamp-2",
+            isLocked ? "text-muted-foreground/40" : "text-muted-foreground",
+          )}
+        >
+          {badge.description}
+        </p>
+
+        {/* Progress for locked badges */}
+        {isLocked && badge.progress !== undefined && badge.progress > 0 && (
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary/60 rounded-full transition-all"
+                style={{ width: `${badge.progress}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-muted-foreground">
+              {Math.round(badge.progress)}%
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Arrow or Check */}
+      <div className="shrink-0">
+        {isLocked ? (
+          <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
+        ) : (
+          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+            <Award className="w-3.5 h-3.5 text-emerald-500" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Composant Badge Desktop (compact grid)
+function DesktopBadgeCard({ badge }: { badge: Badge }) {
+  const IconComponent = ICON_MAP[badge.icon_name] || Film;
+  const rarity = (badge.rarity || badge.base_rarity || "common") as Rarity;
+  const rarityConfig = RARITY_CONFIG[rarity] || RARITY_CONFIG.common;
+  const isLocked = !badge.isUnlocked;
+
+  return (
+    <div
+      className={cn(
+        "relative aspect-square rounded-xl border-2 p-3 flex flex-col items-center justify-center text-center transition-all group",
+        isLocked
+          ? "bg-muted/10 border-muted/20 grayscale"
+          : "bg-gradient-to-br hover:scale-105 hover:-rotate-1",
+        !isLocked && rarityConfig.bgGradient,
+      )}
+      style={{
+        borderColor: isLocked ? undefined : rarityConfig.color,
+      }}
+    >
+      {/* Glow effect on hover */}
+      {!isLocked && (
+        <div
+          className="absolute -inset-1 rounded-2xl blur-md opacity-0 group-hover:opacity-40 transition-opacity -z-10"
+          style={{ backgroundColor: rarityConfig.glowColor }}
+        />
+      )}
+
+      {/* Icon */}
+      <div
+        className={cn(
+          "w-10 h-10 rounded-full flex items-center justify-center mb-2",
+          isLocked ? "bg-muted/20" : "bg-black/30",
+        )}
+      >
+        {isLocked ? (
+          <Lock className="w-5 h-5 text-muted-foreground/50" />
+        ) : (
+          <IconComponent className="w-5 h-5" style={{ color: rarityConfig.color }} />
+        )}
+      </div>
+
+      {/* Title */}
+      <h4
+        className={cn(
+          "font-display font-bold uppercase tracking-wide text-[10px] leading-tight",
+          isLocked ? "text-muted-foreground/50" : "text-foreground",
+        )}
+      >
+        {badge.title}
+      </h4>
+
+      {/* Rarity or Progress */}
+      <div className="mt-1.5">
+        {isLocked ? (
+          <div className="w-10 h-1 bg-muted/30 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary/50 rounded-full"
+              style={{ width: `${badge.progress || 0}%` }}
+            />
+          </div>
+        ) : (
+          <span
+            className="px-1.5 py-0.5 rounded text-[7px] font-mono font-bold uppercase border bg-black/20"
+            style={{
+              borderColor: `${rarityConfig.color}50`,
+              color: rarityConfig.color,
+            }}
+          >
+            {rarityConfig.label}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Badges() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -130,73 +306,68 @@ export default function Badges() {
 
   // Contenu pour les utilisateurs connectés
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
       <Header />
 
-      <main className="container mx-auto px-4 py-6 max-w-6xl">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
-          {/* Left: Title & Progress */}
-          <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-3 mb-4">
-              <Trophy className="w-8 h-8 text-amber-500" />
+      <main className="container mx-auto px-4 py-4 md:py-6 max-w-6xl">
+        {/* Header Section - Stack on mobile */}
+        <div className="space-y-4 mb-6">
+          {/* Title */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl md:text-3xl font-display font-bold flex items-center gap-2">
+              <Trophy className="w-6 h-6 md:w-8 md:h-8 text-amber-500" />
               Mes Badges
             </h1>
-
-            {/* XP Progress Bar */}
-            <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                    <Zap className="w-5 h-5 text-amber-500" />
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Niveau</div>
-                    <div className="font-bold text-lg">{currentLevel}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-muted-foreground">XP Total</div>
-                  <div className="font-bold text-lg text-amber-500">{currentXp}</div>
-                </div>
-              </div>
-              <Progress value={progressPercent} className="h-3" />
-              <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>Niveau {currentLevel}</span>
-                <span>{xpToNextLevel} XP pour le niveau suivant</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Stats & Card Preview */}
-          <div className="flex flex-col gap-4">
-            {/* Badge Stats */}
-            <div className="flex gap-4">
-              <div className="text-center px-6 py-4 rounded-xl bg-card/50 border border-border/50">
-                <div className="text-3xl font-bold text-emerald-500">{totalUnlocked}</div>
-                <div className="text-xs text-muted-foreground">Débloqués</div>
-              </div>
-              <div className="text-center px-6 py-4 rounded-xl bg-card/50 border border-border/50">
-                <div className="text-3xl font-bold text-muted-foreground">{totalBadges - totalUnlocked}</div>
-                <div className="text-xs text-muted-foreground">À débloquer</div>
-              </div>
-            </div>
-
-            {/* View Member Card Button */}
             <Button
               onClick={() => setIsCard3DOpen(true)}
               variant="outline"
-              className="gap-2"
+              size="sm"
+              className="gap-1.5"
             >
               <Crown className="w-4 h-4 text-amber-500" />
-              Voir ma carte membre
+              <span className="hidden sm:inline">Ma carte</span>
             </Button>
           </div>
+
+          {/* Stats Row - Compact */}
+          <div className="flex gap-3">
+            <div className="flex-1 text-center py-3 rounded-xl bg-card/50 border border-border/50">
+              <div className="text-2xl font-bold text-emerald-500">{totalUnlocked}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Débloqués</div>
+            </div>
+            <div className="flex-1 text-center py-3 rounded-xl bg-card/50 border border-border/50">
+              <div className="text-2xl font-bold text-muted-foreground">{totalBadges - totalUnlocked}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">À débloquer</div>
+            </div>
+            <div className="flex-1 text-center py-3 rounded-xl bg-card/50 border border-border/50">
+              <div className="text-2xl font-bold text-amber-500">{currentLevel}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Niveau</div>
+            </div>
+          </div>
+
+          {/* XP Progress Bar */}
+          <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-semibold">{currentXp} XP</span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {xpToNextLevel} XP → Niv. {currentLevel + 1}
+              </span>
+            </div>
+            <Progress value={progressPercent} className="h-2" />
+          </div>
+        </div>
+
+        {/* Weekly Challenges Section */}
+        <div className="mb-6">
+          <WeeklyChallenges />
         </div>
 
         {/* Badges by Category */}
         <Tabs defaultValue="collection" className="w-full">
-          <TabsList className="w-full grid grid-cols-4 mb-6">
+          <TabsList className="w-full grid grid-cols-4 mb-4 h-auto p-1">
             {BADGE_CATEGORIES.map((cat) => {
               const categoryBadges = badges.filter((b) => b.category === cat.id);
               const unlockedCount = categoryBadges.filter((b) => b.isUnlocked).length;
@@ -205,11 +376,11 @@ export default function Badges() {
                 <TabsTrigger
                   key={cat.id}
                   value={cat.id}
-                  className="flex items-center gap-2 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500"
+                  className="flex flex-col items-center gap-0.5 py-2 px-1 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500"
                 >
                   <cat.icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{cat.label}</span>
-                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
+                  <span className="text-[10px] font-medium hidden xs:block">{cat.label}</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted/50">
                     {unlockedCount}/{categoryBadges.length}
                   </span>
                 </TabsTrigger>
@@ -224,32 +395,32 @@ export default function Badges() {
               className="mt-0 focus-visible:outline-none"
             >
               {loading ? (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="aspect-square rounded-xl bg-muted animate-pulse" />
+                <div className="space-y-2 md:grid md:grid-cols-4 lg:grid-cols-6 md:gap-3 md:space-y-0">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="h-16 md:aspect-square rounded-xl bg-muted animate-pulse" />
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
-                  {badges
-                    .filter((b) => b.category === cat.id)
-                    .map((badge) => {
-                      const IconComponent = ICON_MAP[badge.icon_name] || Film;
+                <>
+                  {/* Mobile: List View */}
+                  <div className="space-y-2 md:hidden">
+                    {badges
+                      .filter((b) => b.category === cat.id)
+                      .sort((a, b) => (b.isUnlocked ? 1 : 0) - (a.isUnlocked ? 1 : 0))
+                      .map((badge) => (
+                        <MobileBadgeCard key={badge.id} badge={badge} />
+                      ))}
+                  </div>
 
-                      return (
-                        <PatchBadge
-                          key={badge.id}
-                          title={badge.title}
-                          description={badge.description}
-                          icon={IconComponent}
-                          rarity={(badge.rarity || badge.base_rarity || "common") as Rarity}
-                          isLocked={!badge.isUnlocked}
-                          progress={badge.progress}
-                          compact
-                        />
-                      );
-                    })}
-                </div>
+                  {/* Desktop: Grid View */}
+                  <div className="hidden md:grid md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                    {badges
+                      .filter((b) => b.category === cat.id)
+                      .map((badge) => (
+                        <DesktopBadgeCard key={badge.id} badge={badge} />
+                      ))}
+                  </div>
+                </>
               )}
 
               {!loading && badges.filter((b) => b.category === cat.id).length === 0 && (
