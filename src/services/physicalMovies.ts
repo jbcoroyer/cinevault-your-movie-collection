@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 // ============================================
 // Types
@@ -79,7 +79,7 @@ export const getPhysicalMovies = async (userId: string): Promise<PhysicalMovie[]
     return [];
   }
 
-  return data || [];
+  return (data as PhysicalMovie[]) || [];
 };
 
 export const addPhysicalMovie = async (
@@ -105,7 +105,7 @@ export const addPhysicalMovie = async (
     throw error;
   }
 
-  return data;
+  return data as PhysicalMovie;
 };
 
 export const updatePhysicalMovie = async (
@@ -127,7 +127,7 @@ export const updatePhysicalMovie = async (
     throw error;
   }
 
-  return data;
+  return data as PhysicalMovie;
 };
 
 export const deletePhysicalMovie = async (id: string): Promise<boolean> => {

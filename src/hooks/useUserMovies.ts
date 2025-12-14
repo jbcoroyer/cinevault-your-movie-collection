@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase, UserMovie } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
+import { UserMovie } from "@/types/database";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
@@ -24,7 +25,7 @@ export const useUserMovies = () => {
     try {
       const { data, error } = await supabase.from("user_movies").select("*").eq("user_id", user.id);
       if (error) throw error;
-      setUserMovies(data || []);
+      setUserMovies((data as UserMovie[]) || []);
     } catch (error) {
       console.error("Error fetching user movies:", error);
     } finally {

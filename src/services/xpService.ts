@@ -3,7 +3,7 @@
  * Gestion des points, niveaux et progression
  */
 
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { XP_SOURCES, getXpProgress, getTitleForLevel, type Rarity, RARITY_CONFIG } from "@/data/videoClubData";
 
 export interface XpGain {

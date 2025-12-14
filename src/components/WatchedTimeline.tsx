@@ -5,7 +5,7 @@ import { MovieCard, MovieCardSkeleton } from '@/components/MovieCard';
 import { StarRating } from '@/components/StarRating';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Star } from 'lucide-react';
-import { UserMovie } from '@/lib/supabase';
+import { UserMovie } from '@/types/database';
 
 interface WatchedMovieWithDetails {
   userMovie: UserMovie;

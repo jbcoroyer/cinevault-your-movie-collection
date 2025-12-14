@@ -26,7 +26,16 @@ import PersonDetail from "./pages/PersonDetail";
 import ForgotPassword from "./pages/ForgotPassword";
 import Feed from "./pages/Feed";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 // Composant Wrapper pour gérer l'affichage conditionnel du Wizard
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
@@ -59,7 +68,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
             <BadgeNotificationProvider>
               {/* Wrapper de l'application qui intercepte pour l'Onboarding */}

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 const EDGE_FUNCTION_URL = "https://excnpqcvjixmwqbkocum.supabase.co/functions/v1/gamification-engine";
 
@@ -189,7 +189,7 @@ export async function getUserRewards(userId: string): Promise<UserReward[]> {
       .eq('user_id', userId)
       .order('unlocked_at', { ascending: false });
     
-    return data || [];
+    return (data as UserReward[]) || [];
   } catch (error) {
     console.error('[Gamification] Get rewards error:', error);
     return [];

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { BadgeUnlockDialog } from "@/components/BadgeUnlockDialog";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { ICON_MAP, getXpProgress, getTitleForLevel } from "@/data/videoClubData";
 import { Sparkles } from "lucide-react";
 import { checkAndUnlockBadges } from "@/services/badgeService";
