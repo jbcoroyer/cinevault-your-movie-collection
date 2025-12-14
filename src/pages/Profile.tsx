@@ -16,7 +16,8 @@ import { Edit2, Check, UserPlus, UserMinus, Eye, Heart, ListVideo, Trophy, Disc,
 import { Top5Section } from "@/components/Top5Section";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { FollowListDialog } from "@/components/FollowListDialog";
-import { MemberCard, DestinyMatrix, useDestinyStats } from "@/components/gamification";
+import { CinevaultMemberCard, DestinyMatrix, useDestinyStats } from "@/components/gamification";
+import { MemberCard3DModal } from "@/components/gamification/MemberCard3DModal";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 import { getPhysicalMovies } from "@/services/physicalMovies";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -31,6 +32,8 @@ interface ProfileData {
   total_xp?: number;
   current_title?: string;
   streaming_services?: string[];
+  equipped_frame?: string | null;
+  equipped_theme?: string | null;
 }
 
 export default function Profile() {
@@ -353,10 +356,15 @@ export default function Profile() {
         {/* Member Card */}
         {isOwnProfile && (
           <div className="mb-6">
-            <MemberCard
+            <CinevaultMemberCard
               username={profileData.username || "Membre"}
+              avatarUrl={profileData.avatar_url || undefined}
               totalXp={profileData.total_xp || currentXp}
               movieCount={physicalCount}
+              joinDate={profileData.created_at}
+              equippedTitle={profileData.current_title}
+              equippedFrame={profileData.equipped_frame}
+              equippedTheme={profileData.equipped_theme}
             />
           </div>
         )}
