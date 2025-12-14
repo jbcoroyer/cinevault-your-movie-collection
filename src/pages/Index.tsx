@@ -10,7 +10,7 @@ import { getPopularMovies, Movie, getImageUrl, MovieDetails, getMovieDetails } f
 import { useAuth } from "../contexts/AuthContext";
 import { useBadgeNotification } from "../contexts/BadgeNotificationContext";
 import { getPhysicalMovies, PhysicalMovie } from "../services/physicalMovies";
-import { supabase } from "../lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import {
   ChevronRight,
   Trophy,

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { ProfileMenu } from "./ProfileMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import { useGamificationNotifications } from "@/hooks/useGamificationNotifications";
 
