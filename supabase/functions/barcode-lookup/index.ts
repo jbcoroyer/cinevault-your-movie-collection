@@ -45,9 +45,34 @@ serve(async (req) => {
     const apiUrl = `https://api.barcodelookup.com/v3/products?barcode=${ean}&formatted=y&key=${apiKey}`;
     
     const response = await fetch(apiUrl);
-    const data = await response.json();
-
     console.log(`[barcode-lookup] API response status: ${response.status}`);
+
+    // Handle non-OK responses or empty body
+    const responseText = await response.text();
+    if (!responseText) {
+      console.log(`[barcode-lookup] Empty response for EAN: ${ean}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Produit non trouvé dans la base de données" 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error(`[barcode-lookup] Failed to parse response: ${responseText.substring(0, 200)}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Produit non trouvé dans la base de données" 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!response.ok || !data.products || data.products.length === 0) {
       console.log(`[barcode-lookup] Product not found for EAN: ${ean}`);
