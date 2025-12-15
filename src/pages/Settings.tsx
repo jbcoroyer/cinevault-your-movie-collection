@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useTheme } from "next-themes";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../integrations/supabase/client";
 import { Header } from "../components/Header";
@@ -11,8 +10,8 @@ import { Switch } from "../components/ui/switch";
 import { Separator } from "../components/ui/separator";
 import { toast } from "../hooks/use-toast";
 import { 
-  Moon, Sun, Mail, Bell, Lock, Laptop, User, 
-  Tv, CheckCircle2, LogOut, Trash2 
+  Mail, Bell, Lock, Laptop, User, 
+  Tv, CheckCircle2, LogOut 
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 
@@ -28,7 +27,6 @@ const STREAMING_SERVICES = [
 ];
 
 export default function Settings() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
   const { user, profile, updateProfile, signOut } = useAuth();
   const [mounted, setMounted] = useState(false);
 
@@ -58,12 +56,6 @@ export default function Settings() {
       setSelectedServices(profile.streaming_services);
     }
   }, [profile]);
-
-  const isDarkMode = resolvedTheme === "dark";
-
-  const handleThemeToggle = (checked: boolean) => {
-    setTheme(checked ? "dark" : "light");
-  };
 
   const toggleStreamingService = (serviceId: string) => {
     setSelectedServices(prev => 
@@ -181,40 +173,6 @@ export default function Settings() {
           <h1 className="text-3xl font-bold font-display">Paramètres</h1>
           <p className="text-muted-foreground">Gérez votre compte et vos préférences.</p>
         </div>
-
-        {/* --- APPARENCE --- */}
-        <GlassCard padding="none" className="p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            {isDarkMode ? <Moon className="h-5 w-5 text-primary" /> : <Sun className="h-5 w-5 text-primary" />}
-            <div>
-              <h2 className="text-lg font-semibold">Apparence</h2>
-              <p className="text-sm text-muted-foreground">Personnalisez l'affichage.</p>
-            </div>
-          </div>
-          
-          <Separator className="bg-border/50" />
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-muted">
-                {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-              </div>
-              <div>
-                <Label htmlFor="theme-toggle" className="text-base cursor-pointer font-medium">
-                  Mode sombre
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {isDarkMode ? "Thème sombre activé" : "Thème clair activé"}
-                </p>
-              </div>
-            </div>
-            <Switch 
-              id="theme-toggle" 
-              checked={isDarkMode} 
-              onCheckedChange={handleThemeToggle} 
-            />
-          </div>
-        </GlassCard>
 
         {/* --- SERVICES DE STREAMING --- */}
         <GlassCard padding="none" className="p-6 space-y-4">
