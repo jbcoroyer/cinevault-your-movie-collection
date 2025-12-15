@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getPhysicalMovies,
@@ -19,9 +20,18 @@ import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
 import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
 import { BarcodeScannerDialog } from "@/components/barcode";
 import { useCollectionFilters } from "@/hooks/useCollectionFilters";
+
+// ============================================
+// Sprint 2 Imports - Valorisation
+// ============================================
+import { ValuationDashboard } from "@/components/collection/ValuationDashboard";
+import { PriceCard } from "@/components/collection/PriceCard";
+import { ValueEvolutionChart } from "@/components/collection/ValueEvolutionChart";
+import { useCollectionValuation } from "@/hooks/useCollectionValuation";
+
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { Plus, ArrowUpDown, Library, ChevronDown, Scan } from "lucide-react";
+import { Plus, ArrowUpDown, Library, ChevronDown, Scan, DollarSign, RefreshCw, TrendingUp } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,8 +43,9 @@ import {
 // Types
 // ============================================
 
-type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition";
+type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition" | "market_value";
 type SortOrder = "asc" | "desc";
+type ViewMode = "collection" | "valuation";
 
 interface ExtendedMovieDetails extends MovieDetails {
   director?: string;
@@ -43,7 +54,8 @@ interface ExtendedMovieDetails extends MovieDetails {
 const sortLabels: Record<SortBy, string> = {
   title: "Titre",
   year: "Année",
-  price: "Prix",
+  price: "Prix d'achat",
+  market_value: "Valeur marché",
   genre: "Genre",
   director: "Réalisateur",
   added: "Date d'ajout",
@@ -60,6 +72,9 @@ export default function Collection() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  // View mode state (Collection vs Valuation)
+  const [viewMode, setViewMode] = useState<ViewMode>("collection");
+
   // Collection state
   const [physicalMovies, setPhysicalMovies] = useState<PhysicalMovie[]>([]);
   const [physicalMovieDetails, setPhysicalMovieDetails] = useState<Record<number, ExtendedMovieDetails>>({});
@@ -73,6 +88,9 @@ export default function Collection() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingMovie, setEditingMovie] = useState<PhysicalMovie | null>(null);
   const [editingMovieDetails, setEditingMovieDetails] = useState<Movie | null>(null);
+
+  // Selected movie for valuation detail
+  const [selectedMovie, setSelectedMovie] = useState<PhysicalMovie | null>(null);
 
   // Sort state
   const [sortBy, setSortBy] = useState<SortBy>("added");
@@ -93,6 +111,25 @@ export default function Collection() {
     hasActiveFilters,
     activeFilterCount,
   } = useCollectionFilters(physicalMovies, physicalMovieDetails);
+
+  // ============================================
+  // Sprint 2: Valuation Hook
+  // ============================================
+  const {
+    valuation,
+    moviePrices,
+    loading: valuationLoading,
+    refreshing: valuationRefreshing,
+    lastUpdated: valuationLastUpdated,
+    coverage,
+    refresh: refreshValuation,
+    getMovieValuation,
+    formatValue,
+  } = useCollectionValuation({
+    movies: physicalMovies,
+    movieDetails: physicalMovieDetails,
+    autoRefresh: false,
+  });
 
   // ============================================
   // Data Fetching
@@ -188,7 +225,7 @@ export default function Collection() {
   };
 
   // ============================================
-  // Sorting Logic
+  // Sorting Logic (with market value support)
   // ============================================
 
   const sortedMovies = [...filteredMovies].sort((a, b) => {
@@ -207,6 +244,12 @@ export default function Collection() {
         break;
       case "price":
         compare = (a.price || 0) - (b.price || 0);
+        break;
+      case "market_value":
+        // Sprint 2: Sort by market value
+        const priceA = moviePrices.get(`${a.tmdb_id}-${a.format}`)?.median || 0;
+        const priceB = moviePrices.get(`${b.tmdb_id}-${b.format}`)?.median || 0;
+        compare = priceA - priceB;
         break;
       case "genre":
         const genreA = detailsA?.genres?.[0]?.name || "";
@@ -263,135 +306,302 @@ export default function Collection() {
       <Header />
 
       <div className="container mx-auto px-4 py-6 pt-16 md:pt-6">
-        {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold font-display">Ma Vidéothèque</h1>
-            <p className="text-muted-foreground text-sm">
-              {physicalMovies.length} film{physicalMovies.length > 1 ? "s" : ""} dans votre collection
-              {hasActiveFilters && ` • ${filteredMovies.length} affiché${filteredMovies.length > 1 ? "s" : ""}`}
-            </p>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Filters Drawer */}
-            <CollectionFiltersDrawer
-              filters={filters}
-              filterOptions={filterOptions}
-              activeFilterCount={activeFilterCount}
-              toggleFormat={toggleFormat}
-              toggleCondition={toggleCondition}
-              toggleGenre={toggleGenre}
-              toggleDecade={toggleDecade}
-              toggleDirector={toggleDirector}
-              setPriceRange={setPriceRange}
-              resetFilters={resetFilters}
-              hasActiveFilters={hasActiveFilters}
-            />
-
-            {/* Sort Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <ArrowUpDown className="w-4 h-4" />
-                  <span className="hidden sm:inline">{sortLabels[sortBy]}</span>
-                  <ChevronDown className="w-3 h-3 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {Object.entries(sortLabels).map(([key, label]) => (
-                  <DropdownMenuItem
-                    key={key}
-                    onClick={() => {
-                      if (sortBy === key) {
-                        toggleSortOrder();
-                      } else {
-                        setSortBy(key as SortBy);
-                        setSortOrder("asc");
-                      }
-                    }}
-                    className={cn(sortBy === key && "bg-accent")}
-                  >
-                    {label}
-                    {sortBy === key && (
-                      <span className="ml-auto text-xs opacity-50">{sortOrder === "asc" ? "↑" : "↓"}</span>
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Scanner Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setScannerOpen(true)}
-              className="gap-2 border-videoclub-cyan/30 hover:bg-videoclub-cyan/10 hover:text-videoclub-cyan hover:border-videoclub-cyan/50 transition-colors"
-            >
-              <Scan className="w-4 h-4" />
-              <span className="hidden sm:inline">Scanner</span>
-            </Button>
-
-            {/* Add Button */}
-            <Button
-              onClick={() => setAddDialogOpen(true)}
-              size="sm"
-              className="gap-2 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta hover:opacity-90"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Ajouter</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Collection Content */}
-        <div className="mt-6">
-          {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="aspect-[2/3] rounded-xl bg-muted animate-pulse" />
-              ))}
-            </div>
-          ) : sortedMovies.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Library className="w-16 h-16 text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                {hasActiveFilters ? "Aucun résultat" : "Votre collection est vide"}
-              </h3>
-              <p className="text-muted-foreground mb-4 max-w-md">
-                {hasActiveFilters
-                  ? "Essayez de modifier vos filtres"
-                  : "Commencez à ajouter des films à votre collection en scannant vos DVD/Blu-ray ou en recherchant manuellement"}
+        {/* Header Section with Tabs */}
+        <div className="flex flex-col gap-4 mb-6">
+          {/* Title Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold font-display">Ma Vidéothèque</h1>
+              <p className="text-muted-foreground text-sm">
+                {physicalMovies.length} film{physicalMovies.length > 1 ? "s" : ""} dans votre collection
+                {viewMode === "collection" &&
+                  hasActiveFilters &&
+                  ` • ${filteredMovies.length} affiché${filteredMovies.length > 1 ? "s" : ""}`}
+                {viewMode === "valuation" && valuation && (
+                  <span className="ml-2 text-primary font-medium">
+                    • Valeur estimée: {formatValue(valuation.totalValueMedian)}
+                  </span>
+                )}
               </p>
-              {!hasActiveFilters && (
-                <div className="flex flex-col sm:flex-row gap-3">
+            </div>
+
+            {/* Action Buttons based on view mode */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {viewMode === "collection" && (
+                <>
+                  {/* Filters Drawer */}
+                  <CollectionFiltersDrawer
+                    filters={filters}
+                    filterOptions={filterOptions}
+                    activeFilterCount={activeFilterCount}
+                    toggleFormat={toggleFormat}
+                    toggleCondition={toggleCondition}
+                    toggleGenre={toggleGenre}
+                    toggleDecade={toggleDecade}
+                    toggleDirector={toggleDirector}
+                    setPriceRange={setPriceRange}
+                    resetFilters={resetFilters}
+                    hasActiveFilters={hasActiveFilters}
+                  />
+
+                  {/* Sort Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <ArrowUpDown className="w-4 h-4" />
+                        <span className="hidden sm:inline">{sortLabels[sortBy]}</span>
+                        <ChevronDown className="w-3 h-3 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      {Object.entries(sortLabels).map(([key, label]) => (
+                        <DropdownMenuItem
+                          key={key}
+                          onClick={() => {
+                            if (sortBy === key) {
+                              toggleSortOrder();
+                            } else {
+                              setSortBy(key as SortBy);
+                              setSortOrder("asc");
+                            }
+                          }}
+                          className={cn(sortBy === key && "bg-accent")}
+                        >
+                          {label}
+                          {sortBy === key && (
+                            <span className="ml-auto text-xs opacity-50">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Scanner Button */}
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => setScannerOpen(true)}
-                    className="gap-2 border-videoclub-cyan/30 hover:bg-videoclub-cyan/10"
+                    className="gap-2 border-videoclub-cyan/30 hover:bg-videoclub-cyan/10 hover:text-videoclub-cyan hover:border-videoclub-cyan/50 transition-colors"
                   >
                     <Scan className="w-4 h-4" />
-                    Scanner un code-barres
+                    <span className="hidden sm:inline">Scanner</span>
                   </Button>
+
+                  {/* Add Button */}
                   <Button
                     onClick={() => setAddDialogOpen(true)}
-                    className="gap-2 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta"
+                    size="sm"
+                    className="gap-2 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta hover:opacity-90"
                   >
                     <Plus className="w-4 h-4" />
-                    Ajouter manuellement
+                    <span className="hidden sm:inline">Ajouter</span>
                   </Button>
-                </div>
+                </>
+              )}
+
+              {viewMode === "valuation" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshValuation}
+                  disabled={valuationRefreshing || physicalMovies.length === 0}
+                  className="gap-2"
+                >
+                  <RefreshCw className={cn("w-4 h-4", valuationRefreshing && "animate-spin")} />
+                  {valuationRefreshing ? "Analyse..." : "Actualiser les prix"}
+                </Button>
               )}
             </div>
-          ) : (
-            <ShelfView
-              movies={sortedMovies}
-              movieDetailsMap={physicalMovieDetails}
-              onMovieClick={(movie) => navigate(`/movie/${movie.tmdb_id}`)}
-            />
-          )}
+          </div>
+
+          {/* View Mode Tabs */}
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+            <TabsList className="grid w-full max-w-[320px] grid-cols-2">
+              <TabsTrigger value="collection" className="gap-2">
+                <Library className="w-4 h-4" />
+                Collection
+              </TabsTrigger>
+              <TabsTrigger value="valuation" className="gap-2">
+                <DollarSign className="w-4 h-4" />
+                Valorisation
+                {valuation && valuation.totalValueMedian > 0 && (
+                  <span className="ml-1 text-[10px] font-bold text-green-500">
+                    {formatValue(valuation.totalValueMedian)}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
+
+        {/* ============================================ */}
+        {/* VIEW: COLLECTION */}
+        {/* ============================================ */}
+        {viewMode === "collection" && (
+          <div className="mt-6">
+            {loading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="aspect-[2/3] rounded-xl bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : sortedMovies.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Library className="w-16 h-16 text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {hasActiveFilters ? "Aucun résultat" : "Votre collection est vide"}
+                </h3>
+                <p className="text-muted-foreground mb-4 max-w-md">
+                  {hasActiveFilters
+                    ? "Essayez de modifier vos filtres"
+                    : "Commencez à ajouter des films à votre collection en scannant vos DVD/Blu-ray ou en recherchant manuellement"}
+                </p>
+                {!hasActiveFilters && (
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setScannerOpen(true)}
+                      className="gap-2 border-videoclub-cyan/30 hover:bg-videoclub-cyan/10"
+                    >
+                      <Scan className="w-4 h-4" />
+                      Scanner un code-barres
+                    </Button>
+                    <Button
+                      onClick={() => setAddDialogOpen(true)}
+                      className="gap-2 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Ajouter manuellement
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <ShelfView
+                movies={sortedMovies}
+                movieDetailsMap={physicalMovieDetails}
+                onMovieClick={(movie) => navigate(`/movie/${movie.tmdb_id}`)}
+              />
+            )}
+          </div>
+        )}
+
+        {/* ============================================ */}
+        {/* VIEW: VALUATION (Sprint 2) */}
+        {/* ============================================ */}
+        {viewMode === "valuation" && (
+          <div className="mt-6 space-y-6">
+            {/* Valuation Dashboard */}
+            <ValuationDashboard
+              userId={user.id}
+              movies={physicalMovies}
+              movieDetails={physicalMovieDetails}
+              onRefresh={refreshValuation}
+            />
+
+            {/* Selected Movie Price Evolution */}
+            {selectedMovie && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    Évolution du prix: {physicalMovieDetails[selectedMovie.tmdb_id]?.title}
+                  </h3>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedMovie(null)}>
+                    Fermer
+                  </Button>
+                </div>
+                <ValueEvolutionChart
+                  tmdbId={selectedMovie.tmdb_id}
+                  format={selectedMovie.format}
+                  title={physicalMovieDetails[selectedMovie.tmdb_id]?.title || ""}
+                  purchasePrice={selectedMovie.price ? selectedMovie.price * 100 : undefined}
+                />
+              </div>
+            )}
+
+            {/* Quick Price List */}
+            {physicalMovies.length > 0 && !selectedMovie && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm text-muted-foreground">
+                  Cliquez sur un film pour voir l'évolution de son prix
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {sortedMovies.slice(0, 12).map((movie) => {
+                    const details = physicalMovieDetails[movie.tmdb_id];
+                    const movieValuation = getMovieValuation(movie.tmdb_id, movie.format);
+
+                    return (
+                      <button
+                        key={movie.id}
+                        onClick={() => setSelectedMovie(movie)}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-xl text-left transition-all",
+                          "bg-card/50 border border-white/10 backdrop-blur-sm",
+                          "hover:bg-card/80 hover:border-primary/30",
+                          selectedMovie?.id === movie.id && "ring-2 ring-primary",
+                        )}
+                      >
+                        {/* Poster */}
+                        <div className="w-12 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                          {details?.poster_path ? (
+                            <img
+                              src={`https://image.tmdb.org/t/p/w92${details.poster_path}`}
+                              alt={details.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Library className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{details?.title || `Film #${movie.tmdb_id}`}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{movie.format}</p>
+                        </div>
+
+                        {/* Price */}
+                        <div className="text-right">
+                          {movieValuation?.marketPrice ? (
+                            <>
+                              <p className="font-semibold text-sm">{formatValue(movieValuation.marketPrice.median)}</p>
+                              {movieValuation.profitLossPercent !== undefined && (
+                                <p
+                                  className={cn(
+                                    "text-xs font-medium",
+                                    movieValuation.profitLossPercent > 0
+                                      ? "text-green-500"
+                                      : movieValuation.profitLossPercent < 0
+                                        ? "text-red-500"
+                                        : "text-muted-foreground",
+                                  )}
+                                >
+                                  {movieValuation.profitLossPercent > 0 ? "+" : ""}
+                                  {movieValuation.profitLossPercent}%
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">—</p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {sortedMovies.length > 12 && (
+                  <p className="text-center text-sm text-muted-foreground">
+                    + {sortedMovies.length - 12} autres films dans votre collection
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Dialogs */}
