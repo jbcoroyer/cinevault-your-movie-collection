@@ -3,13 +3,15 @@ import { PhysicalMovie, PhysicalFormat, formatLabels } from "../../services/phys
 import { MovieDetails, getImageUrl } from "../../services/tmdb";
 import { cn } from "../../lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { Disc } from "lucide-react";
+import { Disc, Check } from "lucide-react";
 
 interface ShelfViewProps {
   movies: PhysicalMovie[];
   movieDetailsMap: Record<number, MovieDetails>;
   onMovieClick: (physicalMovie: PhysicalMovie, movieDetails: MovieDetails | null) => void;
   variant?: "default" | "light";
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
 }
 
 // Configuration des dimensions
@@ -48,7 +50,7 @@ const FormatLogo = ({ format }: { format: PhysicalFormat }) => {
   return <div className="h-[2px] w-6 bg-white/20 mb-3 rounded-full mx-auto opacity-50" />;
 };
 
-export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, onMovieClick, variant = "default" }) => {
+export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, onMovieClick, variant = "default", selectionMode = false, selectedIds = new Set() }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -175,14 +177,15 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
 
           const isActive = activeId === pm.id;
           const isSteelbook = pm.format === "steelbook";
+          const isSelected = selectedIds.has(pm.id);
 
           return (
-            <Tooltip key={pm.id} open={isActive} delayDuration={0}>
+            <Tooltip key={pm.id} open={isActive && !selectionMode} delayDuration={0}>
               <TooltipTrigger asChild>
                 <div
                   data-movie-id={pm.id}
-                  onMouseEnter={() => setActiveId(pm.id)}
-                  onMouseLeave={() => setActiveId(null)}
+                  onMouseEnter={() => !selectionMode && setActiveId(pm.id)}
+                  onMouseLeave={() => !selectionMode && setActiveId(null)}
                   onClick={() => onMovieClick(pm, details || null)}
                   className={cn(
                     // Base de la tranche - GPU accelerated
@@ -196,6 +199,9 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                     "shadow-[inset_2px_0_5px_rgba(255,255,255,0.05),inset_-2px_0_10px_rgba(0,0,0,0.8)]",
                     // État actif
                     isActive && "z-50",
+                    // Selection mode styles
+                    selectionMode && "cursor-pointer",
+                    selectionMode && isSelected && "ring-2 ring-primary ring-offset-2 ring-offset-black",
                   )}
                   style={{
                     height: `${16 + (pm.format === "dvd" ? 0.8 : 0)}rem`,
@@ -205,6 +211,19 @@ export const ShelfView: React.FC<ShelfViewProps> = ({ movies, movieDetailsMap, o
                     willChange: 'transform',
                   }}
                 >
+                  {/* Selection checkbox overlay */}
+                  {selectionMode && (
+                    <div 
+                      className={cn(
+                        "absolute top-2 left-1/2 -translate-x-1/2 z-50 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                        isSelected 
+                          ? "bg-primary border-primary text-primary-foreground" 
+                          : "bg-black/60 border-white/40 hover:border-white/60"
+                      )}
+                    >
+                      {isSelected && <Check className="w-3 h-3" />}
+                    </div>
+                  )}
                   {/* === COUCHE 1 : FOND VISUEL (Affiche) - No blur transitions === */}
                   <div
                     className={cn(
