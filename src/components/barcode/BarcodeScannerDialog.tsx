@@ -256,6 +256,10 @@ export const BarcodeScannerDialog: React.FC<BarcodeScannerDialogProps> = ({
                 status: result.success && result.product ? "found" : "not_found",
                 product: result.product,
                 movies: result.movies || [],
+                selectedMovie:
+                  result.movies && result.movies.length === 1
+                    ? result.movies[0]
+                    : item.selectedMovie,
                 error: result.error,
                 detectedFormat: result.product
                   ? detectFormatFromTitle(result.product.title)
@@ -265,10 +269,14 @@ export const BarcodeScannerDialog: React.FC<BarcodeScannerDialogProps> = ({
         )
       );
 
-      if (result.success && result.movies?.length) {
+      if (result.success && result.product) {
         toast({
-          title: "Film trouvé !",
-          description: result.product?.title || "Correspondance TMDB trouvée",
+          title: result.movies?.length ? "Film trouvé !" : "Produit trouvé",
+          description:
+            result.movies?.length
+              ? result.product?.title || "Correspondance TMDB trouvée"
+              : "Produit détecté, mais aucun film TMDB n'a été trouvé automatiquement.",
+          variant: result.movies?.length ? "default" : "destructive",
         });
       } else {
         toast({
