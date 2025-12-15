@@ -57,8 +57,8 @@ export default function Index() {
         const collectionPreview = collection.slice(0, 4);
         setMyCollection(collectionPreview);
         
-        // 30 derniers pour la section collection complète
-        const collectionFull = collection.slice(0, 30);
+        // 20 derniers pour la section collection complète
+        const collectionFull = collection.slice(0, 20);
         setFullCollection(collectionFull);
 
         // Charger les détails des films pour le preview (4)
