@@ -31,7 +31,9 @@ import { useCollectionValuation } from "@/hooks/useCollectionValuation";
 
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { Plus, ArrowUpDown, Library, ChevronDown, Scan, DollarSign, RefreshCw, TrendingUp } from "lucide-react";
+import { Plus, ArrowUpDown, Library, ChevronDown, Scan, DollarSign, RefreshCw, TrendingUp, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -91,6 +93,12 @@ export default function Collection() {
 
   // Selected movie for valuation detail
   const [selectedMovie, setSelectedMovie] = useState<PhysicalMovie | null>(null);
+
+  // Selection mode for bulk delete
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Sort state
   const [sortBy, setSortBy] = useState<SortBy>("added");
@@ -173,6 +181,55 @@ export default function Collection() {
   // Toggle sort order
   const toggleSortOrder = () => {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  };
+
+  // Toggle movie selection
+  const toggleMovieSelection = (movieId: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(movieId)) {
+        newSet.delete(movieId);
+      } else {
+        newSet.add(movieId);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    
+    setIsDeleting(true);
+    let successCount = 0;
+    
+    for (const id of selectedIds) {
+      try {
+        await deletePhysicalMovie(id);
+        successCount++;
+      } catch (error) {
+        console.error(`Error deleting movie ${id}:`, error);
+      }
+    }
+    
+    if (successCount > 0) {
+      toast({
+        title: `${successCount} film${successCount > 1 ? "s" : ""} supprimé${successCount > 1 ? "s" : ""}`,
+        description: "Votre collection a été mise à jour.",
+      });
+      fetchPhysicalMovies();
+    }
+    
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+    setDeleteConfirmOpen(false);
+    setIsDeleting(false);
+  };
+
+  // Exit selection mode
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
   };
 
   // Handle scanned movies from barcode scanner
@@ -387,11 +444,40 @@ export default function Collection() {
                     <span className="hidden sm:inline">Scanner</span>
                   </Button>
 
+                  {/* Selection Mode Toggle */}
+                  <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-muted/50">
+                    <Switch
+                      id="selection-mode"
+                      checked={selectionMode}
+                      onCheckedChange={(checked) => {
+                        setSelectionMode(checked);
+                        if (!checked) setSelectedIds(new Set());
+                      }}
+                    />
+                    <label htmlFor="selection-mode" className="text-xs text-muted-foreground cursor-pointer">
+                      Sélection
+                    </label>
+                  </div>
+
+                  {/* Delete Button (visible when selection mode is on and items selected) */}
+                  {selectionMode && selectedIds.size > 0 && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteConfirmOpen(true)}
+                      className="gap-2 animate-in fade-in slide-in-from-right-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Supprimer ({selectedIds.size})
+                    </Button>
+                  )}
+
                   {/* Add Button */}
                   <Button
                     onClick={() => setAddDialogOpen(true)}
                     size="sm"
                     className="gap-2 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta hover:opacity-90"
+                    disabled={selectionMode}
                   >
                     <Plus className="w-4 h-4" />
                     <span className="hidden sm:inline">Ajouter</span>
@@ -480,7 +566,15 @@ export default function Collection() {
               <ShelfView
                 movies={sortedMovies}
                 movieDetailsMap={physicalMovieDetails}
-                onMovieClick={(movie) => navigate(`/movie/${movie.tmdb_id}`)}
+                onMovieClick={(movie) => {
+                  if (selectionMode) {
+                    toggleMovieSelection(movie.id);
+                  } else {
+                    navigate(`/movie/${movie.tmdb_id}`);
+                  }
+                }}
+                selectionMode={selectionMode}
+                selectedIds={selectedIds}
               />
             )}
           </div>
@@ -622,6 +716,28 @@ export default function Collection() {
           }}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer {selectedIds.size} film{selectedIds.size > 1 ? "s" : ""} ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Les films sélectionnés seront définitivement supprimés de votre collection.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Suppression..." : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <BottomNav />
     </div>
