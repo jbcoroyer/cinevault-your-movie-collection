@@ -13,6 +13,8 @@ import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
 import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
 import { useCollectionFilters } from "@/hooks/useCollectionFilters";
 import { cn } from "@/lib/utils";
+import { BarcodeScannerDialog } from "@/components/barcode";
+import { Scan } from "lucide-react";
 import {
   Plus,
   ArrowUpDown,
@@ -32,7 +34,33 @@ type SortOrder = "asc" | "desc";
 interface ExtendedMovieDetails extends MovieDetails {
   director?: string;
 }
-
+const [scannerOpen, setScannerOpen] = useState(false);
+const handleScannedMovies = async (movies: Array<{
+  movie: Movie;
+  format: PhysicalFormat;
+  ean?: string;
+}>) => {
+  // Ajouter les films directement
+  for (const item of movies) {
+    try {
+      await addPhysicalMovie(user!.id, {
+        tmdb_id: item.movie.id,
+        format: item.format,
+        condition: "good",
+      });
+    } catch (error) {
+      console.error("Erreur ajout film:", error);
+    }
+  }
+  
+  // Rafraîchir la liste
+  fetchPhysicalMovies();
+  
+  toast({
+    title: `${movies.length} film(s) ajouté(s) !`,
+    description: "Votre collection a été mise à jour.",
+  });
+};
 const sortLabels: Record<SortBy, string> = {
   title: "Titre",
   year: "Année",
@@ -44,7 +72,22 @@ const sortLabels: Record<SortBy, string> = {
 };
 
 const conditionOrder = { mint: 1, very_good: 2, good: 3, acceptable: 4 };
-
+<Button
+  variant="outline"
+  size="sm"
+  onClick={() => setScannerOpen(true)}
+  className="gap-2 border-videoclub-cyan/30 hover:bg-videoclub-cyan/10"
+>
+  <Scan className="w-4 h-4" />
+  <span className="hidden sm:inline">Scanner</span>
+</Button>
+  
+<BarcodeScannerDialog
+  open={scannerOpen}
+  onOpenChange={setScannerOpen}
+  onMoviesSelected={handleScannedMovies}
+/>
+  
 export default function Collection() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
