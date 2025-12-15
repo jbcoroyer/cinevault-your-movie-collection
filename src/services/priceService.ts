@@ -6,6 +6,9 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+
+type PriceCache = Tables<"price_cache">;
 
 // ============================================
 // Types
@@ -207,7 +210,7 @@ export const getCachedPrice = async (
       .eq("format", format)
       .eq("region", region)
       .gt("expires_at", new Date().toISOString())
-      .single();
+      .single<PriceCache>();
 
     if (error || !data) return null;
 
@@ -246,7 +249,8 @@ export const getCachedPricesBatch = async (
     const { data, error } = await supabase
       .from("price_cache")
       .select("*")
-      .gt("expires_at", new Date().toISOString());
+      .gt("expires_at", new Date().toISOString())
+      .returns<PriceCache[]>();
 
     if (error || !data) return results;
 
@@ -466,19 +470,21 @@ const saveCollectionValuation = async (
   data: Partial<CollectionValuation>
 ): Promise<void> => {
   try {
+    const upsertData = {
+      user_id: userId,
+      total_value_min: data.totalValueMin,
+      total_value_median: data.totalValueMedian,
+      total_value_max: data.totalValueMax,
+      items_with_price: data.itemsWithPrice,
+      items_without_price: data.itemsWithoutPrice,
+      top_valued_items: JSON.parse(JSON.stringify(data.topValuedItems || [])),
+      biggest_gainers: JSON.parse(JSON.stringify(data.biggestGainers || [])),
+      calculated_at: new Date().toISOString(),
+    };
+    
     await supabase
       .from("collection_valuations")
-      .upsert({
-        user_id: userId,
-        total_value_min: data.totalValueMin,
-        total_value_median: data.totalValueMedian,
-        total_value_max: data.totalValueMax,
-        items_with_price: data.itemsWithPrice,
-        items_without_price: data.itemsWithoutPrice,
-        top_valued_items: data.topValuedItems,
-        biggest_gainers: data.biggestGainers,
-        calculated_at: new Date().toISOString(),
-      }, {
+      .upsert([upsertData], {
         onConflict: "user_id",
       });
   } catch (error) {
@@ -508,8 +514,8 @@ export const getSavedValuation = async (userId: string): Promise<CollectionValua
       profitLossPercent: 0,
       itemsWithPrice: data.items_with_price,
       itemsWithoutPrice: data.items_without_price,
-      topValuedItems: data.top_valued_items || [],
-      biggestGainers: data.biggest_gainers || [],
+      topValuedItems: (data.top_valued_items as unknown as MovieValuation[]) || [],
+      biggestGainers: (data.biggest_gainers as unknown as MovieValuation[]) || [],
       biggestLosers: [],
       lastUpdated: data.calculated_at,
     };
@@ -563,7 +569,7 @@ export const createPriceAlert = async (
       id: data.id,
       tmdbId: data.tmdb_id,
       format: data.format,
-      alertType: data.alert_type,
+      alertType: data.alert_type as PriceAlert["alertType"],
       thresholdPercent: data.threshold_percent,
       thresholdPrice: data.threshold_price,
       isActive: data.is_active,
@@ -593,7 +599,7 @@ export const getUserPriceAlerts = async (userId: string): Promise<PriceAlert[]> 
       id: row.id,
       tmdbId: row.tmdb_id,
       format: row.format,
-      alertType: row.alert_type,
+      alertType: row.alert_type as PriceAlert["alertType"],
       thresholdPercent: row.threshold_percent,
       thresholdPrice: row.threshold_price,
       isActive: row.is_active,
