@@ -253,12 +253,16 @@ export const lookupBarcode = async (ean: string): Promise<BarcodeLookupResult> =
 export const extractMovieTitle = (productTitle: string): string => {
   let title = productTitle;
 
+  // Remove everything after " - " if it contains format/region info
+  title = title.replace(/\s+[-–]\s+(DVD|Blu-?ray|BD|BR|Region|4K|UHD).*$/gi, "");
+
   // Remove common format indicators
   const formatPatterns = [
     /\s*[-–]\s*(DVD|Blu-?ray|4K|UHD|HD|BD|BR)\s*/gi,
     /\s*\((DVD|Blu-?ray|4K|UHD|HD|BD|BR)\)\s*/gi,
     /\s*\[(DVD|Blu-?ray|4K|UHD|HD|BD|BR)\]\s*/gi,
     /\s*(DVD|Blu-?ray|4K UHD|Ultra HD|HD DVD)\s*$/gi,
+    /\s*Region\s*\d+\s*/gi,
   ];
 
   formatPatterns.forEach((pattern) => {
@@ -280,6 +284,12 @@ export const extractMovieTitle = (productTitle: string): string => {
 
   // Remove disc count
   title = title.replace(/\s*\d+\s*(disques?|discs?)\s*/gi, " ");
+
+  // Remove award mentions like (César 2010...)
+  title = title.replace(/\s*\([^)]*(?:César|Oscar|Golden|BAFTA|Award)[^)]*\)\s*/gi, " ");
+
+  // Remove brackets content that looks like metadata
+  title = title.replace(/\s*\[[^\]]*\]\s*/gi, " ");
 
   // Remove year in parentheses at the end (keep for search accuracy)
   // title = title.replace(/\s*\(\d{4}\)\s*$/, "");

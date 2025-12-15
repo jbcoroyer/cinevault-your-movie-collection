@@ -252,9 +252,10 @@ export const BarcodeScannerDialog: React.FC<BarcodeScannerDialogProps> = ({
           item.ean === ean
             ? {
                 ...item,
-                status: result.success && result.movies?.length ? "found" : "not_found",
+                // Mark as found if product exists (even without TMDB matches)
+                status: result.success && result.product ? "found" : "not_found",
                 product: result.product,
-                movies: result.movies,
+                movies: result.movies || [],
                 error: result.error,
                 detectedFormat: result.product
                   ? detectFormatFromTitle(result.product.title)

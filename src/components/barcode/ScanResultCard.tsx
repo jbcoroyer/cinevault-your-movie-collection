@@ -106,87 +106,95 @@ export const ScanResultCard: React.FC<ScanResultCardProps> = ({
       )}
 
       {/* Movie selection */}
-      {item.status === "found" && item.movies && item.movies.length > 0 && (
-        <div className="flex items-center gap-2">
-          <div className="flex-1">
-            {item.movies.length === 1 ? (
-              <div
-                className={cn(
-                  "flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors",
-                  item.selectedMovie?.id === item.movies[0].id
-                    ? "border-videoclub-cyan bg-videoclub-cyan/10"
-                    : "border-border hover:border-videoclub-cyan/50"
-                )}
-                onClick={() => onSelectMovie(item.movies![0])}
-              >
-                {item.movies[0].poster_path ? (
-                  <img
-                    src={`https://image.tmdb.org/t/p/w92${item.movies[0].poster_path}`}
-                    alt={item.movies[0].title}
-                    className="w-8 h-12 object-cover rounded"
-                  />
-                ) : (
-                  <div className="w-8 h-12 bg-muted rounded flex items-center justify-center">
-                    <Film className="w-4 h-4 text-muted-foreground" />
+      {item.status === "found" && (
+        <div className="space-y-2">
+          {item.movies && item.movies.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                {item.movies.length === 1 ? (
+                  <div
+                    className={cn(
+                      "flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors",
+                      item.selectedMovie?.id === item.movies[0].id
+                        ? "border-videoclub-cyan bg-videoclub-cyan/10"
+                        : "border-border hover:border-videoclub-cyan/50"
+                    )}
+                    onClick={() => onSelectMovie(item.movies![0])}
+                  >
+                    {item.movies[0].poster_path ? (
+                      <img
+                        src={`https://image.tmdb.org/t/p/w92${item.movies[0].poster_path}`}
+                        alt={item.movies[0].title}
+                        className="w-8 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-8 h-12 bg-muted rounded flex items-center justify-center">
+                        <Film className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {item.movies[0].title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.movies[0].release_date?.substring(0, 4)}
+                      </p>
+                    </div>
+                    {item.selectedMovie?.id === item.movies[0].id && (
+                      <CheckCircle2 className="w-4 h-4 text-videoclub-cyan" />
+                    )}
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {item.movies[0].title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {item.movies[0].release_date?.substring(0, 4)}
-                  </p>
-                </div>
-                {item.selectedMovie?.id === item.movies[0].id && (
-                  <CheckCircle2 className="w-4 h-4 text-videoclub-cyan" />
+                ) : (
+                  <Select
+                    value={item.selectedMovie?.id.toString() || ""}
+                    onValueChange={(value) => {
+                      const movie = item.movies?.find(
+                        (m) => m.id.toString() === value
+                      );
+                      if (movie) onSelectMovie(movie);
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Sélectionner le film..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {item.movies.map((movie) => (
+                        <SelectItem key={movie.id} value={movie.id.toString()}>
+                          <div className="flex items-center gap-2">
+                            <span>{movie.title}</span>
+                            <span className="text-muted-foreground text-xs">
+                              ({movie.release_date?.substring(0, 4)})
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
-            ) : (
+
+              {/* Format selector */}
               <Select
-                value={item.selectedMovie?.id.toString() || ""}
-                onValueChange={(value) => {
-                  const movie = item.movies?.find(
-                    (m) => m.id.toString() === value
-                  );
-                  if (movie) onSelectMovie(movie);
-                }}
+                value={item.detectedFormat || "bluray"}
+                onValueChange={(value) => onChangeFormat(value as PhysicalFormat)}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionner le film..." />
+                <SelectTrigger className="w-28">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {item.movies.map((movie) => (
-                    <SelectItem key={movie.id} value={movie.id.toString()}>
-                      <div className="flex items-center gap-2">
-                        <span>{movie.title}</span>
-                        <span className="text-muted-foreground text-xs">
-                          ({movie.release_date?.substring(0, 4)})
-                        </span>
-                      </div>
+                  {Object.entries(formatLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            )}
-          </div>
-
-          {/* Format selector */}
-          <Select
-            value={item.detectedFormat || "bluray"}
-            onValueChange={(value) => onChangeFormat(value as PhysicalFormat)}
-          >
-            <SelectTrigger className="w-28">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(formatLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            </div>
+          ) : (
+            <p className="text-xs text-orange-500">
+              Film non trouvé automatiquement. Utilisez la recherche manuelle pour l'ajouter.
+            </p>
+          )}
         </div>
       )}
 
