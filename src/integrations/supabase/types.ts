@@ -83,6 +83,45 @@ export type Database = {
         }
         Relationships: []
       }
+      collection_valuations: {
+        Row: {
+          biggest_gainers: Json | null
+          calculated_at: string | null
+          id: string
+          items_with_price: number | null
+          items_without_price: number | null
+          top_valued_items: Json | null
+          total_value_max: number | null
+          total_value_median: number | null
+          total_value_min: number | null
+          user_id: string
+        }
+        Insert: {
+          biggest_gainers?: Json | null
+          calculated_at?: string | null
+          id?: string
+          items_with_price?: number | null
+          items_without_price?: number | null
+          top_valued_items?: Json | null
+          total_value_max?: number | null
+          total_value_median?: number | null
+          total_value_min?: number | null
+          user_id: string
+        }
+        Update: {
+          biggest_gainers?: Json | null
+          calculated_at?: string | null
+          id?: string
+          items_with_price?: number | null
+          items_without_price?: number | null
+          top_valued_items?: Json | null
+          total_value_max?: number | null
+          total_value_median?: number | null
+          total_value_min?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_bonuses: {
         Row: {
           bonus_type: string
@@ -320,6 +359,147 @@ export type Database = {
           tmdb_id?: number
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      price_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string | null
+          format: string
+          id: string
+          is_active: boolean | null
+          threshold_percent: number | null
+          threshold_price: number | null
+          tmdb_id: number
+          triggered_at: string | null
+          triggered_price: number | null
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string | null
+          format: string
+          id?: string
+          is_active?: boolean | null
+          threshold_percent?: number | null
+          threshold_price?: number | null
+          tmdb_id: number
+          triggered_at?: string | null
+          triggered_price?: number | null
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string | null
+          format?: string
+          id?: string
+          is_active?: boolean | null
+          threshold_percent?: number | null
+          threshold_price?: number | null
+          tmdb_id?: number
+          triggered_at?: string | null
+          triggered_price?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      price_cache: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          format: string
+          id: string
+          last_sold_date: string | null
+          last_sold_price: number | null
+          price_avg: number | null
+          price_max: number | null
+          price_median: number | null
+          price_min: number | null
+          raw_data: Json | null
+          region: string | null
+          sample_size: number | null
+          sold_count: number | null
+          source: string | null
+          source_url: string | null
+          tmdb_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          format: string
+          id?: string
+          last_sold_date?: string | null
+          last_sold_price?: number | null
+          price_avg?: number | null
+          price_max?: number | null
+          price_median?: number | null
+          price_min?: number | null
+          raw_data?: Json | null
+          region?: string | null
+          sample_size?: number | null
+          sold_count?: number | null
+          source?: string | null
+          source_url?: string | null
+          tmdb_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          format?: string
+          id?: string
+          last_sold_date?: string | null
+          last_sold_price?: number | null
+          price_avg?: number | null
+          price_max?: number | null
+          price_median?: number | null
+          price_min?: number | null
+          raw_data?: Json | null
+          region?: string | null
+          sample_size?: number | null
+          sold_count?: number | null
+          source?: string | null
+          source_url?: string | null
+          tmdb_id?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      price_history: {
+        Row: {
+          format: string
+          id: string
+          price_max: number | null
+          price_median: number
+          price_min: number | null
+          recorded_at: string
+          region: string | null
+          sample_size: number | null
+          tmdb_id: number
+        }
+        Insert: {
+          format: string
+          id?: string
+          price_max?: number | null
+          price_median: number
+          price_min?: number | null
+          recorded_at?: string
+          region?: string | null
+          sample_size?: number | null
+          tmdb_id: number
+        }
+        Update: {
+          format?: string
+          id?: string
+          price_max?: number | null
+          price_median?: number
+          price_min?: number | null
+          recorded_at?: string
+          region?: string | null
+          sample_size?: number | null
+          tmdb_id?: number
         }
         Relationships: []
       }
@@ -786,6 +966,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_daily_prices: { Args: never; Returns: undefined }
+      cleanup_expired_price_cache: { Args: never; Returns: undefined }
+      get_price_evolution: {
+        Args: { p_days?: number; p_format: string; p_tmdb_id: number }
+        Returns: {
+          price_max: number
+          price_median: number
+          price_min: number
+          recorded_at: string
+        }[]
+      }
       get_xp_for_format: { Args: { format_name: string }; Returns: number }
     }
     Enums: {
