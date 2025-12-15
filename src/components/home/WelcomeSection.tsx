@@ -299,64 +299,64 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
         </p>
       </motion.div>
 
-      {/* Bento Grid - Clean 2x2 layout */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Ma Collection */}
+      {/* Bento Grid - Asymmetric layout */}
+      <div className="grid grid-cols-12 grid-rows-3 gap-2 h-[180px] md:h-[200px]">
+        {/* Ma Collection - 50% (6 cols, full height) */}
         <BentoCard
           title="Ma Collection"
           cta={collection.length > 0 ? `${collection.length} films` : "Ajouter"}
           onClick={() => navigate("/collection")}
           variant="collection"
-          className="aspect-[4/3]"
+          className="col-span-6 row-span-3"
           delay={0}
         >
           <PosterStack 
             posters={collectionPosters}
-            emptyIcon={<Plus className="w-8 h-8" />}
+            emptyIcon={<Plus className="w-6 h-6" />}
             emptyText="Ajoutez vos films"
           />
         </BentoCard>
 
-        {/* Découvrir */}
+        {/* Badges - 10% small */}
         <BentoCard
-          title="Découvrir"
-          cta="Explorer"
-          onClick={() => navigate("/search")}
-          variant="discover"
-          className="aspect-[4/3]"
-          delay={1}
-        >
-          <PosterStack 
-            posters={trendingPosters}
-            emptyIcon={<Sparkles className="w-8 h-8" />}
-            emptyText="Films tendance"
-          />
-        </BentoCard>
-
-        {/* Mes Badges */}
-        <BentoCard
-          title="Mes Badges"
-          cta="Débloquer"
+          title="Badges"
+          cta="Voir"
           onClick={() => navigate("/badges")}
           variant="badges"
-          className="aspect-[4/3]"
-          delay={2}
+          className="col-span-3 row-span-1"
+          delay={1}
         >
           <BadgesPreview badges={displayBadges} />
         </BentoCard>
 
-        {/* Mes Listes */}
+        {/* Découvrir - 10% small */}
+        <BentoCard
+          title="Découvrir"
+          cta="Go"
+          onClick={() => navigate("/search")}
+          variant="discover"
+          className="col-span-3 row-span-1"
+          delay={2}
+        >
+          <PosterStack 
+            posters={trendingPosters.slice(0, 3)}
+            emptyIcon={<Sparkles className="w-4 h-4" />}
+            emptyText=""
+          />
+        </BentoCard>
+
+        {/* Mes Listes - 30% (6 cols, 2 rows) */}
         <BentoCard
           title="Mes Listes"
           cta="Gérer"
           onClick={() => navigate("/lists")}
           variant="lists"
-          className="aspect-[4/3]"
+          className="col-span-6 row-span-2"
           delay={3}
         >
           <PosterStack 
             posters={listPosters}
-            emptyIcon={<Plus className="w-8 h-8" />}
+            emptyIcon={<Plus className="w-5 h-5" />}
             emptyText="Créez vos listes"
           />
         </BentoCard>
