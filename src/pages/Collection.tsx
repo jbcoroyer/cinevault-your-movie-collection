@@ -280,13 +280,14 @@ export default function Collection() {
               filters={filters}
               filterOptions={filterOptions}
               activeFilterCount={activeFilterCount}
-              onToggleFormat={toggleFormat}
-              onToggleCondition={toggleCondition}
-              onToggleGenre={toggleGenre}
-              onToggleDecade={toggleDecade}
-              onToggleDirector={toggleDirector}
-              onSetPriceRange={setPriceRange}
-              onResetFilters={resetFilters}
+              toggleFormat={toggleFormat}
+              toggleCondition={toggleCondition}
+              toggleGenre={toggleGenre}
+              toggleDecade={toggleDecade}
+              toggleDirector={toggleDirector}
+              setPriceRange={setPriceRange}
+              resetFilters={resetFilters}
+              hasActiveFilters={hasActiveFilters}
             />
 
             {/* Sort Dropdown */}
