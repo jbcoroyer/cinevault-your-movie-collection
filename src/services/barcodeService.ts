@@ -222,10 +222,15 @@ export const lookupBarcode = async (ean: string): Promise<BarcodeLookupResult> =
       };
     }
 
-    // 3. Search TMDB with the product title
+    // 3. Search TMDB with a robust query strategy (handles missing accents/letters)
     const product: BarcodeProduct = data.product;
-    const searchQuery = extractMovieTitle(product.title);
-    const movies = await searchMovies(searchQuery);
+    const candidates = buildTmdbSearchCandidates(product.title);
+
+    let movies: Movie[] = [];
+    for (const q of candidates) {
+      movies = await searchMovies(q);
+      if (movies.length > 0) break;
+    }
 
     return {
       success: true,
@@ -298,6 +303,56 @@ export const extractMovieTitle = (productTitle: string): string => {
   title = title.replace(/\s+/g, " ").trim();
 
   return title;
+};
+
+const foldDiacritics = (input: string): string => {
+  // Convert "Prophète" => "Prophete" while keeping base letters.
+  // Note: if the upstream source stripped non-ascii bytes ("Prophte"), we can't fully restore,
+  // so we also use prefix search fallbacks.
+  return input.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+};
+
+const STOPWORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "the",
+  "of",
+  "to",
+  "un",
+  "une",
+  "le",
+  "la",
+  "les",
+  "de",
+  "du",
+  "des",
+  "d",
+  "l",
+]);
+
+const buildTmdbSearchCandidates = (rawTitle: string): string[] => {
+  const base = extractMovieTitle(rawTitle);
+  const ascii = foldDiacritics(base);
+
+  const tokens = ascii
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .filter((t) => !STOPWORDS.has(t.toLowerCase()));
+
+  const prefix5 = tokens.map((t) => (t.length >= 5 ? t.slice(0, 5) : t)).join(" ");
+  const prefix3words = tokens
+    .slice(0, 3)
+    .map((t) => (t.length >= 5 ? t.slice(0, 5) : t))
+    .join(" ");
+
+  const candidates = [base, ascii, tokens.join(" "), prefix5, prefix3words]
+    .map((q) => q.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  // Unique, preserve order
+  return Array.from(new Set(candidates));
 };
 
 /**
