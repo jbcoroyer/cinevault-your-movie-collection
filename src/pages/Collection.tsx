@@ -283,24 +283,23 @@ export default function Collection() {
     setSelectedIds(new Set());
   };
 
-  // Handle scanned movies from barcode scanner
-  const handleScannedMovies = async (
-    scannedMovies: Array<{
+  // Handle selected movies from barcode scanner
+  const handleMoviesSelected = async (
+    selectedMovies: Array<{
       movie: Movie;
       format: PhysicalFormat;
       ean?: string;
     }>,
   ) => {
-    if (!user || scannedMovies.length === 0) return;
+    if (!user || selectedMovies.length === 0) return;
 
     let addedCount = 0;
-    for (const { movie, format, ean } of scannedMovies) {
+    for (const { movie, format } of selectedMovies) {
       try {
         await addPhysicalMovie(user.id, {
           tmdb_id: movie.id,
           format,
           condition: "good",
-          ean_code: ean,
         });
         addedCount++;
       } catch (error) {
@@ -732,7 +731,7 @@ export default function Collection() {
       <AddPhysicalMovieDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onMovieAdded={fetchPhysicalMovies} />
 
       {/* Barcode Scanner Dialog */}
-      <BarcodeScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} onMoviesScanned={handleScannedMovies} />
+      <BarcodeScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} onMoviesSelected={handleMoviesSelected} />
 
       {/* Edit Movie Dialog */}
       <EditPhysicalMovieDialog
