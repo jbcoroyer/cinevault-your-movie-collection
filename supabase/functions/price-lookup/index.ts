@@ -1,12 +1,13 @@
 /**
- * CineVault - Price Lookup Edge Function (CORRIGÉ)
+ * CineVault - Price Lookup Edge Function
  *
- * CORRECTIONS APPLIQUÉES:
- * - Nettoyage du titre pour la recherche
+ * Edge Function pour la recherche de prix eBay
+ *
+ * CORRECTIONS:
+ * - Nettoyage intelligent du titre
  * - Variantes de recherche multiples
- * - Catégorie eBay Films (617) pour des résultats plus pertinents
- * - Cache des estimations avec expiration courte
- * - Meilleur logging
+ * - Catégorie eBay Films
+ * - Cache des estimations
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -36,14 +37,13 @@ interface EbayAuthToken {
   token_type: string;
 }
 
-// Cache pour le token eBay (évite de redemander à chaque requête)
+// Cache pour le token eBay
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 /**
- * Obtient un token d'accès eBay via OAuth2 Client Credentials
+ * Obtient un token d'accès eBay via OAuth2
  */
 async function getEbayAccessToken(): Promise<string> {
-  // Vérifier le cache
   if (cachedToken && Date.now() < cachedToken.expiresAt - 60000) {
     console.log("[price-lookup] Using cached eBay token");
     return cachedToken.token;
@@ -87,11 +87,11 @@ async function getEbayAccessToken(): Promise<string> {
 }
 
 // ============================================
-// NOUVEAU: Fonctions de nettoyage du titre
+// NOUVEAU: Nettoyage du titre
 // ============================================
 
 /**
- * Nettoie et prépare le titre pour la recherche eBay
+ * Nettoie le titre pour la recherche eBay
  */
 function cleanTitleForSearch(title: string): string {
   return (
@@ -101,17 +101,17 @@ function cleanTitleForSearch(title: string): string {
         /\s*[-–:]\s*(Édition|Edition|Version|Collector|Steelbook|Director'?s?\s*Cut|Extended|Ultimate|Special|Deluxe|Limited|Premium|Digibook|Digipack|Combo|Pack).*/gi,
         "",
       )
-      // Supprimer les mentions de format dans le titre
+      // Supprimer les mentions de format
       .replace(/\s*(4K|UHD|Ultra\s*HD|Blu-?ray|DVD|VHS|3D)\s*/gi, "")
-      // Supprimer les parenthèses avec du contenu
+      // Supprimer les parenthèses
       .replace(/\s*\([^)]*\)/g, "")
       // Supprimer les crochets
       .replace(/\s*\[[^\]]*\]/g, "")
-      // Supprimer les caractères spéciaux problématiques
+      // Supprimer les caractères spéciaux
       .replace(/[&+]/g, " ")
       // Supprimer les guillemets
       .replace(/["""'']/g, "")
-      // Supprimer les deux-points suivis d'un sous-titre long
+      // Supprimer les deux-points avec sous-titre long
       .replace(/:\s*.{20,}$/, "")
       // Normaliser les espaces
       .replace(/\s+/g, " ")
@@ -120,7 +120,7 @@ function cleanTitleForSearch(title: string): string {
 }
 
 /**
- * Génère des variantes de recherche pour améliorer les résultats
+ * Génère des variantes de recherche
  */
 function generateSearchVariants(title: string, format: string): string[] {
   const cleanTitle = cleanTitleForSearch(title);
@@ -138,19 +138,19 @@ function generateSearchVariants(title: string, format: string): string[] {
   const formats = formatKeywords[format.toLowerCase()] || [format];
   const variants: string[] = [];
 
-  // Variante 1: Titre nettoyé + format principal
+  // Titre + format principal
   variants.push(`${cleanTitle} ${formats[0]}`);
 
-  // Variante 2: Titre nettoyé + "film" + format (évite les jeux vidéo, livres, etc.)
+  // Titre + "film" + format
   variants.push(`${cleanTitle} film ${formats[0]}`);
 
-  // Variante 3: Si le titre est long, essayer juste les premiers mots
+  // Premiers mots si titre long
   const words = cleanTitle.split(" ");
   if (words.length > 3) {
     variants.push(`${words.slice(0, 3).join(" ")} ${formats[0]}`);
   }
 
-  // Variante 4: Format alternatif si disponible
+  // Format alternatif
   if (formats.length > 1) {
     variants.push(`${cleanTitle} ${formats[1]}`);
   }
@@ -159,7 +159,7 @@ function generateSearchVariants(title: string, format: string): string[] {
 }
 
 /**
- * Recherche les prix sur eBay avec plusieurs variantes de recherche
+ * Recherche les prix sur eBay
  */
 async function searchEbayPrices(title: string, format: string, year?: number): Promise<EbayPrice | null> {
   const token = await getEbayAccessToken();
@@ -173,7 +173,6 @@ async function searchEbayPrices(title: string, format: string, year?: number): P
     "Content-Type": "application/json",
   };
 
-  // Essayer plusieurs marchés si nécessaire
   const marketplaces = ["EBAY_FR", "EBAY_DE"];
 
   for (const marketplace of marketplaces) {
@@ -184,9 +183,7 @@ async function searchEbayPrices(title: string, format: string, year?: number): P
 
       const browseUrl = new URL("https://api.ebay.com/buy/browse/v1/item_summary/search");
       browseUrl.searchParams.set("q", searchQuery);
-
-      // NOUVEAU: Utiliser la catégorie Films (617) pour des résultats plus pertinents
-      browseUrl.searchParams.set("category_ids", "617");
+      browseUrl.searchParams.set("category_ids", "617"); // Catégorie Films
       browseUrl.searchParams.set("limit", "50");
       browseUrl.searchParams.set("sort", "price");
 
@@ -202,9 +199,8 @@ async function searchEbayPrices(title: string, format: string, year?: number): P
         const data = await response.json();
         const items = data.itemSummaries || [];
 
-        console.log(`[price-lookup] ${marketplace} returned ${items.length} items for "${searchQuery}"`);
+        console.log(`[price-lookup] ${marketplace} returned ${items.length} items`);
 
-        // Au moins 3 résultats pour des stats fiables
         if (items.length >= 3) {
           const result = await processEbayResults(data, marketplace === "EBAY_US" ? "USD" : "EUR");
           if (result) {
@@ -219,7 +215,7 @@ async function searchEbayPrices(title: string, format: string, year?: number): P
     }
   }
 
-  // Dernier essai: recherche sans catégorie (plus large)
+  // Dernier essai: recherche large sans catégorie
   console.log("[price-lookup] Trying broader search without category filter...");
   const broadQuery = cleanTitleForSearch(title);
 
@@ -249,12 +245,12 @@ async function searchEbayPrices(title: string, format: string, year?: number): P
     }
   }
 
-  console.log(`[price-lookup] No results found for "${title}" after all attempts`);
+  console.log(`[price-lookup] No results found for "${title}"`);
   return null;
 }
 
 /**
- * Traite les résultats eBay et calcule les statistiques de prix
+ * Traite les résultats eBay
  */
 async function processEbayResults(data: any, currency: string): Promise<EbayPrice | null> {
   const items = data.itemSummaries || [];
@@ -263,31 +259,26 @@ async function processEbayResults(data: any, currency: string): Promise<EbayPric
     return null;
   }
 
-  // Extraire les prix (convertir en centimes)
   const prices: number[] = items
     .filter((item: any) => item.price?.value)
     .map((item: any) => {
       const value = parseFloat(item.price.value);
-      // Convertir en centimes EUR (approximation si USD)
       const euroValue = item.price.currency === "USD" ? value * 0.92 : value;
       return Math.round(euroValue * 100);
     })
-    // Filtrer les prix aberrants (< 1€ ou > 500€ pour un film)
-    .filter((price: number) => price >= 100 && price <= 50000)
+    .filter((price: number) => price >= 100 && price <= 50000) // 1€ - 500€
     .sort((a: number, b: number) => a - b);
 
   if (prices.length < 3) {
-    console.log(`[price-lookup] Not enough valid prices (${prices.length}), need at least 3`);
+    console.log(`[price-lookup] Not enough valid prices (${prices.length})`);
     return null;
   }
 
-  // Calculer les statistiques
   const min = prices[0];
   const max = prices[prices.length - 1];
   const median = prices[Math.floor(prices.length / 2)];
   const avg = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
 
-  // Dernier vendu (premier item de la liste)
   const lastItem = items[0];
   const lastSoldPrice = lastItem?.price?.value ? Math.round(parseFloat(lastItem.price.value) * 100) : undefined;
 
@@ -310,7 +301,7 @@ async function processEbayResults(data: any, currency: string): Promise<EbayPric
 }
 
 /**
- * Sauvegarde le prix dans le cache Supabase
+ * Sauvegarde le prix dans le cache
  */
 async function cachePriceData(
   supabase: any,
@@ -322,7 +313,7 @@ async function cachePriceData(
 ): Promise<void> {
   const expiresAt = new Date();
 
-  // Les estimations expirent plus vite (24h) que les vrais prix eBay (7 jours)
+  // Estimations: 24h, Prix réels: 7 jours
   if (isEstimate) {
     expiresAt.setHours(expiresAt.getHours() + 24);
   } else {
@@ -352,9 +343,7 @@ async function cachePriceData(
         onConflict: "tmdb_id,format,region",
       },
     );
-    console.log(
-      `[price-lookup] ${isEstimate ? "Estimate" : "Price"} cached successfully (expires: ${isEstimate ? "24h" : "7d"})`,
-    );
+    console.log(`[price-lookup] ${isEstimate ? "Estimate" : "Price"} cached (expires: ${isEstimate ? "24h" : "7d"})`);
   } catch (error) {
     console.error("[price-lookup] Cache save error:", error);
   }
@@ -365,7 +354,6 @@ async function cachePriceData(
 // ============================================
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -382,12 +370,11 @@ serve(async (req) => {
 
     console.log(`[price-lookup] Request for: "${title}" (${format}) tmdb:${tmdb_id}`);
 
-    // Initialiser Supabase
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Vérifier le cache d'abord (seulement si source = "ebay" avec des vrais résultats)
+    // 1. Vérifier le cache (seulement prix eBay réels)
     const { data: cachedPrice } = await supabase
       .from("price_cache")
       .select("*")
@@ -428,7 +415,7 @@ serve(async (req) => {
     const ebayPrice = await searchEbayPrices(title, format, year);
 
     if (!ebayPrice) {
-      // Pas de prix trouvé - retourner une estimation basée sur le format
+      // Pas de prix trouvé - retourner une estimation
       const estimates: Record<string, { min: number; median: number; max: number }> = {
         "4k": { min: 1500, median: 2500, max: 4500 },
         bluray: { min: 500, median: 1200, max: 2500 },
@@ -446,13 +433,13 @@ serve(async (req) => {
         median: est.median,
         max: est.max,
         avg: est.median,
-        sampleSize: 0, // Indicateur que c'est une estimation
+        sampleSize: 0,
         soldCount: 0,
         currency: "EUR",
         source: "estimate",
       };
 
-      // NOUVEAU: Cacher l'estimation aussi (expire dans 24h)
+      // Cache l'estimation
       await cachePriceData(supabase, tmdb_id, format, region, estimateData, true);
 
       console.log(`[price-lookup] No eBay results for "${title}", returning estimate: ${est.median / 100}€`);
