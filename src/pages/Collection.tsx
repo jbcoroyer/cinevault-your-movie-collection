@@ -1,4 +1,16 @@
-import { useState, useEffect } from "react";
+/**
+ * CineVault - Collection Page (CORRIGÉ)
+ *
+ * Page principale de gestion de la collection physique
+ * Avec valorisation basée sur les vrais prix eBay
+ *
+ * CORRECTIONS:
+ * - ValuationDashboardPremium reçoit maintenant les vraies données
+ * - Préparation correcte des données pour les widgets
+ * - Intégration complète avec useCollectionValuation
+ */
+
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
@@ -31,8 +43,20 @@ import { useCollectionValuation } from "@/hooks/useCollectionValuation";
 
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { Plus, ArrowUpDown, Library, ChevronDown, Scan, DollarSign, RefreshCw, TrendingUp, Trash2 } from "lucide-react";
+import {
+  Plus,
+  ArrowUpDown,
+  Library,
+  ChevronDown,
+  Scan,
+  DollarSign,
+  RefreshCw,
+  TrendingUp,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -149,6 +173,24 @@ export default function Collection() {
   });
 
   // ============================================
+  // CORRECTION: Préparer les données pour le dashboard
+  // ============================================
+  const moviesForDashboard = useMemo(() => {
+    return physicalMovies.map((movie) => {
+      const details = physicalMovieDetails[movie.tmdb_id];
+      return {
+        tmdbId: movie.tmdb_id,
+        title: details?.title || `Film #${movie.tmdb_id}`,
+        format: movie.format,
+        posterPath: details?.poster_path,
+        // IMPORTANT: Convertir en centimes pour le dashboard
+        purchasePrice: movie.price ? Math.round(movie.price * 100) : undefined,
+        releaseYear: details?.release_date ? new Date(details.release_date).getFullYear() : undefined,
+      };
+    });
+  }, [physicalMovies, physicalMovieDetails]);
+
+  // ============================================
   // Data Fetching
   // ============================================
 
@@ -251,47 +293,40 @@ export default function Collection() {
   ) => {
     if (!user || scannedMovies.length === 0) return;
 
-    let successCount = 0;
-    let duplicateCount = 0;
-
-    for (const item of scannedMovies) {
+    let addedCount = 0;
+    for (const { movie, format, ean } of scannedMovies) {
       try {
         await addPhysicalMovie(user.id, {
-          tmdb_id: item.movie.id,
-          format: item.format,
+          tmdb_id: movie.id,
+          format,
           condition: "good",
+          ean_code: ean,
         });
-        successCount++;
-      } catch (error: any) {
-        if (error.code === "23505") {
-          // Duplicate entry - film already exists
-          duplicateCount++;
-        } else {
-          console.error("Erreur ajout film scanné:", error);
-        }
+        addedCount++;
+      } catch (error) {
+        console.error(`Error adding scanned movie ${movie.title}:`, error);
       }
     }
 
-    if (successCount > 0) {
+    if (addedCount > 0) {
       toast({
-        title: `${successCount} film${successCount > 1 ? "s" : ""} ajouté${successCount > 1 ? "s" : ""} !`,
-        description:
-          duplicateCount > 0
-            ? `${duplicateCount} film${duplicateCount > 1 ? "s" : ""} déjà présent${duplicateCount > 1 ? "s" : ""} dans votre collection.`
-            : "Votre vidéothèque a été mise à jour.",
+        title: `${addedCount} film${addedCount > 1 ? "s" : ""} ajouté${addedCount > 1 ? "s" : ""}`,
+        description: "Votre collection a été mise à jour.",
       });
       fetchPhysicalMovies();
-    } else if (duplicateCount > 0) {
-      toast({
-        title: "Films déjà présents",
-        description: `${duplicateCount} film${duplicateCount > 1 ? "s" : ""} ${duplicateCount > 1 ? "sont" : "est"} déjà dans votre collection.`,
-        variant: "destructive",
-      });
+    }
+  };
+
+  // Handle movie click in valuation mode
+  const handleValuationMovieClick = (tmdbId: number) => {
+    const movie = physicalMovies.find((m) => m.tmdb_id === tmdbId);
+    if (movie) {
+      setSelectedMovie(movie);
     }
   };
 
   // ============================================
-  // Sorting Logic (with market value support)
+  // Sorting Logic
   // ============================================
 
   const sortedMovies = [...filteredMovies].sort((a, b) => {
@@ -367,7 +402,6 @@ export default function Collection() {
   // Main Render
   // ============================================
 
-
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Header />
@@ -384,123 +418,33 @@ export default function Collection() {
                 {viewMode === "collection" &&
                   hasActiveFilters &&
                   ` • ${filteredMovies.length} affiché${filteredMovies.length > 1 ? "s" : ""}`}
-                {viewMode === "valuation" && valuation && (
-                  <span className="ml-2 text-primary font-medium">
-                    • Valeur estimée: {formatValue(valuation.totalValueMedian)}
-                  </span>
-                )}
               </p>
             </div>
 
-            {/* Action Buttons based on view mode */}
+            {/* Actions */}
             <div className="flex items-center gap-2 flex-wrap">
               {viewMode === "collection" && (
                 <>
-                  {/* Filters Drawer */}
-                  <CollectionFiltersDrawer
-                    filters={filters}
-                    filterOptions={filterOptions}
-                    activeFilterCount={activeFilterCount}
-                    toggleFormat={toggleFormat}
-                    toggleCondition={toggleCondition}
-                    toggleGenre={toggleGenre}
-                    toggleDecade={toggleDecade}
-                    toggleDirector={toggleDirector}
-                    setPriceRange={setPriceRange}
-                    resetFilters={resetFilters}
-                    hasActiveFilters={hasActiveFilters}
-                  />
-
-                  {/* Sort Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <ArrowUpDown className="w-4 h-4" />
-                        <span className="hidden sm:inline">{sortLabels[sortBy]}</span>
-                        <ChevronDown className="w-3 h-3 opacity-50" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      {Object.entries(sortLabels).map(([key, label]) => (
-                        <DropdownMenuItem
-                          key={key}
-                          onClick={() => {
-                            if (sortBy === key) {
-                              toggleSortOrder();
-                            } else {
-                              setSortBy(key as SortBy);
-                              setSortOrder("asc");
-                            }
-                          }}
-                          className={cn(sortBy === key && "bg-accent")}
-                        >
-                          {label}
-                          {sortBy === key && (
-                            <span className="ml-auto text-xs opacity-50">{sortOrder === "asc" ? "↑" : "↓"}</span>
-                          )}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Scanner Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setScannerOpen(true)}
-                    className="gap-2 border-videoclub-cyan/30 hover:bg-videoclub-cyan/10 hover:text-videoclub-cyan hover:border-videoclub-cyan/50 transition-colors"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setScannerOpen(true)} className="gap-2">
                     <Scan className="w-4 h-4" />
                     <span className="hidden sm:inline">Scanner</span>
                   </Button>
-
-                  {/* Selection Mode Toggle */}
-                  <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-muted/50">
-                    <Switch
-                      id="selection-mode"
-                      checked={selectionMode}
-                      onCheckedChange={(checked) => {
-                        setSelectionMode(checked);
-                        if (!checked) setSelectedIds(new Set());
-                      }}
-                    />
-                    <label htmlFor="selection-mode" className="text-xs text-muted-foreground cursor-pointer">
-                      Sélection
-                    </label>
-                  </div>
-
-                  {/* Delete Button (visible when selection mode is on and items selected) */}
-                  {selectionMode && selectedIds.size > 0 && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setDeleteConfirmOpen(true)}
-                      className="gap-2 animate-in fade-in slide-in-from-right-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Supprimer ({selectedIds.size})
-                    </Button>
-                  )}
-
-                  {/* Add Button */}
                   <Button
-                    onClick={() => setAddDialogOpen(true)}
                     size="sm"
-                    className="gap-2 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta hover:opacity-90"
-                    disabled={selectionMode}
+                    onClick={() => setAddDialogOpen(true)}
+                    className="gap-2 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta"
                   >
                     <Plus className="w-4 h-4" />
                     <span className="hidden sm:inline">Ajouter</span>
                   </Button>
                 </>
               )}
-
               {viewMode === "valuation" && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={refreshValuation}
-                  disabled={valuationRefreshing || physicalMovies.length === 0}
+                  disabled={valuationRefreshing}
                   className="gap-2"
                 >
                   <RefreshCw className={cn("w-4 h-4", valuationRefreshing && "animate-spin")} />
@@ -535,6 +479,83 @@ export default function Collection() {
         {/* ============================================ */}
         {viewMode === "collection" && (
           <div className="mt-6">
+            {/* Collection Controls */}
+            <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                {/* Filters */}
+                <CollectionFiltersDrawer
+                  filters={filters}
+                  filterOptions={filterOptions}
+                  toggleFormat={toggleFormat}
+                  toggleCondition={toggleCondition}
+                  toggleGenre={toggleGenre}
+                  toggleDecade={toggleDecade}
+                  toggleDirector={toggleDirector}
+                  setPriceRange={setPriceRange}
+                  resetFilters={resetFilters}
+                  hasActiveFilters={hasActiveFilters}
+                  activeFilterCount={activeFilterCount}
+                />
+
+                {/* Sort Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <ArrowUpDown className="w-4 h-4" />
+                      {sortLabels[sortBy]}
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {Object.entries(sortLabels).map(([key, label]) => (
+                      <DropdownMenuItem
+                        key={key}
+                        onClick={() => setSortBy(key as SortBy)}
+                        className={cn(sortBy === key && "bg-accent")}
+                      >
+                        {label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Sort Order Toggle */}
+                <Button variant="ghost" size="sm" onClick={toggleSortOrder}>
+                  {sortOrder === "asc" ? "↑" : "↓"}
+                </Button>
+              </div>
+
+              {/* Selection Mode Toggle */}
+              <div className="flex items-center gap-2">
+                {selectionMode ? (
+                  <>
+                    <Badge variant="secondary">
+                      {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
+                    </Badge>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteConfirmOpen(true)}
+                      disabled={selectedIds.size === 0}
+                      className="gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Supprimer
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Sélection</span>
+                    <Switch checked={selectionMode} onCheckedChange={setSelectionMode} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Collection Grid */}
             {loading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {Array.from({ length: 10 }).map((_, i) => (
@@ -591,12 +612,25 @@ export default function Collection() {
         )}
 
         {/* ============================================ */}
-        {/* VIEW: VALUATION (Sprint 2) */}
+        {/* VIEW: VALUATION (Sprint 2 - CORRIGÉ) */}
         {/* ============================================ */}
         {viewMode === "valuation" && (
           <div className="mt-6 space-y-6">
-            {/* Valuation Dashboard */}
-            <ValuationDashboardPremium />
+            {/* 
+              CORRECTION MAJEURE: 
+              On passe maintenant les vraies données au dashboard
+              au lieu de laisser le composant utiliser des données mockées
+            */}
+            <ValuationDashboardPremium
+              valuation={valuation}
+              movies={moviesForDashboard}
+              moviePrices={moviePrices}
+              loading={valuationLoading}
+              refreshing={valuationRefreshing}
+              lastUpdated={valuationLastUpdated}
+              onRefresh={refreshValuation}
+              onMovieClick={handleValuationMovieClick}
+            />
 
             {/* Selected Movie Price Evolution */}
             {selectedMovie && (
@@ -607,6 +641,7 @@ export default function Collection() {
                     Évolution du prix: {physicalMovieDetails[selectedMovie.tmdb_id]?.title}
                   </h3>
                   <Button variant="ghost" size="sm" onClick={() => setSelectedMovie(null)}>
+                    <X className="w-4 h-4 mr-1" />
                     Fermer
                   </Button>
                 </div>
@@ -614,113 +649,99 @@ export default function Collection() {
                   tmdbId={selectedMovie.tmdb_id}
                   format={selectedMovie.format}
                   title={physicalMovieDetails[selectedMovie.tmdb_id]?.title || ""}
-                  purchasePrice={selectedMovie.price ? selectedMovie.price * 100 : undefined}
+                  purchasePrice={selectedMovie.price || undefined}
                 />
               </div>
             )}
 
-            {/* Quick Price List */}
-            {physicalMovies.length > 0 && !selectedMovie && (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-sm text-muted-foreground">
-                  Cliquez sur un film pour voir l'évolution de son prix
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {sortedMovies.slice(0, 12).map((movie) => {
-                    const details = physicalMovieDetails[movie.tmdb_id];
-                    const movieValuation = getMovieValuation(movie.tmdb_id, movie.format);
+            {/* Films de la collection avec prix */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Library className="w-5 h-5 text-primary" />
+                Films de votre collection
+              </h3>
+              <p className="text-sm text-muted-foreground">Cliquez sur un film pour voir l'évolution de son prix</p>
 
-                    return (
-                      <button
-                        key={movie.id}
-                        onClick={() => setSelectedMovie(movie)}
-                        className={cn(
-                          "flex items-center gap-3 p-3 rounded-xl text-left transition-all",
-                          "bg-card/50 border border-white/10 backdrop-blur-sm",
-                          "hover:bg-card/80 hover:border-primary/30",
-                          selectedMovie?.id === movie.id && "ring-2 ring-primary",
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {physicalMovies.map((movie) => {
+                  const details = physicalMovieDetails[movie.tmdb_id];
+                  const priceData = moviePrices.get(`${movie.tmdb_id}-${movie.format}`);
+                  const isSelected = selectedMovie?.id === movie.id;
+
+                  return (
+                    <div
+                      key={movie.id}
+                      onClick={() => setSelectedMovie(movie)}
+                      className={cn(
+                        "cursor-pointer transition-all duration-200",
+                        "rounded-lg overflow-hidden border-2",
+                        isSelected
+                          ? "border-primary shadow-lg shadow-primary/20 scale-105"
+                          : "border-transparent hover:border-primary/50",
+                      )}
+                    >
+                      <div className="relative aspect-[2/3] bg-muted">
+                        {details?.poster_path ? (
+                          <img
+                            src={`https://image.tmdb.org/t/p/w185${details.poster_path}`}
+                            alt={details.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Library className="w-8 h-8 text-muted-foreground/50" />
+                          </div>
                         )}
-                      >
-                        {/* Poster */}
-                        <div className="w-12 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                          {details?.poster_path ? (
-                            <img
-                              src={`https://image.tmdb.org/t/p/w92${details.poster_path}`}
-                              alt={details.title}
-                              className="w-full h-full object-cover"
-                            />
+
+                        {/* Format Badge */}
+                        <div className="absolute top-1 left-1">
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] px-1.5 py-0 bg-black/70 text-white border-0"
+                          >
+                            {movie.format.toUpperCase()}
+                          </Badge>
+                        </div>
+
+                        {/* Price Overlay */}
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-2">
+                          <p className="text-white text-xs font-medium truncate">
+                            {details?.title || `Film #${movie.tmdb_id}`}
+                          </p>
+                          {priceData ? (
+                            <p className="text-green-400 text-sm font-bold">{(priceData.median / 100).toFixed(2)} €</p>
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Library className="w-4 h-4 text-muted-foreground" />
-                            </div>
+                            <p className="text-zinc-500 text-xs">Prix inconnu</p>
                           )}
                         </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{details?.title || `Film #${movie.tmdb_id}`}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{movie.format}</p>
-                        </div>
-
-                        {/* Price */}
-                        <div className="text-right">
-                          {movieValuation?.marketPrice ? (
-                            <>
-                              <p className="font-semibold text-sm">{formatValue(movieValuation.marketPrice.median)}</p>
-                              {movieValuation.profitLossPercent !== undefined && (
-                                <p
-                                  className={cn(
-                                    "text-xs font-medium",
-                                    movieValuation.profitLossPercent > 0
-                                      ? "text-green-500"
-                                      : movieValuation.profitLossPercent < 0
-                                        ? "text-red-500"
-                                        : "text-muted-foreground",
-                                  )}
-                                >
-                                  {movieValuation.profitLossPercent > 0 ? "+" : ""}
-                                  {movieValuation.profitLossPercent}%
-                                </p>
-                              )}
-                            </>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">—</p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {sortedMovies.length > 12 && (
-                  <p className="text-center text-sm text-muted-foreground">
-                    + {sortedMovies.length - 12} autres films dans votre collection
-                  </p>
-                )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>
 
+      {/* ============================================ */}
       {/* Dialogs */}
+      {/* ============================================ */}
+
+      {/* Add Movie Dialog */}
       <AddPhysicalMovieDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onMovieAdded={fetchPhysicalMovies} />
 
-      <BarcodeScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} onMoviesSelected={handleScannedMovies} />
+      {/* Barcode Scanner Dialog */}
+      <BarcodeScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} onMoviesScanned={handleScannedMovies} />
 
-      {editingMovie && (
-        <EditPhysicalMovieDialog
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-          physicalMovie={editingMovie}
-          movieDetails={editingMovieDetails}
-          onMovieUpdated={() => {
-            setEditDialogOpen(false);
-            setEditingMovie(null);
-            fetchPhysicalMovies();
-          }}
-        />
-      )}
+      {/* Edit Movie Dialog */}
+      <EditPhysicalMovieDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        physicalMovie={editingMovie}
+        movieDetails={editingMovieDetails}
+        onMovieUpdated={fetchPhysicalMovies}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -738,7 +759,7 @@ export default function Collection() {
             <AlertDialogAction
               onClick={handleBulkDelete}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive hover:bg-destructive/90"
             >
               {isDeleting ? "Suppression..." : "Supprimer"}
             </AlertDialogAction>
