@@ -72,8 +72,7 @@ export const ValuationDashboardPremium = () => {
 
         {/* Widgets Latéraux */}
         <div className="space-y-6">
-          <TopGainersWidget />
-          <CollectionStats />
+          <TopGainersWidget gainers={[]} />
         </div>
       </div>
 

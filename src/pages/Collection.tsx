@@ -367,15 +367,6 @@ export default function Collection() {
   // Main Render
   // ============================================
 
-  {
-    viewMode === "valuation" && (
-      <ValuationDashboardPremium
-        userId={user.id}
-        movies={physicalMovies}
-        movieDetails={physicalMovieDetails}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
@@ -605,11 +596,7 @@ export default function Collection() {
         {viewMode === "valuation" && (
           <div className="mt-6 space-y-6">
             {/* Valuation Dashboard */}
-            <ValuationDashboardPremium
-              userId={user.id}
-              movies={physicalMovies}
-              movieDetails={physicalMovieDetails}
-            />
+            <ValuationDashboardPremium />
 
             {/* Selected Movie Price Evolution */}
             {selectedMovie && (
