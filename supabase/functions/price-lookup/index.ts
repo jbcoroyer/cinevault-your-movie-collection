@@ -87,9 +87,9 @@ async function searchEbayPrices(
 ): Promise<EbayPrice | null> {
   const token = await getEbayAccessToken();
 
-  // Construire la requête de recherche
+  // Construire la requête de recherche - simple et efficace
   const formatKeywords: Record<string, string> = {
-    "4k": "4K UHD Blu-ray",
+    "4k": "4K",
     "bluray": "Blu-ray",
     "dvd": "DVD",
     "vhs": "VHS",
@@ -97,50 +97,54 @@ async function searchEbayPrices(
   };
 
   const formatQuery = formatKeywords[format.toLowerCase()] || format;
-  const searchQuery = year 
-    ? `${title} ${formatQuery} ${year}` 
-    : `${title} ${formatQuery}`;
+  // Recherche simple: titre + format (sans année car trop restrictif)
+  const searchQuery = `${title} ${formatQuery}`;
 
   console.log(`[price-lookup] Searching eBay for: "${searchQuery}"`);
 
-  // 1. D'abord chercher les ventes terminées (sold items) via Browse API
-  const browseUrl = new URL("https://api.ebay.com/buy/browse/v1/item_summary/search");
-  browseUrl.searchParams.set("q", searchQuery);
-  browseUrl.searchParams.set("category_ids", "617"); // Category: DVDs & Blu-ray Discs
-  browseUrl.searchParams.set("filter", "buyingOptions:{FIXED_PRICE|AUCTION},conditionIds:{1000|1500|2000|2500|3000}"); // Various conditions
-  browseUrl.searchParams.set("limit", "50");
-  browseUrl.searchParams.set("sort", "price");
-
   const headers = {
     "Authorization": `Bearer ${token}`,
-    "X-EBAY-C-MARKETPLACE-ID": "EBAY_FR", // Marché français
+    "X-EBAY-C-MARKETPLACE-ID": "EBAY_FR",
     "Content-Type": "application/json",
   };
 
-  try {
-    const browseResponse = await fetch(browseUrl.toString(), { headers });
+  // Essayer plusieurs marchés si nécessaire
+  const marketplaces = ["EBAY_FR", "EBAY_DE", "EBAY_US"];
+  
+  for (const marketplace of marketplaces) {
+    headers["X-EBAY-C-MARKETPLACE-ID"] = marketplace;
     
-    if (!browseResponse.ok) {
-      const errorText = await browseResponse.text();
-      console.error("[price-lookup] Browse API error:", browseResponse.status, errorText);
-      
-      // Essayer avec EBAY_US si FR ne fonctionne pas
-      headers["X-EBAY-C-MARKETPLACE-ID"] = "EBAY_US";
-      const usResponse = await fetch(browseUrl.toString(), { headers });
-      
-      if (!usResponse.ok) {
-        console.error("[price-lookup] US Browse API also failed");
-        return null;
-      }
-      
-      return await processEbayResults(await usResponse.json(), "USD");
-    }
+    const browseUrl = new URL("https://api.ebay.com/buy/browse/v1/item_summary/search");
+    browseUrl.searchParams.set("q", searchQuery);
+    // Pas de catégorie pour élargir la recherche
+    browseUrl.searchParams.set("limit", "50");
+    browseUrl.searchParams.set("sort", "price");
 
-    return await processEbayResults(await browseResponse.json(), "EUR");
-  } catch (error) {
-    console.error("[price-lookup] eBay search error:", error);
-    return null;
+    try {
+      console.log(`[price-lookup] Trying marketplace: ${marketplace}`);
+      const response = await fetch(browseUrl.toString(), { headers });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[price-lookup] ${marketplace} error:`, response.status, errorText.substring(0, 200));
+        continue;
+      }
+
+      const data = await response.json();
+      const items = data.itemSummaries || [];
+      console.log(`[price-lookup] ${marketplace} returned ${items.length} items`);
+      
+      if (items.length > 0) {
+        return await processEbayResults(data, marketplace === "EBAY_US" ? "USD" : "EUR");
+      }
+    } catch (error) {
+      console.error(`[price-lookup] ${marketplace} fetch error:`, error);
+      continue;
+    }
   }
+  
+  console.log("[price-lookup] No results from any marketplace");
+  return null;
 }
 
 /**
@@ -264,18 +268,19 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Vérifier le cache d'abord
+    // 1. Vérifier le cache d'abord (seulement si source = "ebay", pas les estimates)
     const { data: cachedPrice } = await supabase
       .from("price_cache")
       .select("*")
       .eq("tmdb_id", tmdb_id)
       .eq("format", format.toLowerCase())
       .eq("region", region)
+      .eq("source", "ebay") // Ne pas utiliser les estimates en cache
       .gt("expires_at", new Date().toISOString())
       .single();
 
-    if (cachedPrice) {
-      console.log("[price-lookup] Returning cached price");
+    if (cachedPrice && cachedPrice.sample_size > 0) {
+      console.log("[price-lookup] Returning cached eBay price");
       return new Response(
         JSON.stringify({
           success: true,
@@ -296,6 +301,8 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    console.log("[price-lookup] No valid cache, calling eBay API...");
 
     // 2. Rechercher sur eBay
     const ebayPrice = await searchEbayPrices(title, format, year);
