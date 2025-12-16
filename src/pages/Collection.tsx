@@ -24,7 +24,7 @@ import { useCollectionFilters } from "@/hooks/useCollectionFilters";
 // ============================================
 // Sprint 2 Imports - Valorisation
 // ============================================
-import { ValuationDashboardPremium } from "@/components/collection/ValuationDashboardPremium";
+import { ValuationDashboard } from "@/components/collection/Valuationdashboard";
 import { PriceCard } from "@/components/collection/PriceCard";
 import { ValueEvolutionChart } from "@/components/collection/ValueEvolutionChart";
 import { useCollectionValuation } from "@/hooks/useCollectionValuation";
@@ -369,11 +369,10 @@ export default function Collection() {
 
   {
     viewMode === "valuation" && (
-      <ValuationDashboardPremium
+      <ValuationDashboard
         userId={user.id}
         movies={physicalMovies}
         movieDetails={physicalMovieDetails}
-        onMovieClick={(tmdbId) => navigate(`/movie/${tmdbId}`)}
       />
     );
   }

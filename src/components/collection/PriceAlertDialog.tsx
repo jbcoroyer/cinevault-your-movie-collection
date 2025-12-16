@@ -71,8 +71,8 @@ interface PriceAlertDialogProps {
     thresholdPrice?: number;
     thresholdPercent?: number;
   }) => Promise<void>;
-  onDeleteAlert: (alertId: string) => Promise<void>;
-  onToggleAlert: (alertId: string, isActive: boolean) => Promise<void>;
+  onDeleteAlert: (alertId: string) => Promise<void | boolean>;
+  onToggleAlert: (alertId: string, isActive: boolean) => Promise<void | boolean>;
 }
 
 // ============================================
