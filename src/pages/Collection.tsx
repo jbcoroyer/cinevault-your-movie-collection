@@ -367,6 +367,17 @@ export default function Collection() {
   // Main Render
   // ============================================
 
+  {
+    viewMode === "valuation" && (
+      <ValuationDashboardPremium
+        userId={user.id}
+        movies={physicalMovies}
+        movieDetails={physicalMovieDetails}
+        onMovieClick={(tmdbId) => navigate(`/movie/${tmdbId}`)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Header />
