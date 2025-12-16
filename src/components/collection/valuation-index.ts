@@ -6,12 +6,11 @@
 
 // Main dashboard
 export { ValuationDashboardPremium } from "./ValuationDashboardPremium";
-export { default as ValuationDashboard } from "./ValuationDashboardPremium";
 
 // Individual widgets
 export { PortfolioValueCard } from "./PortfolioValueCard";
 export { PortfolioChart } from "./PortfolioChart";
-export { RecentSalesWidget, generateMockSales } from "./RecentSalesWidget";
+export { RecentSalesWidget } from "./RecentSalesWidget";
 export { TopGainersWidget } from "./TopGainersWidget";
-export { HiddenGemsWidget, generateMockGems } from "./HiddenGemsWidget";
+export { HiddenGemsWidget } from "./HiddenGemsWidget";
 export { PriceAlertDialog } from "./PriceAlertDialog";
