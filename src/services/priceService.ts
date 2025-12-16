@@ -238,19 +238,26 @@ export const getCachedPrice = async (
  * Récupère les prix cachés pour plusieurs films
  */
 export const getCachedPricesBatch = async (
-  items: Array<{ tmdbId: number; format: string }>
+  items: Array<{ tmdbId: number; format: string }>,
+  ignoreEstimates = true
 ): Promise<Map<string, PriceData>> => {
   const results = new Map<string, PriceData>();
 
   if (items.length === 0) return results;
 
   try {
-    // Build query for all items
-    const { data, error } = await supabase
+    // Build query for all items - only get eBay prices (not estimates)
+    let query = supabase
       .from("price_cache")
       .select("*")
-      .gt("expires_at", new Date().toISOString())
-      .returns<PriceCache[]>();
+      .gt("expires_at", new Date().toISOString());
+    
+    // Filter out estimates to force fresh eBay lookups
+    if (ignoreEstimates) {
+      query = query.eq("source", "ebay").gt("sample_size", 0);
+    }
+    
+    const { data, error } = await query.returns<PriceCache[]>();
 
     if (error || !data) return results;
 
@@ -259,20 +266,20 @@ export const getCachedPricesBatch = async (
     
     for (const cache of data) {
       const key = `${cache.tmdb_id}-${cache.format}`;
-      if (itemSet.has(key)) {
+      if (itemSet.has(key) && cache.price_median) {
         results.set(key, {
-          min: cache.price_min,
+          min: cache.price_min ?? cache.price_median,
           median: cache.price_median,
-          max: cache.price_max,
-          avg: cache.price_avg,
-          sampleSize: cache.sample_size,
-          soldCount: cache.sold_count,
-          lastSoldPrice: cache.last_sold_price,
-          lastSoldDate: cache.last_sold_date,
+          max: cache.price_max ?? cache.price_median,
+          avg: cache.price_avg ?? cache.price_median,
+          sampleSize: cache.sample_size ?? 0,
+          soldCount: cache.sold_count ?? 0,
+          lastSoldPrice: cache.last_sold_price ?? undefined,
+          lastSoldDate: cache.last_sold_date ?? undefined,
           currency: "EUR",
-          source: cache.source,
+          source: cache.source ?? "ebay",
           cached: true,
-          updatedAt: cache.updated_at,
+          updatedAt: cache.updated_at ?? undefined,
         });
       }
     }

@@ -19,16 +19,19 @@ import {
   AlertTriangle,
   Crown,
   Gem,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { GlassCard } from "@/components/ui/GlassCard";
 import {
@@ -224,6 +227,7 @@ export function ValuationDashboard({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [showAllDialog, setShowAllDialog] = useState(false);
 
   // Prepare movie data for valuation
   const movieData = useMemo(() => {
@@ -503,13 +507,37 @@ export function ValuationDashboard({
                   variant="ghost"
                   size="sm"
                   className="w-full mt-2 text-muted-foreground"
+                  onClick={() => setShowAllDialog(true)}
                 >
-                  Voir tout
+                  Voir tout ({valuation.topValuedItems.length})
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               )}
             </GlassCard>
           )}
+
+          {/* All Top Movies Dialog */}
+          <Dialog open={showAllDialog} onOpenChange={setShowAllDialog}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-yellow-500" />
+                  Top Films Valorisés
+                </DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="max-h-[60vh]">
+                <div className="space-y-1 pr-4">
+                  {valuation?.topValuedItems.map((movie, i) => (
+                    <TopMovieItem
+                      key={`all-${movie.tmdbId}-${movie.format}`}
+                      movie={movie}
+                      rank={i + 1}
+                    />
+                  ))}
+                </div>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
 
           {/* Biggest Gainers */}
           {valuation && valuation.biggestGainers.length > 0 && (

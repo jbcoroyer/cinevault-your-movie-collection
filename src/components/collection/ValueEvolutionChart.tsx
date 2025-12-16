@@ -162,27 +162,27 @@ export function ValueEvolutionChart({
     };
   }, [history]);
 
-  // Chart data with euro conversion for display
+  // Chart data with euro conversion for display (handle null values)
   const chartData = useMemo(() => {
     return history.map((h) => ({
       date: h.date,
       priceMedian: h.priceMedian,
-      priceMin: h.priceMin,
-      priceMax: h.priceMax,
+      priceMin: h.priceMin ?? h.priceMedian,
+      priceMax: h.priceMax ?? h.priceMedian,
       // For chart display (in euros)
       median: centsToEuros(h.priceMedian),
-      min: centsToEuros(h.priceMin),
-      max: centsToEuros(h.priceMax),
+      min: h.priceMin ? centsToEuros(h.priceMin) : centsToEuros(h.priceMedian),
+      max: h.priceMax ? centsToEuros(h.priceMax) : centsToEuros(h.priceMedian),
     }));
   }, [history]);
 
-  // Chart colors
+  // Chart colors using HSL tokens
   const chartColor =
     stats?.trend === "up"
-      ? "rgb(34, 197, 94)"
+      ? "hsl(142, 71%, 45%)"
       : stats?.trend === "down"
-      ? "rgb(239, 68, 68)"
-      : "rgb(var(--primary))";
+      ? "hsl(0, 84%, 60%)"
+      : "hsl(var(--primary))";
 
   const gradientId = `gradient-${tmdbId}-${format}`;
 
