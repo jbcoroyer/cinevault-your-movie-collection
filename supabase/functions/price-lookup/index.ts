@@ -1,3 +1,14 @@
+/**
+ * CineVault - Price Lookup Edge Function (CORRIGÉ)
+ *
+ * CORRECTIONS APPLIQUÉES:
+ * - Nettoyage du titre pour la recherche
+ * - Variantes de recherche multiples
+ * - Catégorie eBay Films (617) pour des résultats plus pertinents
+ * - Cache des estimations avec expiration courte
+ * - Meilleur logging
+ */
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -47,14 +58,13 @@ async function getEbayAccessToken(): Promise<string> {
 
   console.log("[price-lookup] Requesting new eBay OAuth token...");
 
-  // Encode credentials for Basic Auth
   const credentials = btoa(`${appId}:${certId}`);
 
   const response = await fetch("https://api.ebay.com/identity/v1/oauth2/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      "Authorization": `Basic ${credentials}`,
+      Authorization: `Basic ${credentials}`,
     },
     body: "grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope",
   });
@@ -66,97 +76,188 @@ async function getEbayAccessToken(): Promise<string> {
   }
 
   const tokenData: EbayAuthToken = await response.json();
-  
-  // Cache le token
+
   cachedToken = {
     token: tokenData.access_token,
-    expiresAt: Date.now() + (tokenData.expires_in * 1000),
+    expiresAt: Date.now() + tokenData.expires_in * 1000,
   };
 
   console.log("[price-lookup] Got new eBay token, expires in", tokenData.expires_in, "seconds");
   return tokenData.access_token;
 }
 
-/**
- * Recherche les prix sur eBay pour un titre de film
- */
-async function searchEbayPrices(
-  title: string,
-  format: string,
-  year?: number
-): Promise<EbayPrice | null> {
-  const token = await getEbayAccessToken();
+// ============================================
+// NOUVEAU: Fonctions de nettoyage du titre
+// ============================================
 
-  // Construire la requête de recherche - simple et efficace
-  const formatKeywords: Record<string, string> = {
-    "4k": "4K",
-    "bluray": "Blu-ray",
-    "dvd": "DVD",
-    "vhs": "VHS",
-    "laserdisc": "Laserdisc",
+/**
+ * Nettoie et prépare le titre pour la recherche eBay
+ */
+function cleanTitleForSearch(title: string): string {
+  return (
+    title
+      // Supprimer les éditions spéciales
+      .replace(
+        /\s*[-–:]\s*(Édition|Edition|Version|Collector|Steelbook|Director'?s?\s*Cut|Extended|Ultimate|Special|Deluxe|Limited|Premium|Digibook|Digipack|Combo|Pack).*/gi,
+        "",
+      )
+      // Supprimer les mentions de format dans le titre
+      .replace(/\s*(4K|UHD|Ultra\s*HD|Blu-?ray|DVD|VHS|3D)\s*/gi, "")
+      // Supprimer les parenthèses avec du contenu
+      .replace(/\s*\([^)]*\)/g, "")
+      // Supprimer les crochets
+      .replace(/\s*\[[^\]]*\]/g, "")
+      // Supprimer les caractères spéciaux problématiques
+      .replace(/[&+]/g, " ")
+      // Supprimer les guillemets
+      .replace(/["""'']/g, "")
+      // Supprimer les deux-points suivis d'un sous-titre long
+      .replace(/:\s*.{20,}$/, "")
+      // Normaliser les espaces
+      .replace(/\s+/g, " ")
+      .trim()
+  );
+}
+
+/**
+ * Génère des variantes de recherche pour améliorer les résultats
+ */
+function generateSearchVariants(title: string, format: string): string[] {
+  const cleanTitle = cleanTitleForSearch(title);
+
+  const formatKeywords: Record<string, string[]> = {
+    "4k": ["4K UHD", "4K", "Ultra HD"],
+    bluray: ["Blu-ray", "Bluray", "BR"],
+    dvd: ["DVD"],
+    vhs: ["VHS"],
+    laserdisc: ["Laserdisc", "LD"],
+    steelbook: ["Steelbook", "Steel Book"],
+    collector: ["Collector", "Coffret"],
   };
 
-  const formatQuery = formatKeywords[format.toLowerCase()] || format;
-  // Recherche simple: titre + format (sans année car trop restrictif)
-  const searchQuery = `${title} ${formatQuery}`;
+  const formats = formatKeywords[format.toLowerCase()] || [format];
+  const variants: string[] = [];
 
-  console.log(`[price-lookup] Searching eBay for: "${searchQuery}"`);
+  // Variante 1: Titre nettoyé + format principal
+  variants.push(`${cleanTitle} ${formats[0]}`);
 
-  const headers = {
-    "Authorization": `Bearer ${token}`,
+  // Variante 2: Titre nettoyé + "film" + format (évite les jeux vidéo, livres, etc.)
+  variants.push(`${cleanTitle} film ${formats[0]}`);
+
+  // Variante 3: Si le titre est long, essayer juste les premiers mots
+  const words = cleanTitle.split(" ");
+  if (words.length > 3) {
+    variants.push(`${words.slice(0, 3).join(" ")} ${formats[0]}`);
+  }
+
+  // Variante 4: Format alternatif si disponible
+  if (formats.length > 1) {
+    variants.push(`${cleanTitle} ${formats[1]}`);
+  }
+
+  return variants;
+}
+
+/**
+ * Recherche les prix sur eBay avec plusieurs variantes de recherche
+ */
+async function searchEbayPrices(title: string, format: string, year?: number): Promise<EbayPrice | null> {
+  const token = await getEbayAccessToken();
+
+  const searchVariants = generateSearchVariants(title, format);
+  console.log(`[price-lookup] Will try ${searchVariants.length} search variants for "${title}"`);
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
     "X-EBAY-C-MARKETPLACE-ID": "EBAY_FR",
     "Content-Type": "application/json",
   };
 
   // Essayer plusieurs marchés si nécessaire
-  const marketplaces = ["EBAY_FR", "EBAY_DE", "EBAY_US"];
-  
+  const marketplaces = ["EBAY_FR", "EBAY_DE"];
+
   for (const marketplace of marketplaces) {
     headers["X-EBAY-C-MARKETPLACE-ID"] = marketplace;
-    
-    const browseUrl = new URL("https://api.ebay.com/buy/browse/v1/item_summary/search");
-    browseUrl.searchParams.set("q", searchQuery);
-    // Pas de catégorie pour élargir la recherche
-    browseUrl.searchParams.set("limit", "50");
-    browseUrl.searchParams.set("sort", "price");
 
-    try {
-      console.log(`[price-lookup] Trying marketplace: ${marketplace}`);
-      const response = await fetch(browseUrl.toString(), { headers });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[price-lookup] ${marketplace} error:`, response.status, errorText.substring(0, 200));
+    for (const searchQuery of searchVariants) {
+      console.log(`[price-lookup] Trying: "${searchQuery}" on ${marketplace}`);
+
+      const browseUrl = new URL("https://api.ebay.com/buy/browse/v1/item_summary/search");
+      browseUrl.searchParams.set("q", searchQuery);
+
+      // NOUVEAU: Utiliser la catégorie Films (617) pour des résultats plus pertinents
+      browseUrl.searchParams.set("category_ids", "617");
+      browseUrl.searchParams.set("limit", "50");
+      browseUrl.searchParams.set("sort", "price");
+
+      try {
+        const response = await fetch(browseUrl.toString(), { headers });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[price-lookup] ${marketplace} error:`, response.status, errorText.substring(0, 100));
+          continue;
+        }
+
+        const data = await response.json();
+        const items = data.itemSummaries || [];
+
+        console.log(`[price-lookup] ${marketplace} returned ${items.length} items for "${searchQuery}"`);
+
+        // Au moins 3 résultats pour des stats fiables
+        if (items.length >= 3) {
+          const result = await processEbayResults(data, marketplace === "EBAY_US" ? "USD" : "EUR");
+          if (result) {
+            console.log(`[price-lookup] SUCCESS: Found prices for "${title}" - median: ${result.median / 100}€`);
+            return result;
+          }
+        }
+      } catch (error) {
+        console.error(`[price-lookup] ${marketplace} fetch error:`, error);
         continue;
       }
+    }
+  }
 
-      const data = await response.json();
-      const items = data.itemSummaries || [];
-      console.log(`[price-lookup] ${marketplace} returned ${items.length} items`);
-      
-      if (items.length > 0) {
-        return await processEbayResults(data, marketplace === "EBAY_US" ? "USD" : "EUR");
+  // Dernier essai: recherche sans catégorie (plus large)
+  console.log("[price-lookup] Trying broader search without category filter...");
+  const broadQuery = cleanTitleForSearch(title);
+
+  for (const marketplace of marketplaces) {
+    headers["X-EBAY-C-MARKETPLACE-ID"] = marketplace;
+
+    const browseUrl = new URL("https://api.ebay.com/buy/browse/v1/item_summary/search");
+    browseUrl.searchParams.set("q", broadQuery);
+    browseUrl.searchParams.set("limit", "30");
+
+    try {
+      const response = await fetch(browseUrl.toString(), { headers });
+      if (response.ok) {
+        const data = await response.json();
+        const items = data.itemSummaries || [];
+
+        if (items.length >= 5) {
+          const result = await processEbayResults(data, marketplace === "EBAY_US" ? "USD" : "EUR");
+          if (result) {
+            console.log(`[price-lookup] Broad search SUCCESS for "${title}"`);
+            return result;
+          }
+        }
       }
-    } catch (error) {
-      console.error(`[price-lookup] ${marketplace} fetch error:`, error);
+    } catch {
       continue;
     }
   }
-  
-  console.log("[price-lookup] No results from any marketplace");
+
+  console.log(`[price-lookup] No results found for "${title}" after all attempts`);
   return null;
 }
 
 /**
  * Traite les résultats eBay et calcule les statistiques de prix
  */
-async function processEbayResults(
-  data: any,
-  currency: string
-): Promise<EbayPrice | null> {
+async function processEbayResults(data: any, currency: string): Promise<EbayPrice | null> {
   const items = data.itemSummaries || [];
-  
-  console.log(`[price-lookup] Found ${items.length} items on eBay`);
 
   if (items.length === 0) {
     return null;
@@ -171,10 +272,12 @@ async function processEbayResults(
       const euroValue = item.price.currency === "USD" ? value * 0.92 : value;
       return Math.round(euroValue * 100);
     })
-    .filter((price: number) => price > 0 && price < 100000) // Filtrer les prix aberrants (> 1000€)
+    // Filtrer les prix aberrants (< 1€ ou > 500€ pour un film)
+    .filter((price: number) => price >= 100 && price <= 50000)
     .sort((a: number, b: number) => a - b);
 
-  if (prices.length === 0) {
+  if (prices.length < 3) {
+    console.log(`[price-lookup] Not enough valid prices (${prices.length}), need at least 3`);
     return null;
   }
 
@@ -186,11 +289,11 @@ async function processEbayResults(
 
   // Dernier vendu (premier item de la liste)
   const lastItem = items[0];
-  const lastSoldPrice = lastItem?.price?.value 
-    ? Math.round(parseFloat(lastItem.price.value) * 100) 
-    : undefined;
+  const lastSoldPrice = lastItem?.price?.value ? Math.round(parseFloat(lastItem.price.value) * 100) : undefined;
 
-  console.log(`[price-lookup] Price stats: min=${min/100}€, median=${median/100}€, max=${max/100}€, samples=${prices.length}`);
+  console.log(
+    `[price-lookup] Price stats: min=${min / 100}€, median=${median / 100}€, max=${max / 100}€, samples=${prices.length}`,
+  );
 
   return {
     min,
@@ -214,36 +317,52 @@ async function cachePriceData(
   tmdbId: number,
   format: string,
   region: string,
-  priceData: EbayPrice
+  priceData: EbayPrice,
+  isEstimate = false,
 ): Promise<void> {
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // Cache 7 jours
+
+  // Les estimations expirent plus vite (24h) que les vrais prix eBay (7 jours)
+  if (isEstimate) {
+    expiresAt.setHours(expiresAt.getHours() + 24);
+  } else {
+    expiresAt.setDate(expiresAt.getDate() + 7);
+  }
 
   try {
-    await supabase.from("price_cache").upsert({
-      tmdb_id: tmdbId,
-      format: format.toLowerCase(),
-      region,
-      price_min: priceData.min,
-      price_median: priceData.median,
-      price_max: priceData.max,
-      price_avg: priceData.avg,
-      sample_size: priceData.sampleSize,
-      sold_count: priceData.soldCount,
-      last_sold_price: priceData.lastSoldPrice,
-      last_sold_date: priceData.lastSoldDate,
-      source: priceData.source,
-      source_url: "https://www.ebay.fr",
-      expires_at: expiresAt.toISOString(),
-      updated_at: new Date().toISOString(),
-    }, {
-      onConflict: "tmdb_id,format,region",
-    });
-    console.log("[price-lookup] Price cached successfully");
+    await supabase.from("price_cache").upsert(
+      {
+        tmdb_id: tmdbId,
+        format: format.toLowerCase(),
+        region,
+        price_min: priceData.min,
+        price_median: priceData.median,
+        price_max: priceData.max,
+        price_avg: priceData.avg,
+        sample_size: priceData.sampleSize,
+        sold_count: priceData.soldCount,
+        last_sold_price: priceData.lastSoldPrice,
+        last_sold_date: priceData.lastSoldDate,
+        source: priceData.source,
+        source_url: isEstimate ? null : "https://www.ebay.fr",
+        expires_at: expiresAt.toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "tmdb_id,format,region",
+      },
+    );
+    console.log(
+      `[price-lookup] ${isEstimate ? "Estimate" : "Price"} cached successfully (expires: ${isEstimate ? "24h" : "7d"})`,
+    );
   } catch (error) {
     console.error("[price-lookup] Cache save error:", error);
   }
 }
+
+// ============================================
+// Main Handler
+// ============================================
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -255,31 +374,32 @@ serve(async (req) => {
     const { tmdb_id, title, format, year, region = "FR" } = await req.json();
 
     if (!tmdb_id || !title || !format) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Missing required parameters" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: false, error: "Missing required parameters" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log(`[price-lookup] Request for: ${title} (${format}) tmdb:${tmdb_id}`);
+    console.log(`[price-lookup] Request for: "${title}" (${format}) tmdb:${tmdb_id}`);
 
     // Initialiser Supabase
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Vérifier le cache d'abord (seulement si source = "ebay", pas les estimates)
+    // 1. Vérifier le cache d'abord (seulement si source = "ebay" avec des vrais résultats)
     const { data: cachedPrice } = await supabase
       .from("price_cache")
       .select("*")
       .eq("tmdb_id", tmdb_id)
       .eq("format", format.toLowerCase())
       .eq("region", region)
-      .eq("source", "ebay") // Ne pas utiliser les estimates en cache
+      .eq("source", "ebay")
+      .gt("sample_size", 0)
       .gt("expires_at", new Date().toISOString())
       .single();
 
-    if (cachedPrice && cachedPrice.sample_size > 0) {
+    if (cachedPrice) {
       console.log("[price-lookup] Returning cached eBay price");
       return new Response(
         JSON.stringify({
@@ -298,10 +418,10 @@ serve(async (req) => {
           source: cachedPrice.source,
           cached: true,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    
+
     console.log("[price-lookup] No valid cache, calling eBay API...");
 
     // 2. Rechercher sur eBay
@@ -311,36 +431,45 @@ serve(async (req) => {
       // Pas de prix trouvé - retourner une estimation basée sur le format
       const estimates: Record<string, { min: number; median: number; max: number }> = {
         "4k": { min: 1500, median: 2500, max: 4500 },
-        "bluray": { min: 500, median: 1200, max: 2500 },
-        "dvd": { min: 200, median: 500, max: 1000 },
-        "vhs": { min: 300, median: 800, max: 2000 },
-        "laserdisc": { min: 1000, median: 2500, max: 5000 },
+        bluray: { min: 500, median: 1200, max: 2500 },
+        dvd: { min: 200, median: 500, max: 1000 },
+        vhs: { min: 300, median: 800, max: 2000 },
+        laserdisc: { min: 1000, median: 2500, max: 5000 },
+        steelbook: { min: 2000, median: 3500, max: 6000 },
+        collector: { min: 2500, median: 4500, max: 10000 },
       };
-      
+
       const est = estimates[format.toLowerCase()] || estimates.dvd;
-      
-      console.log("[price-lookup] No eBay results, returning estimate");
+
+      const estimateData: EbayPrice = {
+        min: est.min,
+        median: est.median,
+        max: est.max,
+        avg: est.median,
+        sampleSize: 0, // Indicateur que c'est une estimation
+        soldCount: 0,
+        currency: "EUR",
+        source: "estimate",
+      };
+
+      // NOUVEAU: Cacher l'estimation aussi (expire dans 24h)
+      await cachePriceData(supabase, tmdb_id, format, region, estimateData, true);
+
+      console.log(`[price-lookup] No eBay results for "${title}", returning estimate: ${est.median / 100}€`);
+
       return new Response(
         JSON.stringify({
           success: true,
-          price: {
-            min: est.min,
-            median: est.median,
-            max: est.max,
-            avg: est.median,
-            sampleSize: 0,
-            soldCount: 0,
-            currency: "EUR",
-          },
+          price: estimateData,
           source: "estimate",
           cached: false,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     // 3. Sauvegarder dans le cache
-    await cachePriceData(supabase, tmdb_id, format, region, ebayPrice);
+    await cachePriceData(supabase, tmdb_id, format, region, ebayPrice, false);
 
     // 4. Retourner le prix
     return new Response(
@@ -350,18 +479,17 @@ serve(async (req) => {
         source: "ebay",
         cached: false,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-
   } catch (error) {
     console.error("[price-lookup] Error:", error);
     const errorMessage = error instanceof Error ? error.message : "Price lookup failed";
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: errorMessage 
+      JSON.stringify({
+        success: false,
+        error: errorMessage,
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });

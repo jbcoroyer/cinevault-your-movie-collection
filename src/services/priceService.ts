@@ -1,8 +1,14 @@
 /**
- * CineVault - Price Valuation Service
- * 
+ * CineVault - Price Valuation Service (CORRIGÉ)
+ *
  * Service pour la valorisation temps réel des collections
  * Sprint 2 - Feature différenciante
+ *
+ * CORRECTIONS APPLIQUÉES:
+ * - Suppression de la limite de 20 films
+ * - Acceptation des estimations comme fallback
+ * - Ajout du mode fullRefresh
+ * - Progression callback pour l'UX
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +21,7 @@ type PriceCache = Tables<"price_cache">;
 // ============================================
 
 export interface PriceData {
-  min: number;        // Prix en centimes
+  min: number; // Prix en centimes
   median: number;
   max: number;
   avg: number;
@@ -34,9 +40,9 @@ export interface MovieValuation {
   format: string;
   title: string;
   posterPath?: string;
-  purchasePrice?: number;  // Prix d'achat (en centimes)
+  purchasePrice?: number; // Prix d'achat (en centimes)
   marketPrice?: PriceData;
-  profitLoss?: number;     // Différence en centimes
+  profitLoss?: number; // Différence en centimes
   profitLossPercent?: number;
   priceEvolution?: PriceHistoryPoint[];
 }
@@ -57,6 +63,7 @@ export interface CollectionValuation {
   profitLossPercent: number;
   itemsWithPrice: number;
   itemsWithoutPrice: number;
+  itemsWithEstimate: number; // NOUVEAU: compteur d'estimations
   topValuedItems: MovieValuation[];
   biggestGainers: MovieValuation[];
   biggestLosers: MovieValuation[];
@@ -73,6 +80,13 @@ export interface PriceAlert {
   isActive: boolean;
   triggeredAt?: string;
   triggeredPrice?: number;
+}
+
+// Options pour calculateCollectionValuation
+export interface ValuationOptions {
+  fullRefresh?: boolean;
+  batchSize?: number;
+  onProgress?: (current: number, total: number, status: string) => void;
 }
 
 // ============================================
@@ -123,16 +137,16 @@ export const lookupPrice = async (
   title: string,
   format: string,
   year?: number,
-  region = "FR"
+  region = "FR",
 ): Promise<PriceData | null> => {
   try {
     console.log(`[PriceService] Looking up price for: ${title} (${format})`);
 
     const { data, error } = await supabase.functions.invoke("price-lookup", {
-      body: { 
-        tmdb_id: tmdbId, 
-        title, 
-        format, 
+      body: {
+        tmdb_id: tmdbId,
+        title,
+        format,
         year,
         region,
       },
@@ -164,7 +178,7 @@ export const lookupPrice = async (
  * Recherche les prix pour plusieurs films en batch
  */
 export const lookupPricesBatch = async (
-  items: Array<{ tmdbId: number; title: string; format: string; year?: number }>
+  items: Array<{ tmdbId: number; title: string; format: string; year?: number }>,
 ): Promise<Map<string, PriceData>> => {
   const results = new Map<string, PriceData>();
 
@@ -180,10 +194,10 @@ export const lookupPricesBatch = async (
       }
     });
     await Promise.all(promises);
-    
+
     // Small delay between batches to avoid rate limiting
     if (i + batchSize < items.length) {
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
   }
 
@@ -197,11 +211,7 @@ export const lookupPricesBatch = async (
 /**
  * Récupère le prix depuis le cache Supabase
  */
-export const getCachedPrice = async (
-  tmdbId: number,
-  format: string,
-  region = "FR"
-): Promise<PriceData | null> => {
+export const getCachedPrice = async (tmdbId: number, format: string, region = "FR"): Promise<PriceData | null> => {
   try {
     const { data, error } = await supabase
       .from("price_cache")
@@ -236,34 +246,32 @@ export const getCachedPrice = async (
 
 /**
  * Récupère les prix cachés pour plusieurs films
+ * CORRIGÉ: ignoreEstimates = false par défaut pour accepter les estimations
  */
 export const getCachedPricesBatch = async (
   items: Array<{ tmdbId: number; format: string }>,
-  ignoreEstimates = true
+  ignoreEstimates = false, // CHANGÉ: false par défaut pour accepter les estimations
 ): Promise<Map<string, PriceData>> => {
   const results = new Map<string, PriceData>();
 
   if (items.length === 0) return results;
 
   try {
-    // Build query for all items - only get eBay prices (not estimates)
-    let query = supabase
-      .from("price_cache")
-      .select("*")
-      .gt("expires_at", new Date().toISOString());
-    
-    // Filter out estimates to force fresh eBay lookups
+    // Build query for all items
+    let query = supabase.from("price_cache").select("*").gt("expires_at", new Date().toISOString());
+
+    // Only filter estimates if explicitly requested (ex: full refresh)
     if (ignoreEstimates) {
       query = query.eq("source", "ebay").gt("sample_size", 0);
     }
-    
+
     const { data, error } = await query.returns<PriceCache[]>();
 
     if (error || !data) return results;
 
     // Filter and map results
-    const itemSet = new Set(items.map(i => `${i.tmdbId}-${i.format}`));
-    
+    const itemSet = new Set(items.map((i) => `${i.tmdbId}-${i.format}`));
+
     for (const cache of data) {
       const key = `${cache.tmdb_id}-${cache.format}`;
       if (itemSet.has(key) && cache.price_median) {
@@ -298,11 +306,7 @@ export const getCachedPricesBatch = async (
 /**
  * Récupère l'historique des prix pour un film
  */
-export const getPriceHistory = async (
-  tmdbId: number,
-  format: string,
-  days = 30
-): Promise<PriceHistoryPoint[]> => {
+export const getPriceHistory = async (tmdbId: number, format: string, days = 30): Promise<PriceHistoryPoint[]> => {
   try {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
@@ -330,11 +334,12 @@ export const getPriceHistory = async (
 };
 
 // ============================================
-// Collection Valuation
+// Collection Valuation (CORRIGÉ)
 // ============================================
 
 /**
  * Calcule la valorisation complète d'une collection
+ * CORRIGÉ: Plus de limite de 20 films, traite TOUS les films
  */
 export const calculateCollectionValuation = async (
   userId: string,
@@ -345,33 +350,68 @@ export const calculateCollectionValuation = async (
     posterPath?: string;
     purchasePrice?: number;
     releaseYear?: number;
-  }>
+  }>,
+  options: ValuationOptions = {},
 ): Promise<CollectionValuation> => {
-  console.log(`[PriceService] Calculating valuation for ${movies.length} items`);
+  const {
+    fullRefresh = false,
+    batchSize = 10, // Batch de 10 pour le rate limiting
+    onProgress,
+  } = options;
+
+  console.log(`[PriceService] Calculating valuation for ${movies.length} items (fullRefresh: ${fullRefresh})`);
+  onProgress?.(0, movies.length, "Chargement du cache...");
 
   // 1. Get cached prices first
+  // Si fullRefresh, on ignore les estimations pour forcer une nouvelle recherche eBay
   const cachedPrices = await getCachedPricesBatch(
-    movies.map(m => ({ tmdbId: m.tmdbId, format: m.format }))
+    movies.map((m) => ({ tmdbId: m.tmdbId, format: m.format })),
+    fullRefresh, // ignoreEstimates seulement en mode fullRefresh
   );
 
+  console.log(`[PriceService] ${cachedPrices.size} prices from cache`);
+
   // 2. Find items needing lookup
-  const needsLookup = movies.filter(m => !cachedPrices.has(`${m.tmdbId}-${m.format}`));
-  
-  // 3. Lookup missing prices (limit to avoid too many API calls)
+  const needsLookup = movies.filter((m) => !cachedPrices.has(`${m.tmdbId}-${m.format}`));
+
+  console.log(`[PriceService] ${needsLookup.length} items need price lookup`);
+  onProgress?.(cachedPrices.size, movies.length, `${needsLookup.length} films à rechercher...`);
+
+  // 3. CORRIGÉ: Lookup ALL missing prices (plus de limite de 20!)
   if (needsLookup.length > 0) {
-    const lookupItems = needsLookup.slice(0, 20).map(m => ({
+    const lookupItems = needsLookup.map((m) => ({
       tmdbId: m.tmdbId,
       title: m.title,
       format: m.format,
       year: m.releaseYear,
     }));
-    
-    const newPrices = await lookupPricesBatch(lookupItems);
-    newPrices.forEach((price, key) => cachedPrices.set(key, price));
+
+    // Process in batches to avoid overwhelming the API
+    let processed = 0;
+    for (let i = 0; i < lookupItems.length; i += batchSize) {
+      const batch = lookupItems.slice(i, i + batchSize);
+      const batchNum = Math.floor(i / batchSize) + 1;
+      const totalBatches = Math.ceil(lookupItems.length / batchSize);
+
+      console.log(`[PriceService] Processing batch ${batchNum}/${totalBatches}`);
+      onProgress?.(cachedPrices.size + processed, movies.length, `Recherche prix (${batchNum}/${totalBatches})...`);
+
+      const newPrices = await lookupPricesBatch(batch);
+      newPrices.forEach((price, key) => cachedPrices.set(key, price));
+
+      processed += batch.length;
+
+      // Delay between batches to respect rate limits
+      if (i + batchSize < lookupItems.length) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
   }
 
+  onProgress?.(movies.length, movies.length, "Calcul de la valorisation...");
+
   // 4. Calculate valuations
-  const valuations: MovieValuation[] = movies.map(m => {
+  const valuations: MovieValuation[] = movies.map((m) => {
     const key = `${m.tmdbId}-${m.format}`;
     const marketPrice = cachedPrices.get(key);
     const purchaseCents = m.purchasePrice ? eurosToCents(m.purchasePrice) : undefined;
@@ -403,6 +443,7 @@ export const calculateCollectionValuation = async (
   let totalPurchasePrice = 0;
   let itemsWithPrice = 0;
   let itemsWithoutPrice = 0;
+  let itemsWithEstimate = 0; // NOUVEAU: compteur d'estimations
 
   for (const v of valuations) {
     if (v.marketPrice) {
@@ -410,6 +451,11 @@ export const calculateCollectionValuation = async (
       totalValueMedian += v.marketPrice.median;
       totalValueMax += v.marketPrice.max;
       itemsWithPrice++;
+
+      // Compter les estimations séparément
+      if (v.marketPrice.source === "estimate" || v.marketPrice.sampleSize === 0) {
+        itemsWithEstimate++;
+      }
     } else {
       itemsWithoutPrice++;
     }
@@ -419,27 +465,36 @@ export const calculateCollectionValuation = async (
   }
 
   const profitLoss = totalValueMedian - totalPurchasePrice;
-  const profitLossPercent = totalPurchasePrice > 0 
-    ? calculateProfitPercent(totalPurchasePrice, totalValueMedian)
-    : 0;
+  const profitLossPercent = totalPurchasePrice > 0 ? calculateProfitPercent(totalPurchasePrice, totalValueMedian) : 0;
 
-  // 6. Find top valued items
+  // 6. Find top valued items (prioritize real eBay prices over estimates)
   const topValuedItems = [...valuations]
-    .filter(v => v.marketPrice)
-    .sort((a, b) => (b.marketPrice?.median || 0) - (a.marketPrice?.median || 0))
+    .filter((v) => v.marketPrice)
+    .sort((a, b) => {
+      // Priorité aux vrais prix eBay
+      const aIsReal = a.marketPrice?.source === "ebay" && (a.marketPrice?.sampleSize ?? 0) > 0;
+      const bIsReal = b.marketPrice?.source === "ebay" && (b.marketPrice?.sampleSize ?? 0) > 0;
+
+      if (aIsReal && !bIsReal) return -1;
+      if (!aIsReal && bIsReal) return 1;
+
+      return (b.marketPrice?.median || 0) - (a.marketPrice?.median || 0);
+    })
     .slice(0, 10);
 
-  // 7. Find biggest gainers/losers
-  const withProfit = valuations.filter(v => v.profitLossPercent !== undefined);
-  
+  // 7. Find biggest gainers/losers (only with real purchase price)
+  const withProfit = valuations.filter(
+    (v) => v.profitLossPercent !== undefined && v.purchasePrice && v.purchasePrice > 0,
+  );
+
   const biggestGainers = [...withProfit]
     .sort((a, b) => (b.profitLossPercent || 0) - (a.profitLossPercent || 0))
-    .filter(v => (v.profitLossPercent || 0) > 0)
+    .filter((v) => (v.profitLossPercent || 0) > 0)
     .slice(0, 5);
 
   const biggestLosers = [...withProfit]
     .sort((a, b) => (a.profitLossPercent || 0) - (b.profitLossPercent || 0))
-    .filter(v => (v.profitLossPercent || 0) < 0)
+    .filter((v) => (v.profitLossPercent || 0) < 0)
     .slice(0, 5);
 
   // 8. Save to database
@@ -462,6 +517,7 @@ export const calculateCollectionValuation = async (
     profitLossPercent,
     itemsWithPrice,
     itemsWithoutPrice,
+    itemsWithEstimate, // NOUVEAU
     topValuedItems,
     biggestGainers,
     biggestLosers,
@@ -472,10 +528,7 @@ export const calculateCollectionValuation = async (
 /**
  * Sauvegarde la valorisation dans la base
  */
-const saveCollectionValuation = async (
-  userId: string,
-  data: Partial<CollectionValuation>
-): Promise<void> => {
+const saveCollectionValuation = async (userId: string, data: Partial<CollectionValuation>): Promise<void> => {
   try {
     const upsertData = {
       user_id: userId,
@@ -488,12 +541,10 @@ const saveCollectionValuation = async (
       biggest_gainers: JSON.parse(JSON.stringify(data.biggestGainers || [])),
       calculated_at: new Date().toISOString(),
     };
-    
-    await supabase
-      .from("collection_valuations")
-      .upsert([upsertData], {
-        onConflict: "user_id",
-      });
+
+    await supabase.from("collection_valuations").upsert([upsertData], {
+      onConflict: "user_id",
+    });
   } catch (error) {
     console.error("[PriceService] Save valuation error:", error);
   }
@@ -504,30 +555,27 @@ const saveCollectionValuation = async (
  */
 export const getSavedValuation = async (userId: string): Promise<CollectionValuation | null> => {
   try {
-    const { data, error } = await supabase
-      .from("collection_valuations")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
+    const { data, error } = await supabase.from("collection_valuations").select("*").eq("user_id", userId).single();
 
     if (error || !data) return null;
 
     return {
-      totalValueMin: data.total_value_min,
-      totalValueMedian: data.total_value_median,
-      totalValueMax: data.total_value_max,
-      totalPurchasePrice: 0, // Not stored
+      totalValueMin: data.total_value_min || 0,
+      totalValueMedian: data.total_value_median || 0,
+      totalValueMax: data.total_value_max || 0,
+      totalPurchasePrice: 0, // Not stored, will be recalculated
       profitLoss: 0,
       profitLossPercent: 0,
-      itemsWithPrice: data.items_with_price,
-      itemsWithoutPrice: data.items_without_price,
-      topValuedItems: (data.top_valued_items as unknown as MovieValuation[]) || [],
-      biggestGainers: (data.biggest_gainers as unknown as MovieValuation[]) || [],
+      itemsWithPrice: data.items_with_price || 0,
+      itemsWithoutPrice: data.items_without_price || 0,
+      itemsWithEstimate: 0, // Not stored yet
+      topValuedItems: data.top_valued_items || [],
+      biggestGainers: data.biggest_gainers || [],
       biggestLosers: [],
-      lastUpdated: data.calculated_at,
+      lastUpdated: data.calculated_at || new Date().toISOString(),
     };
   } catch (error) {
-    console.error("[PriceService] Load valuation error:", error);
+    console.error("[PriceService] Get saved valuation error:", error);
     return null;
   }
 };
@@ -543,95 +591,24 @@ export const createPriceAlert = async (
   userId: string,
   tmdbId: number,
   format: string,
-  alertType: PriceAlert["alertType"],
-  threshold: number
-): Promise<PriceAlert | null> => {
+  alertType: "price_drop" | "price_increase" | "threshold",
+  thresholdPercent?: number,
+  thresholdPrice?: number,
+): Promise<boolean> => {
   try {
-    const alertData: any = {
+    const { error } = await supabase.from("price_alerts").insert({
       user_id: userId,
       tmdb_id: tmdbId,
       format,
       alert_type: alertType,
+      threshold_percent: thresholdPercent,
+      threshold_price: thresholdPrice,
       is_active: true,
-    };
-
-    if (alertType === "threshold") {
-      alertData.threshold_price = threshold;
-    } else {
-      alertData.threshold_percent = threshold;
-    }
-
-    const { data, error } = await supabase
-      .from("price_alerts")
-      .insert(alertData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("[PriceService] Create alert error:", error);
-      return null;
-    }
-
-    return {
-      id: data.id,
-      tmdbId: data.tmdb_id,
-      format: data.format,
-      alertType: data.alert_type as PriceAlert["alertType"],
-      thresholdPercent: data.threshold_percent,
-      thresholdPrice: data.threshold_price,
-      isActive: data.is_active,
-      triggeredAt: data.triggered_at,
-      triggeredPrice: data.triggered_price,
-    };
-  } catch (error) {
-    console.error("[PriceService] Create alert error:", error);
-    return null;
-  }
-};
-
-/**
- * Récupère les alertes de prix d'un utilisateur
- */
-export const getUserPriceAlerts = async (userId: string): Promise<PriceAlert[]> => {
-  try {
-    const { data, error } = await supabase
-      .from("price_alerts")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-
-    if (error || !data) return [];
-
-    return data.map(row => ({
-      id: row.id,
-      tmdbId: row.tmdb_id,
-      format: row.format,
-      alertType: row.alert_type as PriceAlert["alertType"],
-      thresholdPercent: row.threshold_percent,
-      thresholdPrice: row.threshold_price,
-      isActive: row.is_active,
-      triggeredAt: row.triggered_at,
-      triggeredPrice: row.triggered_price,
-    }));
-  } catch (error) {
-    console.error("[PriceService] Get alerts error:", error);
-    return [];
-  }
-};
-
-/**
- * Supprime une alerte de prix
- */
-export const deletePriceAlert = async (alertId: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from("price_alerts")
-      .delete()
-      .eq("id", alertId);
+    });
 
     return !error;
   } catch (error) {
-    console.error("[PriceService] Delete alert error:", error);
+    console.error("[PriceService] Create alert error:", error);
     return false;
   }
 };
