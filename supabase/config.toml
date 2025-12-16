@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.analyze-movie-prompt]
 verify_jwt = true
+
+[functions.barcode-lookup]
+verify_jwt = false
+
+[functions.price-lookup]
+verify_jwt = false
