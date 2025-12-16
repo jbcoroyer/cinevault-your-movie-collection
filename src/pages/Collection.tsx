@@ -24,7 +24,7 @@ import { useCollectionFilters } from "@/hooks/useCollectionFilters";
 // ============================================
 // Sprint 2 Imports - Valorisation
 // ============================================
-import { ValuationDashboard } from "@/components/collection/ValuationDashboard";
+import { ValuationDashboardPremium } from "@/components/collection/ValuationDashboardPremium";
 import { PriceCard } from "@/components/collection/PriceCard";
 import { ValueEvolutionChart } from "@/components/collection/ValueEvolutionChart";
 import { useCollectionValuation } from "@/hooks/useCollectionValuation";
@@ -33,7 +33,16 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { Plus, ArrowUpDown, Library, ChevronDown, Scan, DollarSign, RefreshCw, TrendingUp, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -185,7 +194,7 @@ export default function Collection() {
 
   // Toggle movie selection
   const toggleMovieSelection = (movieId: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(movieId)) {
         newSet.delete(movieId);
@@ -199,10 +208,10 @@ export default function Collection() {
   // Handle bulk delete
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    
+
     setIsDeleting(true);
     let successCount = 0;
-    
+
     for (const id of selectedIds) {
       try {
         await deletePhysicalMovie(id);
@@ -211,7 +220,7 @@ export default function Collection() {
         console.error(`Error deleting movie ${id}:`, error);
       }
     }
-    
+
     if (successCount > 0) {
       toast({
         title: `${successCount} film${successCount > 1 ? "s" : ""} supprimé${successCount > 1 ? "s" : ""}`,
@@ -219,7 +228,7 @@ export default function Collection() {
       });
       fetchPhysicalMovies();
     }
-    
+
     setSelectedIds(new Set());
     setSelectionMode(false);
     setDeleteConfirmOpen(false);
@@ -721,7 +730,9 @@ export default function Collection() {
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer {selectedIds.size} film{selectedIds.size > 1 ? "s" : ""} ?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Supprimer {selectedIds.size} film{selectedIds.size > 1 ? "s" : ""} ?
+            </AlertDialogTitle>
             <AlertDialogDescription>
               Cette action est irréversible. Les films sélectionnés seront définitivement supprimés de votre collection.
             </AlertDialogDescription>
