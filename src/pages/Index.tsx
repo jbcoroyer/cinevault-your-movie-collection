@@ -99,7 +99,7 @@ export default function Index() {
         setFullMovieDetailsMap(fullDetailsMap);
 
         // Charger les posters des listes
-        const { data: lists } = await supabase.from("user_lists").select("id").eq("user_id", user.id).limit(3);
+        const { data: lists } = await supabase.from("lists").select("id").eq("user_id", user.id).limit(3);
 
         if (lists && lists.length > 0) {
           const posters: string[] = [];
@@ -253,9 +253,7 @@ export default function Index() {
               <ShelfView
                 movies={fullCollection}
                 movieDetailsMap={fullMovieDetailsMap}
-                showFormat
-                showCondition
-                showPrice={false}
+                onMovieClick={() => {}}
               />
             </div>
           </motion.section>
