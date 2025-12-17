@@ -504,7 +504,7 @@ export function PriceCard({
               <span>
                 Source: {price.source} •{" "}
                 {price.cached
-                  ? `Mis en cache le ${new Date(price.fetchedAt).toLocaleDateString("fr-FR")}`
+                  ? `Mis en cache le ${new Date(price.updatedAt || Date.now()).toLocaleDateString("fr-FR")}`
                   : "Données en temps réel"}
               </span>
             </div>

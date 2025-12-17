@@ -112,7 +112,7 @@ function MobileBadgeCard({ badge }: { badge: Badge }) {
   const isLocked = !badge.isUnlocked;
   const rarity = (badge.rarity || "common") as Rarity;
   const rarityConfig = RARITY_CONFIG[rarity] || RARITY_CONFIG.common;
-  const IconComponent = ICON_MAP[badge.icon] || Trophy;
+  const IconComponent = ICON_MAP[badge.icon_name] || Trophy;
 
   return (
     <div
@@ -161,7 +161,7 @@ function MobileBadgeCard({ badge }: { badge: Badge }) {
             {rarityConfig.label}
           </span>
         )}
-        <span className="text-[10px] text-muted-foreground">+{badge.xp} XP</span>
+        <span className="text-[10px] text-muted-foreground">+{badge.xp_reward} XP</span>
       </div>
     </div>
   );
@@ -171,7 +171,7 @@ function DesktopBadgeCard({ badge }: { badge: Badge }) {
   const isLocked = !badge.isUnlocked;
   const rarity = (badge.rarity || "common") as Rarity;
   const rarityConfig = RARITY_CONFIG[rarity] || RARITY_CONFIG.common;
-  const IconComponent = ICON_MAP[badge.icon] || Trophy;
+  const IconComponent = ICON_MAP[badge.icon_name] || Trophy;
 
   return (
     <div
@@ -325,7 +325,6 @@ export default function Badges() {
                 equippedTitle={profile?.current_title}
                 equippedFrame={selectedFrame}
                 equippedTheme={selectedTheme}
-                badgeCount={totalUnlocked}
                 className="hover:scale-[1.02] transition-transform"
               />
             </div>
