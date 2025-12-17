@@ -88,19 +88,19 @@ function AlertTypeSelector({
 }) {
   const options: { value: AlertType; label: string; icon: React.ElementType; description: string }[] = [
     {
-      value: "price_above",
+      value: "price_increase",
       label: "Prix dépasse",
       icon: TrendingUp,
       description: "Notification quand le prix monte au-dessus d'un seuil",
     },
     {
-      value: "price_below",
+      value: "price_drop",
       label: "Prix descend",
       icon: TrendingDown,
       description: "Notification quand le prix tombe sous un seuil",
     },
     {
-      value: "percent_change",
+      value: "threshold",
       label: "Variation %",
       icon: Percent,
       description: "Notification sur une variation en pourcentage",
@@ -193,7 +193,7 @@ function ExistingAlertItem({
   onToggle: (isActive: boolean) => void;
 }) {
   const formatThreshold = () => {
-    if (alert.alertType === "percent_change") {
+    if (alert.alertType === "threshold") {
       return `${alert.thresholdPercent}%`;
     }
     return new Intl.NumberFormat("fr-FR", {
@@ -205,11 +205,11 @@ function ExistingAlertItem({
 
   const getIcon = () => {
     switch (alert.alertType) {
-      case "price_above":
+      case "price_increase":
         return TrendingUp;
-      case "price_below":
+      case "price_drop":
         return TrendingDown;
-      case "percent_change":
+      case "threshold":
         return Percent;
     }
   };
@@ -284,7 +284,7 @@ export function PriceAlertDialog({
   onDeleteAlert,
   onToggleAlert,
 }: PriceAlertDialogProps) {
-  const [alertType, setAlertType] = useState<AlertType>("price_above");
+  const [alertType, setAlertType] = useState<AlertType>("price_increase");
   const [thresholdPrice, setThresholdPrice] = useState<number>(0);
   const [thresholdPercent, setThresholdPercent] = useState<number>(10);
   const [isCreating, setIsCreating] = useState(false);
@@ -295,7 +295,7 @@ export function PriceAlertDialog({
   // Initialize threshold price from current price
   useEffect(() => {
     if (movie.currentPrice) {
-      const adjustment = alertType === "price_above" ? 1.2 : 0.8;
+      const adjustment = alertType === "price_increase" ? 1.2 : 0.8;
       setThresholdPrice(Math.round(movie.currentPrice * adjustment));
     }
   }, [movie.currentPrice, alertType]);
@@ -307,9 +307,9 @@ export function PriceAlertDialog({
       await onCreateAlert({
         alertType,
         thresholdPrice:
-          alertType !== "percent_change" ? thresholdPrice : undefined,
+          alertType !== "threshold" ? thresholdPrice : undefined,
         thresholdPercent:
-          alertType === "percent_change" ? thresholdPercent : undefined,
+          alertType === "threshold" ? thresholdPercent : undefined,
       });
       setShowCreateForm(false);
     } finally {
@@ -432,7 +432,7 @@ export function PriceAlertDialog({
                   />
 
                   {/* Threshold input */}
-                  {alertType === "percent_change" ? (
+                  {alertType === "threshold" ? (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <Label className="text-sm">Seuil de variation</Label>
@@ -457,7 +457,7 @@ export function PriceAlertDialog({
                     <div className="space-y-2">
                       <Label className="text-sm">
                         Prix seuil (
-                        {alertType === "price_above" ? "maximum" : "minimum"})
+                        {alertType === "price_increase" ? "maximum" : "minimum"})
                       </Label>
                       <div className="relative">
                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -511,9 +511,9 @@ export function PriceAlertDialog({
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
                     <p className="text-[11px] text-blue-300">
-                      {alertType === "price_above"
+                      {alertType === "price_increase"
                         ? "Vous serez notifié quand le prix médian dépasse ce seuil."
-                        : alertType === "price_below"
+                        : alertType === "price_drop"
                           ? "Vous serez notifié quand le prix médian descend sous ce seuil."
                           : "Vous serez notifié quand le prix varie de ce pourcentage (à la hausse ou à la baisse)."}
                     </p>

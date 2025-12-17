@@ -34,6 +34,7 @@ import {
   calculateProfitPercent,
   eurosToCents,
 } from "@/services/priceService";
+import { AlertType } from "@/services/priceAlertsService";
 import { PriceAlertDialog } from "./PriceAlertDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePriceAlerts } from "@/hooks/usePriceAlerts";
@@ -135,7 +136,7 @@ export function PriceCard({
 
   // CORRECTION: Handler pour créer une alerte
   const handleCreateAlert = async (params: {
-    alertType: "price_above" | "price_below" | "percent_change";
+    alertType: AlertType;
     thresholdPrice?: number;
     thresholdPercent?: number;
   }) => {
