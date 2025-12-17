@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 // Types
 // ============================================
 
-export type AlertType = "price_above" | "price_below" | "percent_change";
+export type AlertType = "price_drop" | "price_increase" | "threshold";
 
 export interface PriceAlert {
   id: string;
@@ -228,21 +228,21 @@ export const checkAlert = (
   let message = "";
 
   switch (alert.alertType) {
-    case "price_above":
+    case "price_increase":
       if (alert.thresholdPrice && currentPrice >= alert.thresholdPrice) {
         triggered = true;
         message = `Le prix a atteint ${formatCents(currentPrice)} (seuil: ${formatCents(alert.thresholdPrice)})`;
       }
       break;
 
-    case "price_below":
+    case "price_drop":
       if (alert.thresholdPrice && currentPrice <= alert.thresholdPrice) {
         triggered = true;
         message = `Le prix est descendu à ${formatCents(currentPrice)} (seuil: ${formatCents(alert.thresholdPrice)})`;
       }
       break;
 
-    case "percent_change":
+    case "threshold":
       if (alert.thresholdPercent && previousPrice) {
         const percentChange = ((currentPrice - previousPrice) / previousPrice) * 100;
         if (Math.abs(percentChange) >= alert.thresholdPercent) {
@@ -331,13 +331,13 @@ const formatCents = (cents: number): string => {
 // ============================================
 
 export const ALERT_TYPE_LABELS: Record<AlertType, string> = {
-  price_above: "Prix dépasse",
-  price_below: "Prix descend sous",
-  percent_change: "Variation de",
+  price_increase: "Prix dépasse",
+  price_drop: "Prix descend sous",
+  threshold: "Variation de",
 };
 
 export const ALERT_TYPE_ICONS: Record<AlertType, string> = {
-  price_above: "TrendingUp",
-  price_below: "TrendingDown",
-  percent_change: "Percent",
+  price_increase: "TrendingUp",
+  price_drop: "TrendingDown",
+  threshold: "Percent",
 };

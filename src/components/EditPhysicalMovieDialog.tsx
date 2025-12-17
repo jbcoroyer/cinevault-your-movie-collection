@@ -26,6 +26,7 @@ import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { ConditionBadge } from "./collection/ConditionBadge";
 import { PriceAlertDialog } from "./collection/PriceAlertDialog";
+import { AlertType } from "@/services/priceAlertsService";
 import { usePriceAlerts } from "@/hooks/usePriceAlerts";
 import { useAuth } from "@/contexts/AuthContext";
 import { lookupPrice, formatPrice, PriceData } from "@/services/priceService";
@@ -139,7 +140,7 @@ export const EditPhysicalMovieDialog: React.FC<EditPhysicalMovieDialogProps> = (
 
   // NOUVEAU: Handlers pour les alertes
   const handleCreateAlert = async (params: {
-    alertType: "price_above" | "price_below" | "percent_change";
+    alertType: AlertType;
     thresholdPrice?: number;
     thresholdPercent?: number;
   }) => {
