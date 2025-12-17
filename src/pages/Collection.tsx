@@ -596,11 +596,14 @@ export default function Collection() {
               <ShelfView
                 movies={sortedMovies}
                 movieDetailsMap={physicalMovieDetails}
-                onMovieClick={(movie) => {
+                onMovieClick={(movie, details) => {
                   if (selectionMode) {
                     toggleMovieSelection(movie.id);
                   } else {
-                    navigate(`/movie/${movie.tmdb_id}`);
+                    // CORRECTION: Ouvrir le dialog d'édition (avec alertes de prix)
+                    setEditingMovie(movie);
+                    setEditingMovieDetails(details);
+                    setEditDialogOpen(true);
                   }
                 }}
                 selectionMode={selectionMode}
