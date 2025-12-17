@@ -323,6 +323,87 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          badges: boolean | null
+          challenges: boolean | null
+          comments: boolean | null
+          created_at: string
+          email_notifications: boolean | null
+          id: string
+          likes: boolean | null
+          new_followers: boolean | null
+          price_alerts: boolean | null
+          push_notifications: boolean | null
+          system: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          badges?: boolean | null
+          challenges?: boolean | null
+          comments?: boolean | null
+          created_at?: string
+          email_notifications?: boolean | null
+          id?: string
+          likes?: boolean | null
+          new_followers?: boolean | null
+          price_alerts?: boolean | null
+          push_notifications?: boolean | null
+          system?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          badges?: boolean | null
+          challenges?: boolean | null
+          comments?: boolean | null
+          created_at?: string
+          email_notifications?: boolean | null
+          id?: string
+          likes?: boolean | null
+          new_followers?: boolean | null
+          price_alerts?: boolean | null
+          push_notifications?: boolean | null
+          system?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          metadata: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          metadata?: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          metadata?: Json | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       physical_movies: {
         Row: {
           condition: string | null

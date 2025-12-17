@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import { useGamificationNotifications } from "@/hooks/useGamificationNotifications";
+import { NotificationCenter } from "./notifications";
 
 /**
  * Header - Navigation desktop épurée
@@ -133,7 +134,10 @@ export const Header: React.FC = () => {
         {/* Auth Section */}
         {!loading &&
           (user ? (
-            <ProfileMenu />
+            <div className="flex items-center gap-2">
+              <NotificationCenter />
+              <ProfileMenu />
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <Button
