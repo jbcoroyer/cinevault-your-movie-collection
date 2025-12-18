@@ -422,6 +422,17 @@ async function checkAndUnlockBadges(userId: string) {
 
       if (!error) {
         newBadges.push(def.id);
+        
+        // Créer une notification pour le badge débloqué
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: userId,
+            type: 'badge_earned',
+            title: `🏆 Badge débloqué : ${def.title}`,
+            message: def.description,
+            metadata: { badgeId: def.id, rarity: def.base_rarity, xpReward: def.xp_reward }
+          });
       }
     }
   }
@@ -533,9 +544,25 @@ serve(async (req) => {
         // Mettre à jour le streak et récupérer le bonus quotidien
         const streakResult = await updateUserStreak(userId);
         if (streakResult?.isNewDay) {
-          const bonusResult = await claimDailyBonus(userId, streakResult.streak.current_streak);
+          const currentStreak = streakResult.streak.current_streak;
+          const bonusResult = await claimDailyBonus(userId, currentStreak);
           const newBadges = await checkAndUnlockBadges(userId);
           const newRewards = await checkUnlockableRewards(userId);
+          
+          // Vérifier si un palier de streak a été atteint
+          const milestones = [7, 14, 30, 100, 365];
+          if (milestones.includes(currentStreak)) {
+            await supabase
+              .from('notifications')
+              .insert({
+                user_id: userId,
+                type: 'streak_milestone',
+                title: `🔥 Palier de ${currentStreak} jours atteint !`,
+                message: `Félicitations ! Vous avez maintenu votre streak pendant ${currentStreak} jours consécutifs.`,
+                metadata: { milestone: currentStreak, streak: currentStreak }
+              });
+          }
+          
           result = {
             streak: streakResult.streak,
             streakBroken: streakResult.streakBroken,

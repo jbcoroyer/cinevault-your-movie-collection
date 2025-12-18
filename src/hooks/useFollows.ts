@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { createNotification } from "@/services/notificationService";
 
 export interface FollowStats {
   followers: number;
@@ -89,6 +90,25 @@ export function useFollows(targetUserId?: string) {
         setIsFollowing(true);
         setStats((prev) => ({ ...prev, followers: prev.followers + 1 }));
         toast({ title: "Vous suivez maintenant cet utilisateur" });
+
+        // Créer une notification pour l'utilisateur suivi
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("username")
+            .eq("id", user.id)
+            .single();
+          
+          await createNotification(
+            targetUserId,
+            'new_follower',
+            '👤 Nouvel abonné !',
+            `${profile?.username || 'Un utilisateur'} vous suit maintenant.`,
+            { followerId: user.id, followerUsername: profile?.username }
+          );
+        } catch (notifError) {
+          console.error('[Follows] Error creating notification:', notifError);
+        }
       }
     } catch (error) {
       console.error("Error toggling follow:", error);

@@ -9,7 +9,9 @@ import {
   Trophy, 
   Info,
   X,
-  Check
+  Check,
+  Flame,
+  Gift
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Notification, NotificationType } from '@/services/notificationService';
@@ -22,6 +24,8 @@ const ICON_MAP: Record<NotificationType, React.ComponentType<{ className?: strin
   comment: MessageCircle,
   badge_earned: Award,
   challenge_completed: Trophy,
+  streak_milestone: Flame,
+  daily_bonus: Gift,
   system: Info,
 };
 
@@ -32,6 +36,8 @@ const COLOR_MAP: Record<NotificationType, string> = {
   comment: 'text-green-500 bg-green-500/10',
   badge_earned: 'text-purple-500 bg-purple-500/10',
   challenge_completed: 'text-yellow-500 bg-yellow-500/10',
+  streak_milestone: 'text-orange-500 bg-orange-500/10',
+  daily_bonus: 'text-emerald-500 bg-emerald-500/10',
   system: 'text-muted-foreground bg-muted',
 };
 
