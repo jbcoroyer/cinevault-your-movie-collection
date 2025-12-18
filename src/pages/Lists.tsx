@@ -330,7 +330,8 @@ export default function Lists() {
                   title={list.title}
                   description={list.description}
                   isPublic={list.is_public}
-                  itemCount={0}
+                  itemCount={list.item_count || 0}
+                  posters={list.posters || []}
                   onEdit={() => openEditDialog(list)}
                   onDelete={() => handleDelete(list.id)}
                   index={index}
