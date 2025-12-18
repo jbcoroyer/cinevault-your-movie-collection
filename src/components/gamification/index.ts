@@ -7,6 +7,8 @@ export { LootBoxReveal } from "./LootBoxReveal";
 export { PatchBadge } from "./PatchBadge";
 export { HoloBadge } from "./HoloBadge";
 export { DailyBonusDialog } from "./DailyBonusDialog";
+export { StreakMilestoneDialog } from "./StreakMilestoneDialog";
+export { GamificationManager } from "./GamificationManager";
 export { WeeklyChallenges } from "./WeeklyChallenges";
 export { SeasonalEvents } from "./SeasonalEvents";
 export { RewardsShowcase } from "./RewardsShowcase";

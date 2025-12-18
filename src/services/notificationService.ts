@@ -7,6 +7,8 @@ export type NotificationType =
   | 'comment' 
   | 'badge_earned' 
   | 'challenge_completed' 
+  | 'streak_milestone'
+  | 'daily_bonus'
   | 'system';
 
 export interface Notification {
@@ -43,6 +45,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   comment: 'Commentaires',
   badge_earned: 'Badges obtenus',
   challenge_completed: 'Défis complétés',
+  streak_milestone: 'Paliers de streak',
+  daily_bonus: 'Bonus quotidien',
   system: 'Système',
 };
 
@@ -53,6 +57,8 @@ export const NOTIFICATION_TYPE_ICONS: Record<NotificationType, string> = {
   comment: 'MessageCircle',
   badge_earned: 'Award',
   challenge_completed: 'Trophy',
+  streak_milestone: 'Flame',
+  daily_bonus: 'Gift',
   system: 'Info',
 };
 

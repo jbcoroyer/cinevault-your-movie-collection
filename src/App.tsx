@@ -1,12 +1,12 @@
 /**
- * CineVault - App.tsx (CORRIGÉ)
+ * CineVault - App.tsx
  *
- * CORRECTIONS:
- * - Ajout du DailyBonusManager pour afficher le popup de bonus quotidien
- * - Le DailyBonusDialog s'affiche maintenant quand l'utilisateur se connecte
+ * Utilise GamificationManager pour gérer toutes les notifications de gamification :
+ * - Bonus quotidien
+ * - Paliers de streak (7, 14, 30, 100, 365 jours)
+ * - Badges
  */
 
-import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,8 +17,7 @@ import { BadgeNotificationProvider } from "./contexts/BadgeNotificationContext";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { MobileHeader } from "./components/MobileHeader";
 import OnboardingWizard from "./components/OnboardingWizard";
-import { DailyBonusDialog } from "./components/gamification/DailyBonusDialog";
-import { processDailyLogin } from "./services/gamificationService";
+import { GamificationManager } from "./components/gamification/GamificationManager";
 
 // Pages
 import Index from "./pages/Index";
@@ -49,87 +48,6 @@ const queryClient = new QueryClient({
 });
 
 // ============================================
-// NOUVEAU: Composant DailyBonusManager
-// Gère l'affichage du popup de bonus quotidien
-// ============================================
-function DailyBonusManager({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const [showDailyBonus, setShowDailyBonus] = useState(false);
-  const [dailyBonusData, setDailyBonusData] = useState<{
-    streak: number;
-    xpEarned: number;
-    popcornEarned: number;
-    streakBroken: boolean;
-    newBadges: string[];
-  } | null>(null);
-  const [hasProcessedToday, setHasProcessedToday] = useState(false);
-
-  // Vérifier si on a déjà affiché le bonus aujourd'hui (localStorage)
-  useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    const lastShown = localStorage.getItem("cinevault_daily_bonus_shown");
-    if (lastShown === today) {
-      setHasProcessedToday(true);
-    }
-  }, []);
-
-  // Process daily login quand l'utilisateur est connecté
-  useEffect(() => {
-    const handleDailyLogin = async () => {
-      if (!user || hasProcessedToday) return;
-
-      try {
-        const result = await processDailyLogin(user.id);
-
-        // Vérifier si c'est un nouveau jour avec un bonus à afficher
-        if (result && !result.alreadyLoggedIn && result.bonus && !result.bonus.alreadyClaimed) {
-          setDailyBonusData({
-            streak: result.streak?.current_streak || 1,
-            xpEarned: result.bonus.xpEarned || 25,
-            popcornEarned: result.bonus.popcornEarned || 5,
-            streakBroken: result.streakBroken || false,
-            newBadges: result.newBadges || [],
-          });
-          setShowDailyBonus(true);
-
-          // Marquer comme affiché aujourd'hui
-          const today = new Date().toISOString().split("T")[0];
-          localStorage.setItem("cinevault_daily_bonus_shown", today);
-        }
-
-        setHasProcessedToday(true);
-      } catch (error) {
-        console.error("[DailyBonus] Error processing daily login:", error);
-        setHasProcessedToday(true);
-      }
-    };
-
-    // Petit délai pour laisser l'UI se charger
-    const timer = setTimeout(handleDailyLogin, 1500);
-    return () => clearTimeout(timer);
-  }, [user, hasProcessedToday]);
-
-  return (
-    <>
-      {children}
-
-      {/* NOUVEAU: Dialog de bonus quotidien */}
-      {dailyBonusData && (
-        <DailyBonusDialog
-          open={showDailyBonus}
-          onOpenChange={setShowDailyBonus}
-          streak={dailyBonusData.streak}
-          xpEarned={dailyBonusData.xpEarned}
-          popcornEarned={dailyBonusData.popcornEarned}
-          streakBroken={dailyBonusData.streakBroken}
-          newBadges={dailyBonusData.newBadges}
-        />
-      )}
-    </>
-  );
-}
-
-// ============================================
 // App Layout Component
 // ============================================
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
@@ -151,8 +69,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     return <OnboardingWizard />;
   }
 
-  // Application normale avec DailyBonusManager
-  return <DailyBonusManager>{children}</DailyBonusManager>;
+  // Application normale avec GamificationManager
+  return <GamificationManager>{children}</GamificationManager>;
 };
 
 // ============================================
