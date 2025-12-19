@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { MovieCard } from "../components/MovieCard";
 import { MovieSearchDialog } from "../components/MovieSearchDialog";
 import { getMovieDetails, Movie, MovieDetails } from "../services/tmdb";
-import { toast } from "../components/ui/use-toast";
+import { toast } from "../hooks/use-toast";
 import { cn } from "../lib/utils";
 
 import { ListItem } from "../hooks/useUserLists";

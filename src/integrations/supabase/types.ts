@@ -260,6 +260,160 @@ export type Database = {
           },
         ]
       }
+      listing_images: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          listing_id: string
+          position: number | null
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          listing_id: string
+          position?: number | null
+          storage_path: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          listing_id?: string
+          position?: number | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_images_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listings: {
+        Row: {
+          accepts_colissimo: boolean | null
+          accepts_hand_delivery: boolean | null
+          accepts_mondial_relay: boolean | null
+          condition: Database["public"]["Enums"]["listing_condition"]
+          condition_notes: string | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          edition: string | null
+          expires_at: string | null
+          favorites_count: number | null
+          featured: boolean | null
+          format: string
+          id: string
+          includes_booklet: boolean | null
+          includes_slipcover: boolean | null
+          is_sealed: boolean | null
+          movie_poster_path: string | null
+          movie_release_year: number | null
+          movie_title: string
+          original_price_cents: number | null
+          price_cents: number
+          published_at: string | null
+          region_code: string | null
+          seller_id: string
+          shipping_domestic_cents: number | null
+          shipping_eu_cents: number | null
+          shipping_from_city: string | null
+          shipping_from_country: string | null
+          sold_at: string | null
+          status: Database["public"]["Enums"]["listing_status"] | null
+          tmdb_id: number
+          updated_at: string | null
+          views_count: number | null
+        }
+        Insert: {
+          accepts_colissimo?: boolean | null
+          accepts_hand_delivery?: boolean | null
+          accepts_mondial_relay?: boolean | null
+          condition: Database["public"]["Enums"]["listing_condition"]
+          condition_notes?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          edition?: string | null
+          expires_at?: string | null
+          favorites_count?: number | null
+          featured?: boolean | null
+          format: string
+          id?: string
+          includes_booklet?: boolean | null
+          includes_slipcover?: boolean | null
+          is_sealed?: boolean | null
+          movie_poster_path?: string | null
+          movie_release_year?: number | null
+          movie_title: string
+          original_price_cents?: number | null
+          price_cents: number
+          published_at?: string | null
+          region_code?: string | null
+          seller_id: string
+          shipping_domestic_cents?: number | null
+          shipping_eu_cents?: number | null
+          shipping_from_city?: string | null
+          shipping_from_country?: string | null
+          sold_at?: string | null
+          status?: Database["public"]["Enums"]["listing_status"] | null
+          tmdb_id: number
+          updated_at?: string | null
+          views_count?: number | null
+        }
+        Update: {
+          accepts_colissimo?: boolean | null
+          accepts_hand_delivery?: boolean | null
+          accepts_mondial_relay?: boolean | null
+          condition?: Database["public"]["Enums"]["listing_condition"]
+          condition_notes?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          edition?: string | null
+          expires_at?: string | null
+          favorites_count?: number | null
+          featured?: boolean | null
+          format?: string
+          id?: string
+          includes_booklet?: boolean | null
+          includes_slipcover?: boolean | null
+          is_sealed?: boolean | null
+          movie_poster_path?: string | null
+          movie_release_year?: number | null
+          movie_title?: string
+          original_price_cents?: number | null
+          price_cents?: number
+          published_at?: string | null
+          region_code?: string | null
+          seller_id?: string
+          shipping_domestic_cents?: number | null
+          shipping_eu_cents?: number | null
+          shipping_from_city?: string | null
+          shipping_from_country?: string | null
+          sold_at?: string | null
+          status?: Database["public"]["Enums"]["listing_status"] | null
+          tmdb_id?: number
+          updated_at?: string | null
+          views_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listings_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lists: {
         Row: {
           created_at: string
@@ -403,6 +557,195 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      order_items: {
+        Row: {
+          condition: Database["public"]["Enums"]["listing_condition"]
+          created_at: string | null
+          delivered_at: string | null
+          format: string
+          id: string
+          listing_id: string
+          movie_title: string
+          order_id: string
+          price_cents: number
+          seller_id: string
+          seller_payout_cents: number
+          shipped_at: string | null
+          shipping_cents: number
+          status: Database["public"]["Enums"]["order_item_status"] | null
+          tracking_carrier: string | null
+          tracking_number: string | null
+          tracking_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          condition: Database["public"]["Enums"]["listing_condition"]
+          created_at?: string | null
+          delivered_at?: string | null
+          format: string
+          id?: string
+          listing_id: string
+          movie_title: string
+          order_id: string
+          price_cents: number
+          seller_id: string
+          seller_payout_cents: number
+          shipped_at?: string | null
+          shipping_cents: number
+          status?: Database["public"]["Enums"]["order_item_status"] | null
+          tracking_carrier?: string | null
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          condition?: Database["public"]["Enums"]["listing_condition"]
+          created_at?: string | null
+          delivered_at?: string | null
+          format?: string
+          id?: string
+          listing_id?: string
+          movie_title?: string
+          order_id?: string
+          price_cents?: number
+          seller_id?: string
+          seller_payout_cents?: number
+          shipped_at?: string | null
+          shipping_cents?: number
+          status?: Database["public"]["Enums"]["order_item_status"] | null
+          tracking_carrier?: string | null
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          buyer_id: string
+          buyer_notes: string | null
+          cancelled_at: string | null
+          completed_at: string | null
+          created_at: string | null
+          currency: string | null
+          delivered_at: string | null
+          id: string
+          order_number: string
+          paid_at: string | null
+          platform_fee_cents: number
+          relay_point_address: string | null
+          relay_point_id: string | null
+          relay_point_name: string | null
+          shipped_at: string | null
+          shipping_address_line1: string
+          shipping_address_line2: string | null
+          shipping_cents: number
+          shipping_city: string
+          shipping_country: string
+          shipping_name: string
+          shipping_phone: string | null
+          shipping_postal_code: string
+          status: Database["public"]["Enums"]["order_status"] | null
+          stripe_charge_id: string | null
+          stripe_payment_intent_id: string | null
+          subtotal_cents: number
+          total_cents: number
+          updated_at: string | null
+        }
+        Insert: {
+          buyer_id: string
+          buyer_notes?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          delivered_at?: string | null
+          id?: string
+          order_number: string
+          paid_at?: string | null
+          platform_fee_cents: number
+          relay_point_address?: string | null
+          relay_point_id?: string | null
+          relay_point_name?: string | null
+          shipped_at?: string | null
+          shipping_address_line1: string
+          shipping_address_line2?: string | null
+          shipping_cents: number
+          shipping_city: string
+          shipping_country?: string
+          shipping_name: string
+          shipping_phone?: string | null
+          shipping_postal_code: string
+          status?: Database["public"]["Enums"]["order_status"] | null
+          stripe_charge_id?: string | null
+          stripe_payment_intent_id?: string | null
+          subtotal_cents: number
+          total_cents: number
+          updated_at?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          buyer_notes?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          delivered_at?: string | null
+          id?: string
+          order_number?: string
+          paid_at?: string | null
+          platform_fee_cents?: number
+          relay_point_address?: string | null
+          relay_point_id?: string | null
+          relay_point_name?: string | null
+          shipped_at?: string | null
+          shipping_address_line1?: string
+          shipping_address_line2?: string | null
+          shipping_cents?: number
+          shipping_city?: string
+          shipping_country?: string
+          shipping_name?: string
+          shipping_phone?: string | null
+          shipping_postal_code?: string
+          status?: Database["public"]["Enums"]["order_status"] | null
+          stripe_charge_id?: string | null
+          stripe_payment_intent_id?: string | null
+          subtotal_cents?: number
+          total_cents?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       physical_movies: {
         Row: {
@@ -743,6 +1086,168 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_profiles: {
+        Row: {
+          accepts_returns: boolean | null
+          average_rating: number | null
+          created_at: string | null
+          default_shipping_policy: string | null
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean | null
+          is_verified: boolean | null
+          location_city: string | null
+          location_country: string | null
+          rating_count: number | null
+          return_period_days: number | null
+          stripe_account_id: string | null
+          stripe_charges_enabled: boolean | null
+          stripe_onboarding_complete: boolean | null
+          stripe_payouts_enabled: boolean | null
+          suspended_at: string | null
+          suspension_reason: string | null
+          total_revenue_cents: number | null
+          total_sales: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accepts_returns?: boolean | null
+          average_rating?: number | null
+          created_at?: string | null
+          default_shipping_policy?: string | null
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          location_city?: string | null
+          location_country?: string | null
+          rating_count?: number | null
+          return_period_days?: number | null
+          stripe_account_id?: string | null
+          stripe_charges_enabled?: boolean | null
+          stripe_onboarding_complete?: boolean | null
+          stripe_payouts_enabled?: boolean | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
+          total_revenue_cents?: number | null
+          total_sales?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accepts_returns?: boolean | null
+          average_rating?: number | null
+          created_at?: string | null
+          default_shipping_policy?: string | null
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          location_city?: string | null
+          location_country?: string | null
+          rating_count?: number | null
+          return_period_days?: number | null
+          stripe_account_id?: string | null
+          stripe_charges_enabled?: boolean | null
+          stripe_onboarding_complete?: boolean | null
+          stripe_payouts_enabled?: boolean | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
+          total_revenue_cents?: number | null
+          total_sales?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount_cents: number
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          fee_cents: number | null
+          id: string
+          metadata: Json | null
+          net_cents: number
+          order_id: string | null
+          order_item_id: string | null
+          seller_id: string | null
+          status: Database["public"]["Enums"]["transaction_status"] | null
+          stripe_id: string | null
+          stripe_type: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          fee_cents?: number | null
+          id?: string
+          metadata?: Json | null
+          net_cents: number
+          order_id?: string | null
+          order_item_id?: string | null
+          seller_id?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"] | null
+          stripe_id?: string | null
+          stripe_type?: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          fee_cents?: number | null
+          id?: string
+          metadata?: Json | null
+          net_cents?: number
+          order_id?: string | null
+          order_item_id?: string | null
+          seller_id?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"] | null
+          stripe_id?: string | null
+          stripe_type?: string | null
+          type?: Database["public"]["Enums"]["transaction_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_badges: {
         Row: {
           badge_id: string
@@ -1061,7 +1566,38 @@ export type Database = {
       get_xp_for_format: { Args: { format_name: string }; Returns: number }
     }
     Enums: {
-      [_ in never]: never
+      listing_condition:
+        | "mint"
+        | "near_mint"
+        | "very_good"
+        | "good"
+        | "acceptable"
+      listing_status:
+        | "draft"
+        | "active"
+        | "reserved"
+        | "sold"
+        | "cancelled"
+        | "expired"
+      order_item_status:
+        | "pending"
+        | "confirmed"
+        | "shipped"
+        | "delivered"
+        | "cancelled"
+        | "refunded"
+      order_status:
+        | "pending_payment"
+        | "paid"
+        | "processing"
+        | "shipped"
+        | "delivered"
+        | "completed"
+        | "cancelled"
+        | "refunded"
+        | "disputed"
+      transaction_status: "pending" | "succeeded" | "failed" | "cancelled"
+      transaction_type: "payment" | "refund" | "payout" | "fee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1188,6 +1724,43 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      listing_condition: [
+        "mint",
+        "near_mint",
+        "very_good",
+        "good",
+        "acceptable",
+      ],
+      listing_status: [
+        "draft",
+        "active",
+        "reserved",
+        "sold",
+        "cancelled",
+        "expired",
+      ],
+      order_item_status: [
+        "pending",
+        "confirmed",
+        "shipped",
+        "delivered",
+        "cancelled",
+        "refunded",
+      ],
+      order_status: [
+        "pending_payment",
+        "paid",
+        "processing",
+        "shipped",
+        "delivered",
+        "completed",
+        "cancelled",
+        "refunded",
+        "disputed",
+      ],
+      transaction_status: ["pending", "succeeded", "failed", "cancelled"],
+      transaction_type: ["payment", "refund", "payout", "fee"],
+    },
   },
 } as const
