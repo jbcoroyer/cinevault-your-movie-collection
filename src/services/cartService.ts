@@ -99,7 +99,7 @@ export const addToCart = async (
 
     // If user is logged in, sync to Supabase
     if (userId) {
-      const { error } = await supabase.from("cart_items").upsert(
+      const { error } = await (supabase.from("cart_items") as any).upsert(
         {
           user_id: userId,
           listing_id: listingId,
@@ -136,8 +136,7 @@ export const removeFromCart = async (
 
     // If user is logged in, remove from Supabase
     if (userId) {
-      await supabase
-        .from("cart_items")
+      await (supabase.from("cart_items") as any)
         .delete()
         .eq("user_id", userId)
         .eq("listing_id", listingId);
@@ -157,7 +156,7 @@ export const clearCart = async (userId?: string): Promise<void> => {
   setLocalCart([]);
 
   if (userId) {
-    await supabase.from("cart_items").delete().eq("user_id", userId);
+    await (supabase.from("cart_items") as any).delete().eq("user_id", userId);
   }
 };
 
@@ -192,12 +191,11 @@ export const getCart = async (userId?: string): Promise<CartSummary> => {
       // Merge localStorage and Supabase
       const localCart = getLocalCart();
 
-      const { data: dbCart } = await supabase
-        .from("cart_items")
+      const { data: dbCart } = await (supabase.from("cart_items") as any)
         .select("listing_id")
         .eq("user_id", userId);
 
-      const dbIds = (dbCart || []).map(item => item.listing_id);
+      const dbIds = (dbCart || []).map((item: any) => item.listing_id);
       listingIds = [...new Set([...localCart, ...dbIds])];
 
       // Sync localStorage to localStorage
@@ -411,12 +409,11 @@ export const syncCartAfterLogin = async (userId: string): Promise<void> => {
     }
 
     // Get existing cart items from Supabase
-    const { data: existingItems } = await supabase
-      .from("cart_items")
+    const { data: existingItems } = await (supabase.from("cart_items") as any)
       .select("listing_id")
       .eq("user_id", userId);
 
-    const existingIds = (existingItems || []).map(item => item.listing_id);
+    const existingIds = (existingItems || []).map((item: any) => item.listing_id);
 
     // Get listings for local cart items
     const { data: listings } = await supabase
@@ -438,7 +435,7 @@ export const syncCartAfterLogin = async (userId: string): Promise<void> => {
       }));
 
     if (newItems.length > 0) {
-      await supabase.from("cart_items").insert(newItems);
+      await (supabase.from("cart_items") as any).insert(newItems);
     }
 
     // Merge and update localStorage

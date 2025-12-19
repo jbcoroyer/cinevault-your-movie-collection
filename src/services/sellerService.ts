@@ -326,8 +326,7 @@ export const getSellerReviews = async (
   limit: number = 10
 ): Promise<SellerReview[]> => {
   try {
-    const { data, error } = await supabase
-      .from("seller_reviews")
+    const { data, error } = await (supabase.from("seller_reviews") as any)
       .select(`
         *,
         buyer:profiles!seller_reviews_buyer_id_fkey(
@@ -352,7 +351,7 @@ export const getSellerReviews = async (
       return [];
     }
 
-    return (data || []).map(review => ({
+    return (data || []).map((review: any) => ({
       id: review.id,
       buyerId: review.buyer_id,
       buyerName: review.buyer?.username || "Utilisateur",
@@ -382,8 +381,7 @@ export const respondToReview = async (
   response: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const { error } = await supabase
-      .from("seller_reviews")
+    const { error } = await (supabase.from("seller_reviews") as any)
       .update({
         seller_response: response,
         seller_responded_at: new Date().toISOString(),
@@ -423,7 +421,7 @@ export const createReview = async (
       return { success: false, error: "Not authenticated" };
     }
 
-    const { error } = await supabase.from("seller_reviews").insert({
+    const { error } = await (supabase.from("seller_reviews") as any).insert({
       seller_id: sellerId,
       buyer_id: user.id,
       order_id: orderId,

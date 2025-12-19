@@ -83,6 +83,51 @@ export type Database = {
         }
         Relationships: []
       }
+      cart_items: {
+        Row: {
+          added_at: string | null
+          id: string
+          listing_id: string
+          price_cents_at_add: number
+          shipping_cents_at_add: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          added_at?: string | null
+          id?: string
+          listing_id: string
+          price_cents_at_add: number
+          shipping_cents_at_add?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          added_at?: string | null
+          id?: string
+          listing_id?: string
+          price_cents_at_add?: number
+          shipping_cents_at_add?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collection_valuations: {
         Row: {
           biggest_gainers: Json | null
@@ -153,6 +198,189 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dispute_evidence: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          dispute_id: string
+          evidence_type: string
+          file_url: string
+          id: string
+          submitted_by: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          dispute_id: string
+          evidence_type: string
+          file_url: string
+          id?: string
+          submitted_by: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          dispute_id?: string
+          evidence_type?: string
+          file_url?: string
+          id?: string
+          submitted_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispute_evidence_dispute_id_fkey"
+            columns: ["dispute_id"]
+            isOneToOne: false
+            referencedRelation: "disputes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dispute_messages: {
+        Row: {
+          attachments: Json | null
+          created_at: string | null
+          dispute_id: string
+          id: string
+          message: string
+          sender_id: string
+          sender_type: string
+        }
+        Insert: {
+          attachments?: Json | null
+          created_at?: string | null
+          dispute_id: string
+          id?: string
+          message: string
+          sender_id: string
+          sender_type: string
+        }
+        Update: {
+          attachments?: Json | null
+          created_at?: string | null
+          dispute_id?: string
+          id?: string
+          message?: string
+          sender_id?: string
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispute_messages_dispute_id_fkey"
+            columns: ["dispute_id"]
+            isOneToOne: false
+            referencedRelation: "disputes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      disputes: {
+        Row: {
+          buyer_id: string
+          created_at: string | null
+          description: string
+          disputed_amount_cents: number
+          escalated_at: string | null
+          escalation_deadline: string | null
+          escalation_reason: string | null
+          id: string
+          metadata: Json | null
+          order_id: string
+          order_item_id: string | null
+          reason: Database["public"]["Enums"]["dispute_reason"]
+          resolution_amount_cents: number | null
+          resolution_notes: string | null
+          resolution_type: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          seller_id: string
+          seller_responded_at: string | null
+          seller_response: string | null
+          seller_response_deadline: string | null
+          status: Database["public"]["Enums"]["dispute_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string | null
+          description: string
+          disputed_amount_cents: number
+          escalated_at?: string | null
+          escalation_deadline?: string | null
+          escalation_reason?: string | null
+          id?: string
+          metadata?: Json | null
+          order_id: string
+          order_item_id?: string | null
+          reason: Database["public"]["Enums"]["dispute_reason"]
+          resolution_amount_cents?: number | null
+          resolution_notes?: string | null
+          resolution_type?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          seller_id: string
+          seller_responded_at?: string | null
+          seller_response?: string | null
+          seller_response_deadline?: string | null
+          status?: Database["public"]["Enums"]["dispute_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string | null
+          description?: string
+          disputed_amount_cents?: number
+          escalated_at?: string | null
+          escalation_deadline?: string | null
+          escalation_reason?: string | null
+          id?: string
+          metadata?: Json | null
+          order_id?: string
+          order_item_id?: string | null
+          reason?: Database["public"]["Enums"]["dispute_reason"]
+          resolution_amount_cents?: number | null
+          resolution_notes?: string | null
+          resolution_type?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          seller_id?: string
+          seller_responded_at?: string | null
+          seller_response?: string | null
+          seller_response_deadline?: string | null
+          status?: Database["public"]["Enums"]["dispute_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disputes_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -256,6 +484,42 @@ export type Database = {
             columns: ["list_id"]
             isOneToOne: false
             referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_favorites: {
+        Row: {
+          created_at: string | null
+          id: string
+          listing_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          listing_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          listing_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_favorites_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_favorites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1172,6 +1436,218 @@ export type Database = {
           },
         ]
       }
+      seller_reviews: {
+        Row: {
+          buyer_id: string
+          comment: string | null
+          communication_rating: number | null
+          created_at: string | null
+          id: string
+          is_verified_purchase: boolean | null
+          is_visible: boolean | null
+          item_accuracy_rating: number | null
+          moderated_at: string | null
+          moderation_note: string | null
+          order_id: string
+          order_item_id: string | null
+          packaging_rating: number | null
+          rating: number
+          report_reason: string | null
+          reported_at: string | null
+          seller_id: string
+          seller_responded_at: string | null
+          seller_response: string | null
+          shipping_speed_rating: number | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          buyer_id: string
+          comment?: string | null
+          communication_rating?: number | null
+          created_at?: string | null
+          id?: string
+          is_verified_purchase?: boolean | null
+          is_visible?: boolean | null
+          item_accuracy_rating?: number | null
+          moderated_at?: string | null
+          moderation_note?: string | null
+          order_id: string
+          order_item_id?: string | null
+          packaging_rating?: number | null
+          rating: number
+          report_reason?: string | null
+          reported_at?: string | null
+          seller_id: string
+          seller_responded_at?: string | null
+          seller_response?: string | null
+          shipping_speed_rating?: number | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          comment?: string | null
+          communication_rating?: number | null
+          created_at?: string | null
+          id?: string
+          is_verified_purchase?: boolean | null
+          is_visible?: boolean | null
+          item_accuracy_rating?: number | null
+          moderated_at?: string | null
+          moderation_note?: string | null
+          order_id?: string
+          order_item_id?: string | null
+          packaging_rating?: number | null
+          rating?: number
+          report_reason?: string | null
+          reported_at?: string | null
+          seller_id?: string
+          seller_responded_at?: string | null
+          seller_response?: string | null
+          shipping_speed_rating?: number | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_reviews_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_reviews_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_reviews_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shipments: {
+        Row: {
+          carrier: string
+          carrier_name: string | null
+          created_at: string | null
+          delivered_at: string | null
+          estimated_delivery_date: string | null
+          height_cm: number | null
+          id: string
+          insurance_cents: number | null
+          label_created_at: string | null
+          label_url: string | null
+          length_cm: number | null
+          metadata: Json | null
+          order_item_id: string
+          relay_point_address: string | null
+          relay_point_id: string | null
+          relay_point_name: string | null
+          seller_id: string
+          sendcloud_label_id: string | null
+          sendcloud_parcel_id: string | null
+          service_type: string | null
+          shipped_at: string | null
+          shipping_cost_cents: number
+          status: string
+          tracking_number: string | null
+          tracking_url: string | null
+          updated_at: string | null
+          weight_grams: number | null
+          width_cm: number | null
+        }
+        Insert: {
+          carrier: string
+          carrier_name?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          estimated_delivery_date?: string | null
+          height_cm?: number | null
+          id?: string
+          insurance_cents?: number | null
+          label_created_at?: string | null
+          label_url?: string | null
+          length_cm?: number | null
+          metadata?: Json | null
+          order_item_id: string
+          relay_point_address?: string | null
+          relay_point_id?: string | null
+          relay_point_name?: string | null
+          seller_id: string
+          sendcloud_label_id?: string | null
+          sendcloud_parcel_id?: string | null
+          service_type?: string | null
+          shipped_at?: string | null
+          shipping_cost_cents?: number
+          status?: string
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string | null
+          weight_grams?: number | null
+          width_cm?: number | null
+        }
+        Update: {
+          carrier?: string
+          carrier_name?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          estimated_delivery_date?: string | null
+          height_cm?: number | null
+          id?: string
+          insurance_cents?: number | null
+          label_created_at?: string | null
+          label_url?: string | null
+          length_cm?: number | null
+          metadata?: Json | null
+          order_item_id?: string
+          relay_point_address?: string | null
+          relay_point_id?: string | null
+          relay_point_name?: string | null
+          seller_id?: string
+          sendcloud_label_id?: string | null
+          sendcloud_parcel_id?: string | null
+          service_type?: string | null
+          shipped_at?: string | null
+          shipping_cost_cents?: number
+          status?: string
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string | null
+          weight_grams?: number | null
+          width_cm?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipments_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipments_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount_cents: number
@@ -1505,6 +1981,147 @@ export type Database = {
           },
         ]
       }
+      wantlist: {
+        Row: {
+          conditions: string[] | null
+          created_at: string | null
+          editions: string[] | null
+          formats: string[] | null
+          id: string
+          last_matched_at: string | null
+          match_count: number | null
+          max_price_cents: number | null
+          movie_poster_path: string | null
+          movie_release_year: number | null
+          movie_title: string
+          notes: string | null
+          notify_on_match: boolean | null
+          notify_price_drop: boolean | null
+          priority: number | null
+          region_codes: string[] | null
+          tmdb_id: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          conditions?: string[] | null
+          created_at?: string | null
+          editions?: string[] | null
+          formats?: string[] | null
+          id?: string
+          last_matched_at?: string | null
+          match_count?: number | null
+          max_price_cents?: number | null
+          movie_poster_path?: string | null
+          movie_release_year?: number | null
+          movie_title: string
+          notes?: string | null
+          notify_on_match?: boolean | null
+          notify_price_drop?: boolean | null
+          priority?: number | null
+          region_codes?: string[] | null
+          tmdb_id: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          conditions?: string[] | null
+          created_at?: string | null
+          editions?: string[] | null
+          formats?: string[] | null
+          id?: string
+          last_matched_at?: string | null
+          match_count?: number | null
+          max_price_cents?: number | null
+          movie_poster_path?: string | null
+          movie_release_year?: number | null
+          movie_title?: string
+          notes?: string | null
+          notify_on_match?: boolean | null
+          notify_price_drop?: boolean | null
+          priority?: number | null
+          region_codes?: string[] | null
+          tmdb_id?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wantlist_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wantlist_matches: {
+        Row: {
+          condition_match: boolean | null
+          created_at: string | null
+          dismissed_at: string | null
+          format_match: boolean | null
+          id: string
+          listing_id: string
+          match_score: number | null
+          notified_at: string | null
+          price_match: boolean | null
+          user_id: string
+          viewed_at: string | null
+          wantlist_id: string
+        }
+        Insert: {
+          condition_match?: boolean | null
+          created_at?: string | null
+          dismissed_at?: string | null
+          format_match?: boolean | null
+          id?: string
+          listing_id: string
+          match_score?: number | null
+          notified_at?: string | null
+          price_match?: boolean | null
+          user_id: string
+          viewed_at?: string | null
+          wantlist_id: string
+        }
+        Update: {
+          condition_match?: boolean | null
+          created_at?: string | null
+          dismissed_at?: string | null
+          format_match?: boolean | null
+          id?: string
+          listing_id?: string
+          match_score?: number | null
+          notified_at?: string | null
+          price_match?: boolean | null
+          user_id?: string
+          viewed_at?: string | null
+          wantlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wantlist_matches_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wantlist_matches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wantlist_matches_wantlist_id_fkey"
+            columns: ["wantlist_id"]
+            isOneToOne: false
+            referencedRelation: "wantlist"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       weekly_challenges: {
         Row: {
           challenge_type: string
@@ -1554,6 +2171,7 @@ export type Database = {
     Functions: {
       archive_daily_prices: { Args: never; Returns: undefined }
       cleanup_expired_price_cache: { Args: never; Returns: undefined }
+      generate_order_number: { Args: never; Returns: string }
       get_price_evolution: {
         Args: { p_days?: number; p_format: string; p_tmdb_id: number }
         Returns: {
@@ -1564,8 +2182,28 @@ export type Database = {
         }[]
       }
       get_xp_for_format: { Args: { format_name: string }; Returns: number }
+      update_seller_stats: { Args: { seller_uuid: string }; Returns: undefined }
     }
     Enums: {
+      dispute_reason:
+        | "item_not_received"
+        | "item_not_as_described"
+        | "item_damaged"
+        | "wrong_item"
+        | "counterfeit"
+        | "seller_unresponsive"
+        | "shipping_issue"
+        | "refund_not_received"
+        | "other"
+      dispute_status:
+        | "open"
+        | "seller_responded"
+        | "escalated"
+        | "resolved_buyer_favor"
+        | "resolved_seller_favor"
+        | "resolved_partial"
+        | "closed"
+        | "cancelled"
       listing_condition:
         | "mint"
         | "near_mint"
@@ -1725,6 +2363,27 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      dispute_reason: [
+        "item_not_received",
+        "item_not_as_described",
+        "item_damaged",
+        "wrong_item",
+        "counterfeit",
+        "seller_unresponsive",
+        "shipping_issue",
+        "refund_not_received",
+        "other",
+      ],
+      dispute_status: [
+        "open",
+        "seller_responded",
+        "escalated",
+        "resolved_buyer_favor",
+        "resolved_seller_favor",
+        "resolved_partial",
+        "closed",
+        "cancelled",
+      ],
       listing_condition: [
         "mint",
         "near_mint",
