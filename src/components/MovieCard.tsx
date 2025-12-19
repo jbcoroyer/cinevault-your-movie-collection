@@ -272,7 +272,7 @@ export const MovieCardFeatured: React.FC<{ movie: Movie; className?: string }> =
     <Link
       to={`/movie/${movie.id}`}
       className={cn(
-        "relative block overflow-hidden rounded-2xl aspect-video group",
+        "relative block overflow-hidden rounded-xl aspect-video group",
         "bg-gradient-to-br from-muted to-muted/50",
         className,
       )}

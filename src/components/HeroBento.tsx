@@ -218,13 +218,13 @@ const HeroBentoSkeleton: React.FC = () => (
     <div className="max-w-7xl mx-auto">
       <div className="bento-grid gap-4">
         {/* Featured skeleton */}
-        <div className="bento-lg animate-shimmer rounded-3xl" style={{ minHeight: "240px" }} />
+        <div className="bento-lg animate-shimmer rounded-xl" style={{ minHeight: "240px" }} />
         
         {/* Stats skeletons */}
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="bento-sm animate-shimmer rounded-3xl"
+            className="bento-sm animate-shimmer rounded-xl"
             style={{ 
               minHeight: "120px",
               animationDelay: `${i * 100}ms` 
@@ -233,7 +233,7 @@ const HeroBentoSkeleton: React.FC = () => (
         ))}
         
         {/* Level skeleton */}
-        <div className="bento-md animate-shimmer rounded-3xl" style={{ minHeight: "160px" }} />
+        <div className="bento-md animate-shimmer rounded-xl" style={{ minHeight: "160px" }} />
       </div>
     </div>
   </section>

@@ -80,11 +80,13 @@ export default {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-        "2xl": "1rem",
-        "3xl": "1.5rem",
+        sm: "0.375rem",    // 6px - badges, small elements
+        DEFAULT: "0.5rem", // 8px - default
+        md: "0.625rem",    // 10px - buttons, inputs
+        lg: "0.75rem",     // 12px - cards, dialogs
+        xl: "1rem",        // 16px - larger cards
+        "2xl": "1.25rem",  // 20px - featured cards
+        "3xl": "1.5rem",   // 24px - hero elements
       },
       boxShadow: {
         glass: "var(--glass-shadow)",

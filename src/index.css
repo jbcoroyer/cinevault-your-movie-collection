@@ -39,7 +39,7 @@
     --border: 220 13% 88%;
     --input: 220 13% 88%;
     --ring: 38 92% 50%;
-    --radius: 1rem;
+    --radius: 0.75rem;
 
     /* Glass Tokens */
     --glass-bg: 0 0% 100% / 0.7;
@@ -193,7 +193,7 @@
   }
 
   .bento-card {
-    @apply glass-elevated rounded-3xl p-5 transition-all duration-300 ease-out;
+    @apply glass-elevated rounded-xl p-5 transition-all duration-300 ease-out;
   }
 
   .bento-card:hover {
@@ -426,7 +426,7 @@
   }
 
   .movie-card-hover {
-    @apply relative overflow-hidden rounded-2xl transition-all duration-500;
+    @apply relative overflow-hidden rounded-xl transition-all duration-500;
   }
 
   .movie-card-hover::after {
