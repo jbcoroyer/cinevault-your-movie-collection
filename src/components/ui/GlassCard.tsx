@@ -10,7 +10,7 @@ import { cva, type VariantProps } from "class-variance-authority";
  */
 
 const glassCardVariants = cva(
-  "relative overflow-hidden rounded-2xl transition-all duration-500",
+  "relative overflow-hidden rounded-xl transition-all duration-500",
   {
     variants: {
       variant: {
