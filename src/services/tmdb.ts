@@ -270,7 +270,27 @@ export interface AIFilters {
   sort_by?: string;
   "vote_count.gte"?: string;
   "vote_average.gte"?: string;
+  with_keywords?: string;
 }
+
+// Keyword IDs for TMDB API (common thematic keywords)
+const KEYWORD_MAP: Record<string, string> = {
+  shark: "911",
+  dinosaur: "1299",
+  zombie: "12377",
+  alien: "9882",
+  vampire: "3133",
+  werewolf: "12564",
+  ghost: "10224",
+  robot: "9951",
+  space: "1612",
+  time_travel: "4379",
+  serial_killer: "10714",
+  haunted_house: "10224",
+  monster: "9715",
+  apocalypse: "4458",
+  superhero: "9715",
+};
 
 export interface AISearchResult {
   type: "specific" | "discover";
@@ -314,6 +334,7 @@ export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> 
   }
 
   const filters: AIFilters = data?.filters || data;
+  const keywordHint = data?.with_keywords;
   if (!filters) throw new Error("Aucun filtre retourné par l'IA");
 
   const params: Record<string, string> = {
@@ -331,6 +352,13 @@ export const searchMoviesByAI = async (prompt: string): Promise<AISearchResult> 
   if (filters.sort_by) params.sort_by = filters.sort_by;
   if (filters["vote_count.gte"]) params["vote_count.gte"] = filters["vote_count.gte"];
   if (filters["vote_average.gte"]) params["vote_average.gte"] = filters["vote_average.gte"];
+  
+  // Handle keywords for thematic searches
+  if (keywordHint && KEYWORD_MAP[keywordHint.toLowerCase()]) {
+    params.with_keywords = KEYWORD_MAP[keywordHint.toLowerCase()];
+  } else if (filters.with_keywords) {
+    params.with_keywords = filters.with_keywords;
+  }
 
   const movieData = await fetchTMDB<TMDBResponse<Movie>>("/discover/movie", params);
   return { type: "discover", movies: movieData.results };
