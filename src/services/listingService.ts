@@ -548,7 +548,7 @@ export const addToFavorites = async (
   listingId: string
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase.from("listing_favorites").insert({
+    const { error } = await (supabase.from("listing_favorites") as any).insert({
       user_id: userId,
       listing_id: listingId,
     });
@@ -567,8 +567,7 @@ export const removeFromFavorites = async (
   listingId: string
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from("listing_favorites")
+    const { error } = await (supabase.from("listing_favorites") as any)
       .delete()
       .eq("user_id", userId)
       .eq("listing_id", listingId);
@@ -586,8 +585,7 @@ export const isFavorite = async (
   userId: string,
   listingId: string
 ): Promise<boolean> => {
-  const { count } = await supabase
-    .from("listing_favorites")
+  const { count } = await (supabase.from("listing_favorites") as any)
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("listing_id", listingId);
@@ -601,8 +599,7 @@ export const isFavorite = async (
 export const getUserFavorites = async (
   userId: string
 ): Promise<ListingWithSeller[]> => {
-  const { data, error } = await supabase
-    .from("listing_favorites")
+  const { data, error } = await (supabase.from("listing_favorites") as any)
     .select(`
       listing:listings(
         *,

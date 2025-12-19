@@ -170,7 +170,8 @@ export default function Sell() {
       try {
         let profile = await getCurrentSellerProfile(user.id);
         if (!profile) {
-          const result = await createSellerProfile(user.id, { displayName: user.user_metadata?.full_name || user.email?.split("@")[0] || "Vendeur" });
+          const displayName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Vendeur";
+          const result = await createSellerProfile(user.id, displayName);
           if (result.success) profile = result.profile;
         }
         setSellerProfile(profile);
