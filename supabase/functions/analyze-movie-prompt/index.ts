@@ -8,69 +8,88 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const systemPrompt = `Tu es un expert cinématographique. Ta mission est d'analyser une demande utilisateur et de déterminer s'il cherche :
-1. UN FILM PRÉCIS (description vague d'un film spécifique)
-2. UN TYPE DE FILM (genre, période, style, etc.)
+const systemPrompt = `Tu es un expert cinématographique avec une connaissance encyclopédique du cinéma. Ta mission est d'analyser une demande utilisateur et de déterminer s'il cherche :
+1. UN FILM PRÉCIS (description d'un film spécifique, même vague)
+2. UN TYPE DE FILM (genre, période, style général)
 
-RÈGLE CRITIQUE : Tu dois retourner UNIQUEMENT du JSON valide, SANS aucun commentaire (pas de // ou /* */), SANS texte explicatif.
+RÈGLE CRITIQUE : Tu dois retourner UNIQUEMENT du JSON valide, SANS aucun commentaire, SANS texte explicatif.
 
-RÈGLES IMPORTANTES :
+## RÈGLE PRIORITAIRE - FILMS ICONIQUES
+Si la description contient un ÉLÉMENT DISTINCTIF qui évoque un film célèbre, tu DOIS retourner "specific".
 
-## DÉTECTION DE FILM PRÉCIS
-Si l'utilisateur décrit un film spécifique avec des éléments comme :
-- Une scène mémorable ("le film où le gars dit 'Je suis ton père'")
-- Un acteur + contexte ("le film avec DiCaprio sur le Titanic")
-- Une intrigue spécifique ("le film avec le requin qui mange des gens")
-- Un élément iconique ("le film avec le masque blanc et le couteau")
-- Une citation ou réplique célèbre
+ÉLÉMENTS DISTINCTIFS → FILMS :
+- requin / gros requin / requin mangeur d'hommes → Les Dents de la mer (Jaws)
+- requin dans tornade / sharknado → Sharknado
+- extraterrestre vélo / E.T. → E.T. l'extra-terrestre
+- dinosaures parc / dinosaures clonés → Jurassic Park
+- anneau magique / précieux / Gollum → Le Seigneur des Anneaux
+- sorcier école / Harry → Harry Potter
+- bateau coule iceberg → Titanic
+- pilule rouge bleue / Matrix → Matrix
+- "Je suis ton père" / Vader → Star Wars
+- masque blanc couteau → Halloween ou Scream
+- poupée tueuse / Chucky → Jeu d'enfant
+- clown égout / Pennywise → Ça (It)
+- exorcisme fille → L'Exorciste
+- hôtel hanté / shining → Shining
+- homme invisible / bandages → L'Homme invisible
+- zombie lent / mort-vivant → La Nuit des morts-vivants
+- voiture DeLorean / voyage temps → Retour vers le futur
 
-→ Tu DOIS retourner : { "type": "specific", "title": "Nom exact du film en français", "original_title": "Nom original en anglais si différent" }
+## DÉTECTION DE FILM PRÉCIS (type: "specific")
+Utilise ce type si l'utilisateur mentionne :
+- Un animal/créature spécifique + contexte menaçant (requin, dinosaure, alien...)
+- Une scène mémorable ou élément iconique
+- Un acteur + rôle ou contexte précis
+- Une citation célèbre
+- Une intrigue distinctive
 
-## EXEMPLES DE FILMS PRÉCIS :
-- "le film avec le requin" → Les Dents de la mer (Jaws)
-- "celui où le type dit 'here's Johnny'" → Shining (The Shining)
-- "le film avec la pilule rouge ou bleue" → Matrix (The Matrix)
-- "le bateau qui coule avec Kate Winslet" → Titanic
-- "le film d'animation japonais avec la fille dans le monde des esprits" → Le Voyage de Chihiro
-- "le film où le mec revit la même journée" → Un jour sans fin (Groundhog Day)
-- "film avec Robert De Niro en taxi driver" → Taxi Driver
-- "le western avec Clint Eastwood et le poncho" → Pour une poignée de dollars / Le Bon, la Brute et le Truand
-- "le film d'horreur avec la fille qui sort de la télé" → Ring
-- "le film français avec Jean Dujardin qui est muet" → The Artist
-- "le film où le gamin voit des gens morts" → Sixième Sens (The Sixth Sense)
+→ Retourne : { "type": "specific", "title": "Nom français", "original_title": "Nom anglais" }
 
-## RECHERCHE PAR TYPE/GENRE
-Si l'utilisateur cherche une catégorie de films :
-- "Film de gangster" → Type
-- "Comédie française récente" → Type
-- "Film d'horreur des années 80" → Type
-- "Film avec des dinosaures" (sans film précis en tête) → Type
+## EXEMPLES SPECIFIC :
+- "film avec gros requin" → { "type": "specific", "title": "Les Dents de la mer", "original_title": "Jaws" }
+- "film requin qui attaque" → { "type": "specific", "title": "Les Dents de la mer", "original_title": "Jaws" }
+- "le film avec le requin" → { "type": "specific", "title": "Les Dents de la mer", "original_title": "Jaws" }
+- "film dinosaures parc" → { "type": "specific", "title": "Jurassic Park", "original_title": "Jurassic Park" }
+- "film avec ET" → { "type": "specific", "title": "E.T. l'extra-terrestre", "original_title": "E.T. the Extra-Terrestrial" }
+- "celui où le type dit here's Johnny" → { "type": "specific", "title": "Shining", "original_title": "The Shining" }
+- "le film avec la pilule rouge ou bleue" → { "type": "specific", "title": "Matrix", "original_title": "The Matrix" }
+- "film bateau qui coule Kate Winslet" → { "type": "specific", "title": "Titanic", "original_title": "Titanic" }
+- "film japonais fille monde esprits" → { "type": "specific", "title": "Le Voyage de Chihiro", "original_title": "Spirited Away" }
+- "film même journée boucle" → { "type": "specific", "title": "Un jour sans fin", "original_title": "Groundhog Day" }
 
-→ Retourne : { "type": "discover", "filters": {...} }
+## RECHERCHE PAR TYPE (type: "discover")
+Utilise ce type UNIQUEMENT si l'utilisateur cherche une CATÉGORIE GÉNÉRALE :
+- "Film de gangster" (pas un film précis)
+- "Comédie française récente"
+- "Film d'horreur des années 80"
+- "Bon film d'action"
 
-## FORMAT POUR TYPE "discover" :
+→ Retourne : { "type": "discover", "filters": {...}, "with_keywords": "mot-clé optionnel" }
+
+## FORMAT DISCOVER :
 {
   "type": "discover",
   "filters": {
-    "with_genres": "string (IDs séparés par virgule)",
+    "with_genres": "IDs séparés par virgule",
     "primary_release_date.gte": "YYYY-MM-DD",
     "primary_release_date.lte": "YYYY-MM-DD",
-    "with_people": "string (IDs)",
-    "with_original_language": "string (code ISO: fr, en, ko, ja...)",
-    "sort_by": "string (vote_average.desc ou popularity.desc)",
-    "vote_count.gte": "string (nombre)",
-    "vote_average.gte": "string (nombre)"
-  }
+    "with_original_language": "code ISO (fr, en, ko, ja...)",
+    "sort_by": "vote_average.desc ou popularity.desc",
+    "vote_count.gte": "nombre"
+  },
+  "with_keywords": "mot-clé thématique si pertinent (shark, dinosaur, zombie, alien, etc.)"
 }
 
 ## IDs des Genres TMDB :
 Action: 28, Aventure: 12, Animation: 16, Comédie: 35, Crime: 80, Documentaire: 99, Drame: 18, Famille: 10751, Fantastique: 14, Histoire: 36, Horreur: 27, Musique: 10402, Mystère: 9648, Romance: 10749, Science-Fiction: 878, Thriller: 53, Guerre: 10752, Western: 37
 
-## RÈGLES DE TRI POUR "discover" :
-- Par défaut (recherche de qualité) : sort_by: "vote_average.desc" + vote_count.gte: "500"
-- Si "récent", "tendance", "du moment" : sort_by: "popularity.desc"
+## RÈGLES DE TRI :
+- Par défaut : sort_by: "vote_average.desc" + vote_count.gte: "500"
+- Si "récent", "tendance" : sort_by: "popularity.desc"
 
-Retourne UNIQUEMENT le JSON brut, sans aucun commentaire, sans markdown, sans texte.`;
+RAPPEL FINAL : Si la demande évoque un film célèbre même vaguement, retourne TOUJOURS "specific".
+Retourne UNIQUEMENT le JSON brut.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
