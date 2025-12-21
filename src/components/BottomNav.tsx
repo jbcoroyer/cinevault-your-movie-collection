@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, Library, Trophy, ListVideo } from "lucide-react";
+import { Home, Search, Library, Store, ListVideo } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGamificationNotifications } from "@/hooks/useGamificationNotifications";
 import { useEffect } from "react";
@@ -7,13 +7,13 @@ import { useEffect } from "react";
 /**
  * BottomNav - Navigation mobile
  *
- * Structure : Accueil | Recherche | Collection | Listes | Badges
+ * Structure : Accueil | Recherche | Collection | Marketplace | Listes
  * Le profil/paramètres sont accessibles via la photo de profil dans le MobileHeader
  */
 
 export const BottomNav = () => {
   const { pathname } = useLocation();
-  const { totalNotifications, markBadgesAsSeen, markChallengesAsSeen, markRewardsAsSeen } = useGamificationNotifications();
+  const { markBadgesAsSeen, markRewardsAsSeen } = useGamificationNotifications();
 
   // Mark as seen when visiting badges page
   useEffect(() => {
@@ -43,16 +43,16 @@ export const BottomNav = () => {
       showBadge: false,
     },
     {
+      icon: Store,
+      label: "Marché",
+      path: "/marketplace",
+      showBadge: false,
+    },
+    {
       icon: ListVideo,
       label: "Listes",
       path: "/lists",
       showBadge: false,
-    },
-    {
-      icon: Trophy,
-      label: "Badges",
-      path: "/badges",
-      showBadge: totalNotifications > 0,
     },
   ];
 
