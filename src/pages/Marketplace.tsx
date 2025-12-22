@@ -10,6 +10,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -407,9 +409,11 @@ export default function Marketplace() {
   const totalPages = Math.ceil(total / (filters.limit || 24));
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-white/5">
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      {/* Search & Filters Bar */}
+      <div className="sticky top-14 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             {/* Search */}
@@ -586,7 +590,7 @@ export default function Marketplace() {
       </div>
 
       {/* Sell CTA (mobile) */}
-      <div className="fixed bottom-20 right-4 lg:bottom-4">
+      <div className="fixed bottom-24 right-4 md:bottom-8 z-30">
         <Button
           size="lg"
           className="bg-amber-500 hover:bg-amber-600 text-black shadow-lg shadow-amber-500/20 rounded-full"
@@ -596,6 +600,8 @@ export default function Marketplace() {
           Vendre
         </Button>
       </div>
+      
+      <BottomNav />
     </div>
   );
 }
