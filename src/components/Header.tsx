@@ -1,5 +1,5 @@
 import { useNavigate, NavLink, useLocation, Link } from "react-router-dom";
-import { Home, Search, Library, Trophy, ListVideo, LogIn } from "lucide-react";
+import { Home, Search, Library, Trophy, ListVideo, LogIn, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProfileMenu } from "./ProfileMenu";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +36,7 @@ export const Header: React.FC = () => {
     { to: "/", icon: Home, label: "Accueil", exact: true },
     { to: "/search", icon: Search, label: "Recherche" },
     { to: "/collection", icon: Library, label: "Collection", isMain: true },
+    { to: "/marketplace", icon: Store, label: "Marché" },
     { to: "/lists", icon: ListVideo, label: "Listes" },
     { to: "/badges", icon: Trophy, label: "Badges", hasBadge: totalNotifications > 0 },
   ];
