@@ -10,6 +10,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -371,7 +373,8 @@ export default function Cart() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background">
+        <Header />
         <div className="container mx-auto px-4 py-6">
           <Skeleton className="h-8 w-48 mb-6" />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -382,6 +385,7 @@ export default function Cart() {
             <Skeleton className="h-80" />
           </div>
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -389,20 +393,24 @@ export default function Cart() {
   // Empty cart
   if (!cart || cart.items.length === 0) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <GlassCard className="p-8 text-center max-w-md">
-          <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Votre panier est vide</h2>
-          <p className="text-muted-foreground mb-6">
-            Parcourez notre marketplace pour trouver des films à ajouter.
-          </p>
-          <Button
-            className="bg-amber-500 hover:bg-amber-600 text-black"
-            onClick={() => navigate("/marketplace")}
-          >
-            Découvrir le marketplace
-          </Button>
-        </GlassCard>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center p-4 min-h-[60vh]">
+          <GlassCard className="p-8 text-center max-w-md">
+            <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Votre panier est vide</h2>
+            <p className="text-muted-foreground mb-6">
+              Parcourez notre marketplace pour trouver des films à ajouter.
+            </p>
+            <Button
+              className="bg-amber-500 hover:bg-amber-600 text-black"
+              onClick={() => navigate("/marketplace")}
+            >
+              Découvrir le marketplace
+            </Button>
+          </GlassCard>
+        </div>
+        <BottomNav />
       </div>
     );
   }
@@ -420,9 +428,10 @@ export default function Cart() {
   const optimization = getCartOptimization(cart);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <div className="bg-background/80 backdrop-blur-xl border-b border-white/5">
+    <div className="min-h-screen bg-background">
+      <Header />
+      {/* Sub Header */}
+      <div className="bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -505,6 +514,7 @@ export default function Cart() {
           </div>
         </div>
       </div>
+      <BottomNav />
     </div>
   );
 }

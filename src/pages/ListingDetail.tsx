@@ -11,6 +11,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -170,7 +172,8 @@ export default function ListingDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background">
+        <Header />
         <div className="container mx-auto px-4 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Skeleton className="aspect-square rounded-xl" />
@@ -180,19 +183,24 @@ export default function ListingDetail() {
             </div>
           </div>
         </div>
+        <BottomNav />
       </div>
     );
   }
 
   if (!listing) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <GlassCard className="p-8 text-center max-w-md">
-          <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Annonce introuvable</h2>
-          <p className="text-muted-foreground mb-4">Cette annonce n'existe plus ou a été vendue.</p>
-          <Button onClick={() => navigate("/marketplace")}>Retour au marketplace</Button>
-        </GlassCard>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <GlassCard className="p-8 text-center max-w-md">
+            <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Annonce introuvable</h2>
+            <p className="text-muted-foreground mb-4">Cette annonce n'existe plus ou a été vendue.</p>
+            <Button onClick={() => navigate("/marketplace")}>Retour au marketplace</Button>
+          </GlassCard>
+        </div>
+        <BottomNav />
       </div>
     );
   }
@@ -202,8 +210,9 @@ export default function ListingDetail() {
   const FormatIcon = format?.icon || Disc;
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-white/5">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="sticky top-14 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="container mx-auto px-4 py-3">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ChevronLeft className="w-4 h-4 mr-1" />Retour
@@ -292,6 +301,7 @@ export default function ListingDetail() {
           </div>
         </div>
       </div>
+      <BottomNav />
     </div>
   );
 }

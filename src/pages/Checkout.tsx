@@ -11,6 +11,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -617,8 +619,9 @@ export default function Checkout() {
   // Loading
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="container mx-auto">
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-6">
           <Skeleton className="h-8 w-48 mb-6" />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
@@ -627,6 +630,7 @@ export default function Checkout() {
             <Skeleton className="h-80" />
           </div>
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -646,7 +650,9 @@ export default function Checkout() {
     ) / cart.items.length;
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background">
+      <Header />
+      
       {/* Header */}
       <div className="bg-background/80 backdrop-blur-xl border-b border-white/5">
         <div className="container mx-auto px-4 py-4">
@@ -884,6 +890,7 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+      <BottomNav />
     </div>
   );
 }

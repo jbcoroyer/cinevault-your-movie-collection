@@ -11,6 +11,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -637,8 +639,9 @@ export default function Orders() {
   // Loading
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="container mx-auto max-w-2xl">
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-6 max-w-2xl">
           <Skeleton className="h-8 w-48 mb-6" />
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
@@ -646,6 +649,7 @@ export default function Orders() {
             ))}
           </div>
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -653,8 +657,9 @@ export default function Orders() {
   // Order detail view
   if (selectedOrder) {
     return (
-      <div className="min-h-screen bg-background pb-20">
-        <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-white/5">
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="sticky top-14 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
           <div className="container mx-auto px-4 py-4">
             <Button
               variant="ghost"
@@ -691,14 +696,16 @@ export default function Orders() {
             onSubmit={handleSubmitReview}
           />
         )}
+        <BottomNav />
       </div>
     );
   }
 
   // Orders list view
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-white/5">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="sticky top-14 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="container mx-auto px-4 py-4">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Package className="w-5 h-5" />
@@ -734,6 +741,7 @@ export default function Orders() {
           </GlassCard>
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }
