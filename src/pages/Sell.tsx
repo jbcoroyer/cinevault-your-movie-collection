@@ -5,6 +5,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -223,8 +225,9 @@ export default function Sell() {
   const canSell = onboardingStatus.status === "complete";
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="bg-gradient-to-b from-amber-500/10 to-transparent border-b border-white/5">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="bg-gradient-to-b from-amber-500/10 to-transparent border-b border-border">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div><h1 className="text-2xl font-bold flex items-center gap-2"><Store className="w-6 h-6 text-amber-400" />Espace Vendeur</h1>{sellerProfile && <p className="text-muted-foreground">{sellerProfile.display_name}</p>}</div>
@@ -296,6 +299,7 @@ export default function Sell() {
           </div>
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }

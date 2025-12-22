@@ -11,6 +11,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -447,19 +449,22 @@ export default function CreateListing() {
   // Loading
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="container mx-auto max-w-2xl">
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-6 max-w-2xl">
           <Skeleton className="h-8 w-48 mb-6" />
           <Skeleton className="h-96" />
         </div>
+        <BottomNav />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-white/5">
+    <div className="min-h-screen bg-background">
+      <Header />
+      {/* Sub Header */}
+      <div className="sticky top-14 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -891,6 +896,7 @@ export default function CreateListing() {
           )}
         </GlassCard>
       </div>
+      <BottomNav />
     </div>
   );
 }
