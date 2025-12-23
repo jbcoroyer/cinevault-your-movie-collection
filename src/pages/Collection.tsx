@@ -28,6 +28,8 @@ import { CollectionShowcase } from "@/components/guest/CollectionShowcase";
 import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
 import { BarcodeScannerDialog } from "@/components/barcode";
 import { useCollectionFilters } from "@/hooks/useCollectionFilters";
+import { ShelfView } from "@/components/collection/ShelfView";
+import { CollectionFiltersDrawer, ActiveFiltersBar } from "@/components/collection/CollectionFilters";
 
 // NEW IMPORTS - Améliorations
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
@@ -56,11 +58,7 @@ import {
   Film,
   Star,
   Search,
-  Sparkles,
-  Filter,
   Grid3X3,
-  LayoutList,
-  Image,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -88,7 +86,7 @@ import { getImageUrl } from "@/services/tmdb";
 type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition" | "market_value";
 type SortOrder = "asc" | "desc";
 type ViewMode = "collection" | "valuation";
-type DisplayMode = "grid" | "list" | "poster";
+type DisplayMode = "shelf" | "grid";
 
 interface ExtendedMovieDetails extends MovieDetails {
   director?: string;
@@ -273,21 +271,29 @@ const EmptyCollection = ({ onAddMovie }: { onAddMovie: () => void }) => {
  * Sticky Filter Bar
  */
 const StickyFilterBar = ({
-  activeFilterCount,
   sortBy,
-  sortOrder,
   onSortChange,
-  onFilterClick,
   displayMode,
   onDisplayModeChange,
+  filterProps,
 }: {
-  activeFilterCount: number;
   sortBy: SortBy;
-  sortOrder: SortOrder;
   onSortChange: (sort: SortBy) => void;
-  onFilterClick: () => void;
   displayMode: DisplayMode;
   onDisplayModeChange: (mode: DisplayMode) => void;
+  filterProps: {
+    filters: ReturnType<typeof useCollectionFilters>["filters"];
+    filterOptions: ReturnType<typeof useCollectionFilters>["filterOptions"];
+    toggleFormat: ReturnType<typeof useCollectionFilters>["toggleFormat"];
+    toggleCondition: ReturnType<typeof useCollectionFilters>["toggleCondition"];
+    toggleGenre: ReturnType<typeof useCollectionFilters>["toggleGenre"];
+    toggleDecade: ReturnType<typeof useCollectionFilters>["toggleDecade"];
+    toggleDirector: ReturnType<typeof useCollectionFilters>["toggleDirector"];
+    setPriceRange: ReturnType<typeof useCollectionFilters>["setPriceRange"];
+    resetFilters: ReturnType<typeof useCollectionFilters>["resetFilters"];
+    hasActiveFilters: ReturnType<typeof useCollectionFilters>["hasActiveFilters"];
+    activeFilterCount: ReturnType<typeof useCollectionFilters>["activeFilterCount"];
+  };
 }) => {
   return (
     <motion.div
@@ -299,21 +305,8 @@ const StickyFilterBar = ({
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        {/* Filter button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onFilterClick}
-          className="gap-2"
-        >
-          <Filter className="w-4 h-4" />
-          Filtres
-          {activeFilterCount > 0 && (
-            <Badge className="ml-1 bg-amber-500 text-white text-xs px-1.5">
-              {activeFilterCount}
-            </Badge>
-          )}
-        </Button>
+        {/* Filter drawer */}
+        <CollectionFiltersDrawer {...filterProps} />
 
         {/* Sort dropdown */}
         <DropdownMenu>
@@ -337,28 +330,36 @@ const StickyFilterBar = ({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Display mode toggle */}
-        <div className="hidden sm:flex items-center gap-1 p-1 bg-muted rounded-lg">
+        {/* Display mode toggle - Shelf & Grid only */}
+        <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
           {[
-            { mode: "grid" as DisplayMode, icon: Grid3X3 },
-            { mode: "list" as DisplayMode, icon: LayoutList },
-            { mode: "poster" as DisplayMode, icon: Image },
-          ].map(({ mode, icon: Icon }) => (
+            { mode: "shelf" as DisplayMode, icon: Library, label: "Étagère" },
+            { mode: "grid" as DisplayMode, icon: Grid3X3, label: "Grille" },
+          ].map(({ mode, icon: Icon, label }) => (
             <button
               key={mode}
               onClick={() => onDisplayModeChange(mode)}
               className={cn(
-                "p-1.5 rounded-md transition-colors",
+                "p-1.5 rounded-md transition-colors flex items-center gap-1.5",
                 displayMode === mode 
                   ? "bg-background text-foreground shadow-sm" 
                   : "text-muted-foreground hover:text-foreground"
               )}
+              title={label}
             >
               <Icon className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">{label}</span>
             </button>
           ))}
         </div>
       </div>
+
+      {/* Active filters bar */}
+      {filterProps.hasActiveFilters && (
+        <div className="mt-3">
+          <ActiveFiltersBar {...filterProps} />
+        </div>
+      )}
     </motion.div>
   );
 };
@@ -373,7 +374,7 @@ export default function Collection() {
 
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>("collection");
-  const [displayMode, setDisplayMode] = useState<DisplayMode>("grid");
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("shelf");
 
   // Collection state
   const [physicalMovies, setPhysicalMovies] = useState<PhysicalMovie[]>([]);
@@ -384,7 +385,6 @@ export default function Collection() {
   // Sheet/Dialog states
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -654,13 +654,23 @@ export default function Collection() {
                 <>
                   {/* Sticky Filter Bar */}
                   <StickyFilterBar
-                    activeFilterCount={activeFilterCount}
                     sortBy={sortBy}
-                    sortOrder={sortOrder}
                     onSortChange={setSortBy}
-                    onFilterClick={() => setFiltersOpen(true)}
                     displayMode={displayMode}
                     onDisplayModeChange={setDisplayMode}
+                    filterProps={{
+                      filters,
+                      filterOptions,
+                      toggleFormat,
+                      toggleCondition,
+                      toggleGenre,
+                      toggleDecade,
+                      toggleDirector,
+                      setPriceRange,
+                      resetFilters,
+                      hasActiveFilters,
+                      activeFilterCount,
+                    }}
                   />
 
                   {/* Selection action bar */}
@@ -686,27 +696,40 @@ export default function Collection() {
                     </motion.div>
                   )}
 
-                  {/* Movies Grid */}
-                  <div className={cn(
-                    "grid gap-4 mt-4",
-                    displayMode === "grid" && "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5",
-                    displayMode === "poster" && "grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6",
-                    displayMode === "list" && "grid-cols-1"
-                  )}>
-                    <AnimatePresence>
-                      {sortedMovies.map((movie, index) => (
-                        <CollectionMovieCard
-                          key={movie.id}
-                          movie={movie}
-                          details={physicalMovieDetails[movie.tmdb_id]}
-                          isSelected={selectedIds.has(movie.id)}
-                          selectionMode={selectionMode}
-                          onSelect={() => toggleSelection(movie.id)}
-                          onEdit={() => handleEditMovie(movie)}
-                          onClick={() => navigate(`/movie/${movie.tmdb_id}`)}
-                        />
-                      ))}
-                    </AnimatePresence>
+                  {/* Movies Display - Shelf or Grid */}
+                  <div className="mt-4">
+                    {displayMode === "shelf" ? (
+                      <ShelfView
+                        movies={sortedMovies}
+                        movieDetailsMap={physicalMovieDetails}
+                        onMovieClick={(pm, details) => {
+                          if (selectionMode) {
+                            toggleSelection(pm.id);
+                          } else {
+                            navigate(`/movie/${pm.tmdb_id}`);
+                          }
+                        }}
+                        selectionMode={selectionMode}
+                        selectedIds={selectedIds}
+                      />
+                    ) : (
+                      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                        <AnimatePresence>
+                          {sortedMovies.map((movie) => (
+                            <CollectionMovieCard
+                              key={movie.id}
+                              movie={movie}
+                              details={physicalMovieDetails[movie.tmdb_id]}
+                              isSelected={selectedIds.has(movie.id)}
+                              selectionMode={selectionMode}
+                              onSelect={() => toggleSelection(movie.id)}
+                              onEdit={() => handleEditMovie(movie)}
+                              onClick={() => navigate(`/movie/${movie.tmdb_id}`)}
+                            />
+                          ))}
+                        </AnimatePresence>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
