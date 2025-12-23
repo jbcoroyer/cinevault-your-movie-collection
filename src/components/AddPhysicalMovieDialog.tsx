@@ -1,3 +1,10 @@
+/**
+ * CineVault - AddPhysicalMovieDialog (CORRIGÉ)
+ *
+ * CORRECTION: Ajout des appels à updateChallengeProgress après l'ajout de films
+ * pour que les défis hebdomadaires se mettent à jour correctement.
+ */
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,13 +13,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Plus, Disc, Info, X, Package } from "lucide-react";
-import { searchMovies, Movie, getImageUrl } from "@/services/tmdb";
-import { 
-  PhysicalFormat, 
+import { searchMovies, Movie, getImageUrl, getMovieDetails } from "@/services/tmdb";
+import {
+  PhysicalFormat,
   PhysicalCondition,
-  formatLabels, 
+  formatLabels,
   conditionLabels,
-  addPhysicalMovie 
+  addPhysicalMovie,
 } from "@/services/physicalMovies";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -21,6 +28,8 @@ import { getXpForFormat, calculateRarity } from "@/services/xpService";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 import { LORE_TERMINOLOGY } from "@/data/videoClubData";
 import { Badge } from "@/components/ui/badge";
+// ✅ CORRECTION: Import du service de gamification
+import { updateChallengeProgress } from "@/services/gamificationService";
 
 interface AddPhysicalMovieDialogProps {
   open: boolean;
@@ -37,22 +46,18 @@ interface SelectedMovieWithDetails {
   notes: string;
 }
 
-export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({ 
-  open, 
-  onOpenChange, 
-  onMovieAdded 
-}) => {
+export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({ open, onOpenChange, onMovieAdded }) => {
   const { user } = useAuth();
   const { checkBadges } = useBadgeNotification();
   const [step, setStep] = useState<"search" | "details">("search");
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Movie[]>([]);
   const [searching, setSearching] = useState(false);
-  
+
   // Multiple movies selection
   const [selectedMovies, setSelectedMovies] = useState<SelectedMovieWithDetails[]>([]);
   const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
-  
+
   // Form fields for current movie
   const [format, setFormat] = useState<PhysicalFormat>("bluray");
   const [condition, setCondition] = useState<PhysicalCondition>("good");
@@ -109,7 +114,7 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
 
   const handleAddToQueue = (movie: Movie) => {
     // Check if already in queue
-    if (selectedMovies.some(m => m.movie.id === movie.id)) {
+    if (selectedMovies.some((m) => m.movie.id === movie.id)) {
       toast({
         title: "Film déjà ajouté",
         description: "Ce film est déjà dans votre liste d'ajout.",
@@ -118,15 +123,18 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
       return;
     }
 
-    setSelectedMovies(prev => [...prev, {
-      movie,
-      format: "bluray",
-      condition: "good",
-      price: "",
-      purchaseDate: "",
-      notes: "",
-    }]);
-    
+    setSelectedMovies((prev) => [
+      ...prev,
+      {
+        movie,
+        format: "bluray",
+        condition: "good",
+        price: "",
+        purchaseDate: "",
+        notes: "",
+      },
+    ]);
+
     toast({
       title: "Film ajouté à la liste",
       description: `${movie.title} ajouté. ${selectedMovies.length + 1} film(s) en attente.`,
@@ -134,7 +142,7 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
   };
 
   const handleRemoveFromQueue = (movieId: number) => {
-    setSelectedMovies(prev => prev.filter(m => m.movie.id !== movieId));
+    setSelectedMovies((prev) => prev.filter((m) => m.movie.id !== movieId));
   };
 
   const handleGoToDetails = () => {
@@ -163,11 +171,9 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
   };
 
   const saveCurrentMovieDetails = () => {
-    setSelectedMovies(prev => prev.map((m, i) => 
-      i === currentMovieIndex 
-        ? { ...m, format, condition, price, purchaseDate, notes }
-        : m
-    ));
+    setSelectedMovies((prev) =>
+      prev.map((m, i) => (i === currentMovieIndex ? { ...m, format, condition, price, purchaseDate, notes } : m)),
+    );
   };
 
   const handleNextMovie = () => {
@@ -193,18 +199,20 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
 
     setSaving(true);
     saveCurrentMovieDetails();
-    
+
     let totalXp = 0;
     let successCount = 0;
     let highestRarity: "common" | "rare" | "epic" | "legendary" | "grail" = "common";
     const rarityOrder = ["common", "rare", "epic", "legendary", "grail"];
-    
+
     // Get updated movies with current form values
-    const moviesToSave = selectedMovies.map((m, i) => 
-      i === currentMovieIndex 
-        ? { ...m, format, condition, price, purchaseDate, notes }
-        : m
+    const moviesToSave = selectedMovies.map((m, i) =>
+      i === currentMovieIndex ? { ...m, format, condition, price, purchaseDate, notes } : m,
     );
+
+    // ✅ CORRECTION: Collecter les formats et genres pour les défis
+    const formatsAdded: PhysicalFormat[] = [];
+    const genresAdded: string[] = [];
 
     for (const movieData of moviesToSave) {
       try {
@@ -220,6 +228,21 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
         const xp = getXpForFormat(movieData.format);
         totalXp += xp;
         successCount++;
+        formatsAdded.push(movieData.format);
+
+        // Récupérer les genres du film pour les défis genre-spécifiques
+        try {
+          const details = await getMovieDetails(movieData.movie.id);
+          if (details?.genres) {
+            details.genres.forEach((g) => {
+              if (!genresAdded.includes(String(g.id))) {
+                genresAdded.push(String(g.id));
+              }
+            });
+          }
+        } catch (e) {
+          console.log("[AddPhysicalMovieDialog] Could not fetch genres for challenge");
+        }
 
         const rarity = calculateRarity(movieData.format);
         if (rarityOrder.indexOf(rarity) > rarityOrder.indexOf(highestRarity)) {
@@ -236,16 +259,42 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
       }
     }
 
+    // ✅ CORRECTION: Mettre à jour les défis hebdomadaires
+    if (successCount > 0) {
+      console.log(`[AddPhysicalMovieDialog] Updating challenges for ${successCount} movies added`);
+
+      // Mettre à jour le défi "add_movies" pour chaque film ajouté
+      for (let i = 0; i < successCount; i++) {
+        await updateChallengeProgress(user.id, "add_movies");
+      }
+
+      // Mettre à jour les défis format-spécifiques
+      const formatMapping: Record<PhysicalFormat, string> = {
+        dvd: "dvd",
+        bluray: "bluray",
+        "4k": "4k",
+        steelbook: "steelbook",
+        collector: "collector",
+      };
+
+      for (const fmt of formatsAdded) {
+        await updateChallengeProgress(user.id, "format_specific", formatMapping[fmt]);
+      }
+
+      // Mettre à jour les défis genre-spécifiques
+      for (const genreId of genresAdded) {
+        await updateChallengeProgress(user.id, "genre_specific", genreId);
+      }
+
+      console.log("[AddPhysicalMovieDialog] Challenge progress updated successfully");
+    }
+
     if (successCount > 0) {
       const firstMovie = moviesToSave[0];
       setLootBoxData({
-        movieTitle: successCount > 1 
-          ? `${successCount} films ajoutés !` 
-          : firstMovie.movie.title,
+        movieTitle: successCount > 1 ? `${successCount} films ajoutés !` : firstMovie.movie.title,
         moviePoster: successCount === 1 ? firstMovie.movie.poster_path || undefined : undefined,
-        format: successCount > 1 
-          ? `Pack de ${successCount} films` 
-          : formatLabels[firstMovie.format],
+        format: successCount > 1 ? `Pack de ${successCount} films` : formatLabels[firstMovie.format],
         xpGained: totalXp,
         rarity: highestRarity,
         isMultiple: successCount > 1,
@@ -254,7 +303,7 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
 
       onOpenChange(false);
       setShowLootBox(true);
-      
+
       // Attendre un peu avant de vérifier les badges pour laisser le temps à la DB
       setTimeout(async () => {
         console.log("[AddPhysicalMovieDialog] Checking badges after adding movies...");
@@ -284,7 +333,7 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
               Ajouter à l'{LORE_TERMINOLOGY.collection}
               {selectedMovies.length > 0 && (
                 <Badge variant="secondary" className="ml-2 bg-videoclub-cyan/20 text-videoclub-cyan">
-                  {selectedMovies.length} film{selectedMovies.length > 1 ? 's' : ''}
+                  {selectedMovies.length} film{selectedMovies.length > 1 ? "s" : ""}
                 </Badge>
               )}
             </DialogTitle>
@@ -292,136 +341,107 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
 
           {step === "search" ? (
             <div className="space-y-4">
-              {/* Search input */}
+              {/* Search Input */}
               <div className="flex gap-2">
-                <Input
-                  placeholder="Rechercher un film..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="bg-background/50 border-videoclub-cyan/20 focus:border-videoclub-cyan"
-                />
-                <Button onClick={handleSearch} disabled={searching} className="bg-videoclub-cyan hover:bg-videoclub-cyan/80 text-background">
-                  <Search className="w-4 h-4" />
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher un film..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="pl-10 bg-background/50 border-videoclub-cyan/20"
+                  />
+                </div>
+                <Button
+                  onClick={handleSearch}
+                  disabled={searching}
+                  className="bg-videoclub-cyan hover:bg-videoclub-cyan/80"
+                >
+                  {searching ? "..." : "Chercher"}
                 </Button>
               </div>
 
-              {/* Selected movies queue */}
+              {/* Selected Movies Queue */}
               {selectedMovies.length > 0 && (
                 <div className="p-3 bg-videoclub-cyan/10 rounded-lg border border-videoclub-cyan/20">
-                  <p className="text-sm font-mono text-videoclub-cyan mb-2 flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    Films à ajouter ({selectedMovies.length})
-                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium flex items-center gap-2">
+                      <Package className="w-4 h-4" />
+                      Films sélectionnés
+                    </span>
+                    <Button
+                      size="sm"
+                      onClick={handleGoToDetails}
+                      className="bg-videoclub-cyan hover:bg-videoclub-cyan/80 text-background"
+                    >
+                      Continuer →
+                    </Button>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {selectedMovies.map((m) => (
-                      <Badge 
-                        key={m.movie.id} 
-                        variant="outline" 
-                        className="border-videoclub-cyan/30 bg-background/50 pr-1"
-                      >
-                        <span className="truncate max-w-[120px]">{m.movie.title}</span>
+                      <Badge key={m.movie.id} variant="secondary" className="flex items-center gap-1 bg-background/50">
+                        {m.movie.title.substring(0, 20)}
+                        {m.movie.title.length > 20 ? "..." : ""}
                         <button
                           onClick={() => handleRemoveFromQueue(m.movie.id)}
-                          className="ml-1 p-0.5 hover:bg-videoclub-magenta/20 rounded"
+                          className="ml-1 hover:text-destructive"
                         >
                           <X className="w-3 h-3" />
                         </button>
                       </Badge>
                     ))}
                   </div>
-                  <Button 
-                    onClick={handleGoToDetails}
-                    className="w-full mt-3 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta hover:opacity-90"
-                  >
-                    Configurer les {selectedMovies.length} film{selectedMovies.length > 1 ? 's' : ''}
-                  </Button>
                 </div>
               )}
 
-              {/* Search results */}
-              <div className="max-h-[350px] overflow-y-auto space-y-2">
-                {searching ? (
-                  <p className="text-center text-muted-foreground py-4 font-mono">Recherche...</p>
-                ) : searchResults.length > 0 ? (
-                  searchResults.map((movie) => {
-                    const isInQueue = selectedMovies.some(m => m.movie.id === movie.id);
-                    return (
-                      <button
-                        key={movie.id}
-                        onClick={() => handleAddToQueue(movie)}
-                        disabled={isInQueue}
-                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left border ${
-                          isInQueue 
-                            ? "bg-videoclub-cyan/10 border-videoclub-cyan/30 opacity-60"
-                            : "bg-background/50 hover:bg-videoclub-cyan/10 border-transparent hover:border-videoclub-cyan/30"
-                        }`}
-                      >
-                        {movie.poster_path ? (
-                          <img
-                            src={getImageUrl(movie.poster_path, "w200")!}
-                            alt={movie.title}
-                            className="w-12 h-18 object-cover rounded"
-                          />
-                        ) : (
-                          <div className="w-12 h-18 bg-muted rounded flex items-center justify-center">
-                            <Disc className="w-6 h-6 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{movie.title}</p>
-                          <p className="text-sm text-muted-foreground font-mono">
-                            {movie.release_date?.split("-")[0] || "Date inconnue"}
-                          </p>
+              {/* Search Results */}
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                {searchResults.map((movie) => {
+                  const isSelected = selectedMovies.some((m) => m.movie.id === movie.id);
+                  return (
+                    <div
+                      key={movie.id}
+                      className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                        isSelected
+                          ? "bg-videoclub-cyan/20 border border-videoclub-cyan"
+                          : "hover:bg-muted/50 border border-transparent"
+                      }`}
+                      onClick={() => !isSelected && handleAddToQueue(movie)}
+                    >
+                      {movie.poster_path ? (
+                        <img
+                          src={getImageUrl(movie.poster_path, "w92")}
+                          alt={movie.title}
+                          className="w-12 h-18 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-12 h-18 bg-muted rounded flex items-center justify-center">
+                          <Disc className="w-6 h-6 text-muted-foreground" />
                         </div>
-                        {isInQueue ? (
-                          <Badge variant="outline" className="border-videoclub-cyan text-videoclub-cyan">
-                            Ajouté
-                          </Badge>
-                        ) : (
-                          <Plus className="w-5 h-5 text-videoclub-cyan" />
-                        )}
-                      </button>
-                    );
-                  })
-                ) : query ? (
-                  <p className="text-center text-muted-foreground py-4 font-mono">Aucun résultat</p>
-                ) : (
-                  <p className="text-center text-muted-foreground py-4 font-mono">
-                    Recherchez un film pour l'ajouter
-                  </p>
-                )}
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{movie.title}</p>
+                        <p className="text-sm text-muted-foreground">{movie.release_date?.substring(0, 4) || "N/A"}</p>
+                      </div>
+                      {isSelected ? (
+                        <Badge className="bg-videoclub-cyan text-background">Ajouté</Badge>
+                      ) : (
+                        <Plus className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Progress indicator */}
-              {selectedMovies.length > 1 && (
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  {selectedMovies.map((_, i) => (
-                    <div
-                      key={i}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        i === currentMovieIndex 
-                          ? "bg-videoclub-cyan" 
-                          : i < currentMovieIndex 
-                            ? "bg-videoclub-magenta" 
-                            : "bg-muted"
-                      }`}
-                    />
-                  ))}
-                  <span className="ml-2 text-sm font-mono text-muted-foreground">
-                    {currentMovieIndex + 1} / {selectedMovies.length}
-                  </span>
-                </div>
-              )}
-
-              {/* Current movie preview */}
+              {/* Movie info header */}
               {currentMovie && (
-                <div className="flex gap-3 p-3 bg-background/50 rounded-lg border border-videoclub-cyan/20">
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
                   {currentMovie.poster_path ? (
                     <img
-                      src={getImageUrl(currentMovie.poster_path, "w200")!}
+                      src={getImageUrl(currentMovie.poster_path, "w92")}
                       alt={currentMovie.title}
                       className="w-16 h-24 object-cover rounded"
                     />
@@ -431,24 +451,27 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
                     </div>
                   )}
                   <div className="flex-1">
-                    <p className="font-semibold">{currentMovie.title}</p>
-                    <p className="text-sm text-muted-foreground font-mono">
-                      {currentMovie.release_date?.split("-")[0]}
-                    </p>
+                    <p className="font-semibold text-lg">{currentMovie.title}</p>
+                    <p className="text-muted-foreground">{currentMovie.release_date?.substring(0, 4)}</p>
+                    {selectedMovies.length > 1 && (
+                      <Badge variant="outline" className="mt-1">
+                        Film {currentMovieIndex + 1} / {selectedMovies.length}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Format */}
+              {/* Format Selection */}
               <div className="space-y-2">
-                <Label>Format *</Label>
+                <Label>Format</Label>
                 <Select value={format} onValueChange={(v) => setFormat(v as PhysicalFormat)}>
                   <SelectTrigger className="bg-background/50 border-videoclub-cyan/20">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(formatLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
+                    {Object.entries(formatLabels).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
                         {label}
                       </SelectItem>
                     ))}
@@ -456,25 +479,21 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
                 </Select>
               </div>
 
-              {/* Condition */}
+              {/* Condition Selection */}
               <div className="space-y-2">
-                <Label>État *</Label>
+                <Label>État</Label>
                 <Select value={condition} onValueChange={(v) => setCondition(v as PhysicalCondition)}>
                   <SelectTrigger className="bg-background/50 border-videoclub-cyan/20">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(conditionLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
+                    {Object.entries(conditionLabels).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
                         {label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
-                  <Info className="w-3 h-3" />
-                  L'état physique du boîtier et du disque
-                </p>
               </div>
 
               {/* Price */}
@@ -483,8 +502,6 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
                 <div className="relative">
                   <Input
                     type="number"
-                    step="0.01"
-                    min="0"
                     placeholder="0.00"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
@@ -497,9 +514,9 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
               {/* Purchase date */}
               <div className="space-y-2">
                 <Label>Date d'achat (optionnel)</Label>
-                <Input 
-                  type="date" 
-                  value={purchaseDate} 
+                <Input
+                  type="date"
+                  value={purchaseDate}
                   onChange={(e) => setPurchaseDate(e.target.value)}
                   className="bg-background/50 border-videoclub-cyan/20"
                 />
@@ -521,25 +538,25 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
               <div className="flex gap-2 pt-2">
                 {selectedMovies.length > 1 ? (
                   <>
-                    <Button 
-                      variant="outline" 
-                      onClick={handlePreviousMovie} 
+                    <Button
+                      variant="outline"
+                      onClick={handlePreviousMovie}
                       disabled={currentMovieIndex === 0}
                       className="border-videoclub-cyan/30"
                     >
                       Précédent
                     </Button>
                     {currentMovieIndex < selectedMovies.length - 1 ? (
-                      <Button 
+                      <Button
                         onClick={handleNextMovie}
                         className="flex-1 bg-videoclub-cyan hover:bg-videoclub-cyan/80 text-background"
                       >
                         Suivant
                       </Button>
                     ) : (
-                      <Button 
-                        onClick={handleSaveAll} 
-                        disabled={saving} 
+                      <Button
+                        onClick={handleSaveAll}
+                        disabled={saving}
                         className="flex-1 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta hover:opacity-90"
                       >
                         {saving ? "Ajout..." : `Ajouter ${selectedMovies.length} films`}
@@ -548,12 +565,16 @@ export const AddPhysicalMovieDialog: React.FC<AddPhysicalMovieDialogProps> = ({
                   </>
                 ) : (
                   <>
-                    <Button variant="outline" onClick={() => setStep("search")} className="flex-1 border-videoclub-cyan/30">
+                    <Button
+                      variant="outline"
+                      onClick={() => setStep("search")}
+                      className="flex-1 border-videoclub-cyan/30"
+                    >
                       Retour
                     </Button>
-                    <Button 
-                      onClick={handleSaveAll} 
-                      disabled={saving} 
+                    <Button
+                      onClick={handleSaveAll}
+                      disabled={saving}
                       className="flex-1 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta hover:opacity-90"
                     >
                       {saving ? "Ajout..." : "Ajouter"}

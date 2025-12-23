@@ -225,6 +225,15 @@ async function getWeeklyChallenges(userId: string) {
   }));
 }
 
+/**
+ * PATCH pour supabase/functions/gamification-engine/index.ts
+ * 
+ * MODIFICATION: Dans la fonction updateChallengeProgress, ajouter la création
+ * d'une notification quand un défi est complété.
+ * 
+ * Remplacer la fonction updateChallengeProgress existante par celle-ci:
+ */
+
 // Mettre à jour la progression d'un défi
 async function updateChallengeProgress(userId: string, challengeType: string, value?: string) {
   const now = new Date();
@@ -244,6 +253,93 @@ async function updateChallengeProgress(userId: string, challengeType: string, va
   for (const challenge of challenges) {
     // Vérifier si le défi correspond à la valeur (format/genre)
     if (challenge.target_value && challenge.target_value !== value) continue;
+
+    // Récupérer ou créer la progression
+    const { data: existingProgress } = await supabase
+      .from('user_challenges')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('challenge_id', challenge.id)
+      .eq('week_start', weekStart)
+      .single();
+
+    if (existingProgress?.is_completed) continue;
+
+    if (existingProgress) {
+      const newProgress = existingProgress.current_progress + 1;
+      const isCompleted = newProgress >= challenge.target_count;
+
+      await supabase
+        .from('user_challenges')
+        .update({
+          current_progress: newProgress,
+          is_completed: isCompleted,
+          completed_at: isCompleted ? new Date().toISOString() : null
+        })
+        .eq('id', existingProgress.id);
+
+      // ✅ NOUVEAU: Créer une notification si le défi est complété
+      if (isCompleted) {
+        await createChallengeCompletedNotification(userId, challenge);
+      }
+    } else {
+      const isCompleted = challenge.target_count <= 1;
+      
+      await supabase
+        .from('user_challenges')
+        .insert({
+          user_id: userId,
+          challenge_id: challenge.id,
+          week_start: weekStart,
+          current_progress: 1,
+          is_completed: isCompleted,
+          completed_at: isCompleted ? new Date().toISOString() : null
+        });
+
+      // ✅ NOUVEAU: Créer une notification si le défi est complété immédiatement
+      if (isCompleted) {
+        await createChallengeCompletedNotification(userId, challenge);
+      }
+    }
+  }
+}
+
+// ✅ NOUVELLE FONCTION: Créer une notification de défi complété
+async function createChallengeCompletedNotification(userId: string, challenge: any) {
+  try {
+    // Vérifier les préférences de notification de l'utilisateur
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('challenges')
+      .eq('user_id', userId)
+      .single();
+
+    // Si l'utilisateur a désactivé les notifications de défis, ne pas créer
+    if (prefs && prefs.challenges === false) {
+      return;
+    }
+
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        type: 'challenge_completed',
+        title: '🏆 Défi complété !',
+        message: `Vous avez complété le défi "${challenge.title}". Réclamez votre récompense de ${challenge.xp_reward} XP et ${challenge.popcorn_reward} 🍿 !`,
+        metadata: {
+          challenge_id: challenge.id,
+          challenge_title: challenge.title,
+          xp_reward: challenge.xp_reward,
+          popcorn_reward: challenge.popcorn_reward,
+          type: 'challenge_completed'
+        }
+      });
+
+    console.log(`[Gamification] Created notification for completed challenge: ${challenge.title}`);
+  } catch (error) {
+    console.error('[Gamification] Error creating challenge notification:', error);
+  }
+}
 
     // Récupérer ou créer la progression
     const { data: existingProgress } = await supabase
