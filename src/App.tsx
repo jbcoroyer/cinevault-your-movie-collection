@@ -1,24 +1,25 @@
 /**
- * CineVault - App.tsx
+ * CineVault - App.tsx AMÉLIORÉ
  *
- * Utilise GamificationManager pour gérer toutes les notifications de gamification :
- * - Bonus quotidien
- * - Paliers de streak (7, 14, 30, 100, 365 jours)
- * - Badges
+ * INTÉGRATIONS:
+ * - XPToastProvider pour les notifications de gain XP
+ * - GamificationManager pour les bonus quotidiens
+ * - Transitions de page fluides
  */
 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { BadgeNotificationProvider } from "./contexts/BadgeNotificationContext";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { MobileHeader } from "./components/MobileHeader";
 import OnboardingWizard from "./components/OnboardingWizard";
 import { GamificationManager } from "./components/gamification/GamificationManager";
-import Marketplace from "@/pages/Marketplace";
+import { XPToastProvider } from "./components/gamification/XPToast";
 
 // Pages
 import Index from "./pages/Index";
@@ -36,78 +37,84 @@ import ListDetail from "./pages/ListDetail";
 import PersonDetail from "./pages/PersonDetail";
 import ForgotPassword from "./pages/ForgotPassword";
 import Feed from "./pages/Feed";
+import Marketplace from "./pages/Marketplace";
 
+// Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 30,
-      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
       retry: 1,
     },
   },
 });
 
-// ============================================
-// App Layout Component
-// ============================================
-const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const { user, profile, loading } = useAuth();
+// Layout component with conditional mobile header
+function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
 
-  // État de chargement initial
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
-      </div>
-    );
-  }
+  const isAuthPage = location.pathname === "/auth" || location.pathname === "/forgot-password";
 
-  // Vérification si l'utilisateur a besoin de passer par l'onboarding
-  const needsOnboarding = user && (!profile?.username || profile.username.startsWith("User_"));
+  // Show onboarding for new users
+  const showOnboarding = user && !loading && !localStorage.getItem(`onboarding_complete_${user.id}`);
 
-  if (needsOnboarding) {
+  if (showOnboarding && !isAuthPage) {
     return <OnboardingWizard />;
   }
 
-  // Application normale avec GamificationManager
-  return <GamificationManager>{children}</GamificationManager>;
-};
+  return (
+    <GamificationManager>
+      {children}
+    </GamificationManager>
+  );
+}
 
-// ============================================
-// Main App Component
-// ============================================
+// Animated routes wrapper
+function AnimatedRoutes() {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <Routes location={location} key={location.pathname}>
+        <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/" element={<Index />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/movies" element={<MovieList />} />
+        <Route path="/movie/:id" element={<MovieDetail />} />
+        <Route path="/person/:id" element={<PersonDetail />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/:userId" element={<Profile />} />
+        <Route path="/collection" element={<Collection />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/badges" element={<Badges />} />
+        <Route path="/lists" element={<Lists />} />
+        <Route path="/lists/:id" element={<ListDetail />} />
+        <Route path="/feed" element={<Feed />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
+
+// Main App component
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
-      <TooltipProvider>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <TooltipProvider delayDuration={300}>
         <Toaster />
-        <Sonner />
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Sonner position="top-center" />
+        <BrowserRouter>
           <AuthProvider>
             <BadgeNotificationProvider>
-              <AppLayout>
-                <MobileHeader />
-                <Routes>
-                  <Route path="/marketplace" element={<Marketplace />} />
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/movies" element={<MovieList />} />
-                  <Route path="/movie/:id" element={<MovieDetail />} />
-                  <Route path="/person/:id" element={<PersonDetail />} />
-                  <Route path="/search" element={<Search />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/profile/:userId" element={<Profile />} />
-                  <Route path="/collection" element={<Collection />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/badges" element={<Badges />} />
-                  <Route path="/lists" element={<Lists />} />
-                  <Route path="/lists/:id" element={<ListDetail />} />
-                  <Route path="/feed" element={<Feed />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </AppLayout>
+              <XPToastProvider>
+                <AppLayout>
+                  <MobileHeader />
+                  <AnimatedRoutes />
+                </AppLayout>
+              </XPToastProvider>
             </BadgeNotificationProvider>
           </AuthProvider>
         </BrowserRouter>
