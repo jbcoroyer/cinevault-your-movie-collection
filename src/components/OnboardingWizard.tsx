@@ -141,7 +141,10 @@ export default function OnboardingWizard() {
 
       if (error) throw error;
 
-      // 2. Refresh le contexte Auth pour avoir les nouvelles données
+      // 2. Marquer l'onboarding comme terminé
+      localStorage.setItem(`onboarding_complete_${user.id}`, 'true');
+
+      // 3. Refresh le contexte Auth pour avoir les nouvelles données
       await refreshProfile();
 
       toast({ 
