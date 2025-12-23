@@ -1,351 +1,292 @@
 /**
- * CINEVAULT - VIDEO CLUB NÉO-RÉTRO
- * Système de gamification thématique
+ * CineVault - Video Club Data & Gamification Helpers
+ * 
+ * Données et fonctions utilitaires pour le système de gamification
+ * Niveaux, titres, XP, badges, etc.
  */
 
-import {
-  Film,
-  Disc,
-  Tv,
-  Skull,
-  Eye,
-  Crown,
-  Star,
-  Trophy,
-  Ticket,
-  VenetianMask,
-  Clapperboard,
-  Sparkles,
-  Gem,
-  Archive,
-  Heart,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+// ============================================
+// RARITY SYSTEM
+// ============================================
 
-// ============================================
-// TERMINOLOGIE "VIDÉO CLUB"
-// ============================================
-export const LORE_TERMINOLOGY = {
-  user: "Membre du Club",
-  collection: "Inventaire",
-  watchlist: "Réservations",
-  review: "Note du Staff",
-  settings: "Arrière-Boutique",
-  logout: "Rembobinage & Éjection",
-  profile: "Carte de Membre",
-  badges: "Écussons",
-  level: "Rang",
-  xp: "Points Vidéo",
-} as const;
-
-// ============================================
-// SOURCES D'XP
-// ============================================
-export const XP_SOURCES = {
-  DVD: 50,
-  "Blu-ray": 75,
-  "4K UHD": 100,
-  VHS: 150,
-  Laserdisc: 150,
-  review: 100,
-} as const;
-
-// ============================================
-// FORMULE DE PROGRESSION XP
-// Courbe géométrique: XP_Total(N) = 500 * ((1 - 1.15^(N-1)) / (1 - 1.15))
-// ============================================
-export function getXpForLevel(level: number): number {
-  if (level <= 1) return 0;
-  const r = 1.15;
-  return Math.floor(500 * ((1 - Math.pow(r, level - 1)) / (1 - r)));
-}
-
-export function getLevelFromXp(totalXp: number): number {
-  let level = 1;
-  while (getXpForLevel(level + 1) <= totalXp) {
-    level++;
-  }
-  return level;
-}
-
-export function getXpProgress(totalXp: number): {
-  currentLevel: number;
-  currentLevelXp: number;
-  nextLevelXp: number;
-  progressPercent: number;
-  xpToNextLevel: number;
-} {
-  const currentLevel = getLevelFromXp(totalXp);
-  const currentLevelXp = getXpForLevel(currentLevel);
-  const nextLevelXp = getXpForLevel(currentLevel + 1);
-  const xpInLevel = totalXp - currentLevelXp;
-  const xpNeeded = nextLevelXp - currentLevelXp;
-  const progressPercent = Math.min(100, (xpInLevel / xpNeeded) * 100);
-  
-  return {
-    currentLevel,
-    currentLevelXp,
-    nextLevelXp,
-    progressPercent,
-    xpToNextLevel: xpNeeded - xpInLevel,
-  };
-}
-
-// ============================================
-// TITRES DE NIVEAUX
-// ============================================
-export interface LevelTitle {
-  level: number;
-  title: string;
-  minXp: number;
-}
-
-export const LEVEL_TITLES: LevelTitle[] = [
-  { level: 1, title: "Visiteur Curieux", minXp: 0 },
-  { level: 2, title: "Nouvel Adhérent", minXp: 500 },
-  { level: 5, title: "Client Régulier", minXp: 3300 },
-  { level: 10, title: "Chasseur de VHS", minXp: 12000 },
-  { level: 20, title: "Clerk (Employé)", minXp: 55000 },
-  { level: 30, title: "Responsable Rayon", minXp: 150000 },
-  { level: 50, title: "Gérant du Club", minXp: 500000 },
-  { level: 100, title: "Légende du Format", minXp: 5000000 },
-];
-
-export function getTitleForLevel(level: number): string {
-  let title = LEVEL_TITLES[0].title;
-  for (const t of LEVEL_TITLES) {
-    if (level >= t.level) {
-      title = t.title;
-    }
-  }
-  return title;
-}
-
-// ============================================
-// RARETÉS
-// ============================================
 export type Rarity = "common" | "rare" | "epic" | "legendary" | "grail";
 
 export const RARITY_CONFIG: Record<Rarity, {
   label: string;
   color: string;
+  bgColor: string;
+  borderColor: string;
   glowColor: string;
-  bgGradient: string;
+  xpMultiplier: number;
 }> = {
   common: {
     label: "Commun",
-    color: "hsl(142 70% 45%)", // Vert
-    glowColor: "rgba(34, 197, 94, 0.5)",
-    bgGradient: "from-emerald-900/30 to-emerald-950/50",
+    color: "text-zinc-400",
+    bgColor: "bg-zinc-500/20",
+    borderColor: "border-zinc-500/30",
+    glowColor: "rgba(161, 161, 170, 0.3)",
+    xpMultiplier: 1,
   },
   rare: {
     label: "Rare",
-    color: "hsl(199 89% 48%)", // Cyan
-    glowColor: "rgba(6, 182, 212, 0.6)",
-    bgGradient: "from-cyan-900/30 to-cyan-950/50",
+    color: "text-blue-400",
+    bgColor: "bg-blue-500/20",
+    borderColor: "border-blue-500/30",
+    glowColor: "rgba(59, 130, 246, 0.3)",
+    xpMultiplier: 1.5,
   },
   epic: {
     label: "Épique",
-    color: "hsl(280 100% 70%)", // Magenta
-    glowColor: "rgba(192, 38, 211, 0.6)",
-    bgGradient: "from-fuchsia-900/30 to-fuchsia-950/50",
+    color: "text-purple-400",
+    bgColor: "bg-purple-500/20",
+    borderColor: "border-purple-500/30",
+    glowColor: "rgba(168, 85, 247, 0.4)",
+    xpMultiplier: 2,
   },
   legendary: {
     label: "Légendaire",
-    color: "hsl(45 93% 55%)", // Or
-    glowColor: "rgba(234, 179, 8, 0.7)",
-    bgGradient: "from-amber-900/30 to-amber-950/50",
+    color: "text-amber-400",
+    bgColor: "bg-amber-500/20",
+    borderColor: "border-amber-500/30",
+    glowColor: "rgba(245, 158, 11, 0.5)",
+    xpMultiplier: 3,
   },
   grail: {
     label: "Graal",
-    color: "hsl(0 0% 100%)", // Blanc pur
-    glowColor: "rgba(255, 255, 255, 0.8)",
-    bgGradient: "from-white/10 to-slate-950/80",
+    color: "text-rose-400",
+    bgColor: "bg-gradient-to-r from-rose-500/20 to-amber-500/20",
+    borderColor: "border-rose-500/30",
+    glowColor: "rgba(244, 63, 94, 0.5)",
+    xpMultiplier: 5,
   },
 };
 
 // ============================================
-// BADGES (ÉCUSSONS)
+// LEVEL SYSTEM
 // ============================================
-export interface BadgeDefinition {
-  id: string;
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  category: "collection" | "format" | "genre" | "secret";
-  rarity: Rarity;
-  criteria: {
-    type: "movie_count" | "format_count" | "genre_count" | "review_count" | "secret";
-    value?: string;
-    count: number;
+
+// XP required to reach each level (cumulative)
+const LEVEL_THRESHOLDS = [
+  0,      // Level 1
+  100,    // Level 2
+  250,    // Level 3
+  500,    // Level 4
+  850,    // Level 5
+  1300,   // Level 6
+  1900,   // Level 7
+  2600,   // Level 8
+  3500,   // Level 9
+  4600,   // Level 10
+  5900,   // Level 11
+  7400,   // Level 12
+  9100,   // Level 13
+  11000,  // Level 14
+  13100,  // Level 15
+  15400,  // Level 16
+  17900,  // Level 17
+  20600,  // Level 18
+  23500,  // Level 19
+  26600,  // Level 20
+  30000,  // Level 21
+  34000,  // Level 22
+  38500,  // Level 23
+  43500,  // Level 24
+  49000,  // Level 25
+  55000,  // Level 26
+  62000,  // Level 27
+  70000,  // Level 28
+  79000,  // Level 29
+  89000,  // Level 30
+  100000, // Level 31+
+];
+
+// Titles for each level tier
+const LEVEL_TITLES: Record<number, string> = {
+  1: "Novice",
+  2: "Cinéphile Amateur",
+  3: "Cinéphile Amateur",
+  4: "Collectionneur",
+  5: "Collectionneur",
+  6: "Collectionneur Averti",
+  7: "Collectionneur Averti",
+  8: "Passionné",
+  9: "Passionné",
+  10: "Expert",
+  11: "Expert",
+  12: "Expert",
+  13: "Connaisseur",
+  14: "Connaisseur",
+  15: "Connaisseur",
+  16: "Archiviste",
+  17: "Archiviste",
+  18: "Archiviste",
+  19: "Conservateur",
+  20: "Conservateur",
+  21: "Maître Collectionneur",
+  22: "Maître Collectionneur",
+  23: "Maître Collectionneur",
+  24: "Légende Vivante",
+  25: "Légende Vivante",
+  26: "Gardien du 7ème Art",
+  27: "Gardien du 7ème Art",
+  28: "Gardien du 7ème Art",
+  29: "Oracle du Cinéma",
+  30: "Oracle du Cinéma",
+};
+
+/**
+ * Get level from total XP
+ */
+export function getLevelFromXp(totalXp: number): number {
+  let level = 1;
+  for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+    if (totalXp >= LEVEL_THRESHOLDS[i]) {
+      level = i + 1;
+    } else {
+      break;
+    }
+  }
+  return Math.min(level, 30);
+}
+
+/**
+ * Get XP progress within current level
+ */
+export function getXpProgress(totalXp: number): {
+  current: number;
+  required: number;
+  percentage: number;
+  level: number;
+  nextLevelXp: number;
+} {
+  const level = getLevelFromXp(totalXp);
+  const currentLevelXp = LEVEL_THRESHOLDS[level - 1] || 0;
+  const nextLevelXp = LEVEL_THRESHOLDS[level] || currentLevelXp + 10000;
+  
+  const current = totalXp - currentLevelXp;
+  const required = nextLevelXp - currentLevelXp;
+  const percentage = Math.min((current / required) * 100, 100);
+
+  return {
+    current,
+    required,
+    percentage,
+    level,
+    nextLevelXp,
   };
 }
 
-export const BADGES: BadgeDefinition[] = [
-  // Collection
-  {
-    id: "premier_clap",
-    title: "Premier Clap",
-    description: "Ajoutez votre premier film à l'inventaire",
-    icon: Clapperboard,
-    category: "collection",
-    rarity: "common",
-    criteria: { type: "movie_count", count: 1 },
-  },
-  {
-    id: "mur_de_briques",
-    title: "Mur de Briques",
-    description: "100 films dans votre inventaire",
-    icon: Archive,
-    category: "collection",
-    rarity: "rare",
-    criteria: { type: "movie_count", count: 100 },
-  },
-  {
-    id: "le_musee",
-    title: "Le Musée",
-    description: "5000 films - Une vraie vidéothèque !",
-    icon: Crown,
-    category: "collection",
-    rarity: "grail",
-    criteria: { type: "movie_count", count: 5000 },
-  },
-  
-  // Format
-  {
-    id: "analogique_forever",
-    title: "Analogique Forever",
-    description: "Possédez 20 VHS",
-    icon: Tv,
-    category: "format",
-    rarity: "epic",
-    criteria: { type: "format_count", value: "VHS", count: 20 },
-  },
-  {
-    id: "disc_jockey",
-    title: "Disc Jockey",
-    description: "Possédez 10 Laserdiscs",
-    icon: Disc,
-    category: "format",
-    rarity: "legendary",
-    criteria: { type: "format_count", value: "Laserdisc", count: 10 },
-  },
-  {
-    id: "4k_pioneer",
-    title: "4K Pioneer",
-    description: "Possédez 50 films en 4K UHD",
-    icon: Gem,
-    category: "format",
-    rarity: "rare",
-    criteria: { type: "format_count", value: "4K UHD", count: 50 },
-  },
-  
-  // Genre
-  {
-    id: "giallo_rosso",
-    title: "Giallo Rosso",
-    description: "5 films d'horreur italiens dans votre inventaire",
-    icon: Skull,
-    category: "genre",
-    rarity: "epic",
-    criteria: { type: "genre_count", value: "horror_italian", count: 5 },
-  },
-  {
-    id: "criterion_collectionneur",
-    title: "Criterion Collectionneur",
-    description: "10 titres de la collection Criterion",
-    icon: Star,
-    category: "genre",
-    rarity: "legendary",
-    criteria: { type: "genre_count", value: "criterion", count: 10 },
-  },
-  
-  // Secret
-  {
-    id: "be_kind_rewind",
-    title: "Be Kind Rewind",
-    description: "Vous avez trouvé l'easter egg !",
-    icon: Sparkles,
-    category: "secret",
-    rarity: "legendary",
-    criteria: { type: "secret", count: 1 },
-  },
-  
-  // Reviews
-  {
-    id: "critique_en_herbe",
-    title: "Critique en Herbe",
-    description: "Rédigez votre première Note du Staff",
-    icon: Film,
-    category: "collection",
-    rarity: "common",
-    criteria: { type: "review_count", count: 1 },
-  },
-  {
-    id: "plume_doree",
-    title: "Plume Dorée",
-    description: "50 Notes du Staff rédigées",
-    icon: Trophy,
-    category: "collection",
-    rarity: "legendary",
-    criteria: { type: "review_count", count: 50 },
-  },
-];
-
-// ============================================
-// DESTINÉES (Axes du radar)
-// ============================================
-export interface DestinyAxis {
-  id: "guardian" | "specialist" | "completist";
-  name: string;
-  description: string;
-  icon: LucideIcon;
-  color: string;
+/**
+ * Get title for a level
+ */
+export function getTitleForLevel(level: number): string {
+  return LEVEL_TITLES[Math.min(level, 30)] || LEVEL_TITLES[30];
 }
 
-export const DESTINY_AXES: DestinyAxis[] = [
-  {
-    id: "guardian",
-    name: "Le Gardien",
-    description: "Préserve l'histoire du cinéma (VHS, Noir & Blanc, films pré-1970)",
-    icon: Archive,
-    color: "hsl(199 89% 48%)", // Cyan
-  },
-  {
-    id: "specialist",
-    name: "Le Spécialiste",
-    description: "Maîtrise un genre dominant (>30% du catalogue)",
-    icon: Eye,
-    color: "hsl(280 100% 70%)", // Magenta
-  },
-  {
-    id: "completist",
-    name: "Le Complétiste",
-    description: "Collectionne les sagas complètes et labels premium",
-    icon: Crown,
-    color: "hsl(45 93% 55%)", // Or
-  },
+/**
+ * Calculate XP for adding a movie based on rarity
+ */
+export function calculateMovieXp(rarity: Rarity = "common"): number {
+  const baseXp = 25;
+  return Math.round(baseXp * RARITY_CONFIG[rarity].xpMultiplier);
+}
+
+// ============================================
+// BADGE CATEGORIES
+// ============================================
+
+export const BADGE_CATEGORIES = [
+  { id: "collection", label: "Collection", icon: "Library" },
+  { id: "format", label: "Formats", icon: "Disc" },
+  { id: "social", label: "Social", icon: "Users" },
+  { id: "genres", label: "Genres", icon: "Film" },
+  { id: "achievement", label: "Réussites", icon: "Trophy" },
+  { id: "special", label: "Spéciaux", icon: "Sparkles" },
 ];
 
 // ============================================
-// ICON MAP pour compatibilité avec la DB
+// LORE TERMINOLOGY
 // ============================================
-export const ICON_MAP: Record<string, LucideIcon> = {
-  Clapperboard,
-  Skull,
-  Disc,
-  Tv,
-  Eye,
-  Crown,
-  Star,
-  Zap,
-  Trophy,
-  Ticket,
-  VenetianMask,
-  Film,
-  Sparkles,
-  Gem,
-  Archive,
-  Heart,
+
+export const LORE_TERMINOLOGY = {
+  collection: "Archive",
+  level: "Rang",
+  xp: "Points de Prestige",
+  badge: "Insigne",
+  streak: "Flamme",
+  member: "Archiviste",
+  currency: "Popcorn",
+};
+
+// ============================================
+// STREAK MILESTONES
+// ============================================
+
+export const STREAK_MILESTONES = [
+  { days: 3, label: "3 jours", xpBonus: 25, icon: "🔥" },
+  { days: 7, label: "1 semaine", xpBonus: 50, icon: "🔥" },
+  { days: 14, label: "2 semaines", xpBonus: 75, icon: "💫" },
+  { days: 30, label: "1 mois", xpBonus: 100, icon: "⭐" },
+  { days: 60, label: "2 mois", xpBonus: 150, icon: "🌟" },
+  { days: 100, label: "100 jours", xpBonus: 200, icon: "👑" },
+  { days: 365, label: "1 an", xpBonus: 500, icon: "🏆" },
+];
+
+/**
+ * Get next streak milestone
+ */
+export function getNextStreakMilestone(currentStreak: number) {
+  return STREAK_MILESTONES.find(m => m.days > currentStreak);
+}
+
+/**
+ * Check if streak reached a milestone
+ */
+export function isStreakMilestone(streak: number): boolean {
+  return STREAK_MILESTONES.some(m => m.days === streak);
+}
+
+/**
+ * Get current streak milestone data
+ */
+export function getStreakMilestoneData(streak: number) {
+  return STREAK_MILESTONES.find(m => m.days === streak);
+}
+
+// ============================================
+// FORMAT RARITY MAPPING
+// ============================================
+
+export function getFormatRarity(format: string): Rarity {
+  switch (format) {
+    case "vhs":
+    case "laserdisc":
+      return "rare";
+    case "steelbook":
+      return "epic";
+    case "collector":
+      return "legendary";
+    case "4k":
+      return "rare";
+    case "bluray":
+      return "common";
+    case "dvd":
+    default:
+      return "common";
+  }
+}
+
+export default {
+  RARITY_CONFIG,
+  getLevelFromXp,
+  getXpProgress,
+  getTitleForLevel,
+  calculateMovieXp,
+  BADGE_CATEGORIES,
+  LORE_TERMINOLOGY,
+  STREAK_MILESTONES,
+  getNextStreakMilestone,
+  isStreakMilestone,
+  getStreakMilestoneData,
+  getFormatRarity,
 };
