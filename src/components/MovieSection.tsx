@@ -170,7 +170,7 @@ export const MovieSection: React.FC<MovieSectionProps> = ({
                     animationFillMode: "forwards",
                   }}
                 >
-                  <MovieCard movie={movie} size={cardSize} showInfo showQuickActions={showQuickActions} />
+                  <MovieCard movie={movie} size={cardSize} showInfo />
                 </div>
               ))}
         </div>

@@ -67,7 +67,7 @@ export function PatchBadge({
           "bg-gradient-to-br",
           isLocked
             ? "border-muted/20 from-muted/5 to-muted/10 grayscale"
-            : rarityConfig.bgGradient,
+            : rarityConfig.bgColor,
           !isLocked && "hover:scale-105 hover:-rotate-2",
         )}
         style={{

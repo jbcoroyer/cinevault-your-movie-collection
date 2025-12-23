@@ -123,8 +123,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
 
           if (platformEntry && userPlatforms.includes(platformEntry[0])) {
             available.push({
-              type: "platform",
-              id: platformEntry[0],
+              type: "platform" as const,
               name: provider.provider_name,
             });
           }
@@ -141,7 +140,7 @@ export function useAvailableMovies(options: UseAvailableMoviesOptions = {}) {
     (tmdbId: number): AvailabilityInfo[] => {
       const formats = physicalMoviesMap.get(tmdbId);
       if (!formats) return [];
-      return formats.map((format) => ({ type: "physical" as const, id: format }));
+      return formats.map((format) => ({ type: "physical" as const, name: format }));
     },
     [physicalMoviesMap],
   );

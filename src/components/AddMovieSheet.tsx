@@ -47,8 +47,6 @@ const FORMAT_CONFIG: Record<PhysicalFormat, { color: string; label: string }> = 
   "4k": { color: "bg-purple-500", label: "4K UHD" },
   steelbook: { color: "bg-amber-500", label: "Steelbook" },
   collector: { color: "bg-rose-500", label: "Collector" },
-  vhs: { color: "bg-orange-500", label: "VHS" },
-  laserdisc: { color: "bg-cyan-500", label: "LaserDisc" },
 };
 
 interface AddMovieSheetProps {
@@ -123,8 +121,7 @@ export const AddMovieSheet = ({
     if (!user) return;
 
     try {
-      await addPhysicalMovie({
-        user_id: user.id,
+      await addPhysicalMovie(user.id, {
         tmdb_id: movie.id,
         format: defaultFormat,
         condition: "good",
@@ -178,8 +175,7 @@ export const AddMovieSheet = ({
 
     for (const item of selectedMovies) {
       try {
-        await addPhysicalMovie({
-          user_id: user.id,
+        await addPhysicalMovie(user.id, {
           tmdb_id: item.movie.id,
           format: item.format,
           condition: item.condition,
