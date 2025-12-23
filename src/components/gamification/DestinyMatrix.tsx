@@ -11,8 +11,15 @@ import {
   Radar,
   ResponsiveContainer,
 } from "recharts";
-import { DESTINY_AXES } from "@/data/videoClubData";
+import { Shield, Target, Library } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Destiny axes configuration
+const DESTINY_AXES = [
+  { id: "guardian", name: "Gardien", icon: Shield, color: "hsl(199 89% 48%)", description: "Protecteur de formats anciens" },
+  { id: "specialist", name: "Spécialiste", icon: Target, color: "hsl(280 80% 60%)", description: "Expert d'un genre" },
+  { id: "completist", name: "Complétiste", icon: Library, color: "hsl(45 90% 50%)", description: "Collectionneur acharné" },
+];
 
 interface DestinyStats {
   guardian: number; // 0-100

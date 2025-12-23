@@ -41,7 +41,9 @@ export function MemberCard3DModal({
   const [isDragging, setIsDragging] = useState(false);
   const lastPosition = useRef({ x: 0, y: 0 });
 
-  const { currentLevel, progressPercent } = getXpProgress(totalXp);
+  const xpProgress = getXpProgress(totalXp);
+  const currentLevel = xpProgress.level;
+  const progressPercent = xpProgress.percentage;
   const defaultTitle = getTitleForLevel(currentLevel);
   const displayTitle = equippedTitle || defaultTitle;
 

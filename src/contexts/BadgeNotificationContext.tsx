@@ -2,8 +2,13 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { useAuth } from "@/contexts/AuthContext";
 import { BadgeUnlockDialog } from "@/components/BadgeUnlockDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { ICON_MAP, getXpProgress, getTitleForLevel } from "@/data/videoClubData";
-import { Sparkles } from "lucide-react";
+import { getXpProgress, getTitleForLevel } from "@/data/videoClubData";
+import { Sparkles, Film, Trophy, Users, Library, Disc, Star, Heart, Flame, Target, Clapperboard, Award, Crown, Zap } from "lucide-react";
+
+// Icon map for badge icons
+const ICON_MAP: Record<string, React.ElementType> = {
+  Sparkles, Film, Trophy, Users, Library, Disc, Star, Heart, Flame, Target, Clapperboard, Award, Crown, Zap
+};
 import { checkAndUnlockBadges } from "@/services/badgeService";
 
 // --- TYPES ---
@@ -195,15 +200,16 @@ export function BadgeNotificationProvider({ children }: { children: ReactNode })
 
   // Calculs basés sur la nouvelle formule XP
   const progress = getXpProgress(xp);
-  const currentTitle = getTitleForLevel(progress.currentLevel);
+  const currentTitle = getTitleForLevel(progress.level);
+  const xpToNextLevel = progress.nextLevelXp - xp;
 
   const value = {
     currentXp: xp,
-    currentLevel: progress.currentLevel,
+    currentLevel: progress.level,
     currentTitle,
     nextLevelXp: progress.nextLevelXp,
-    progressPercent: progress.progressPercent,
-    xpToNextLevel: progress.xpToNextLevel,
+    progressPercent: progress.percentage,
+    xpToNextLevel,
     triggerTestBadge,
     checkBadges,
   };

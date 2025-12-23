@@ -91,7 +91,10 @@ export function CinevaultMemberCard({
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
 
-  const { currentLevel, progressPercent, xpToNextLevel } = getXpProgress(totalXp);
+  const xpProgress = getXpProgress(totalXp);
+  const currentLevel = xpProgress.level;
+  const progressPercent = xpProgress.percentage;
+  const xpToNextLevel = xpProgress.nextLevelXp - totalXp;
   const defaultTitle = getTitleForLevel(currentLevel);
 
   // Get equipped rewards

@@ -33,11 +33,7 @@ import { useCollectionFilters } from "@/hooks/useCollectionFilters";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { AddMovieSheet } from "@/components/AddMovieSheet";
 import { AnimatedPage, ListStagger } from "@/components/ui/PageTransition";
-import { 
-  CollectionHeaderSkeleton, 
-  MovieGridSkeleton,
-  CollectionCardSkeleton 
-} from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { showXPToast } from "@/components/gamification/XPToast";
 
 // Valuation imports
@@ -115,8 +111,6 @@ const formatLabels: Record<PhysicalFormat, { label: string; color: string }> = {
   "4k": { label: "4K UHD", color: "bg-purple-500" },
   steelbook: { label: "Steelbook", color: "bg-amber-500" },
   collector: { label: "Collector", color: "bg-rose-500" },
-  vhs: { label: "VHS", color: "bg-orange-500" },
-  laserdisc: { label: "LaserDisc", color: "bg-cyan-500" },
 };
 
 // ============================================
@@ -424,11 +418,11 @@ export default function Collection() {
   } = useCollectionFilters(physicalMovies, physicalMovieDetails);
 
   // Valuation hook
-  const { 
-    valuationData, 
-    isLoading: valuationLoading, 
-    refreshValuation 
-  } = useCollectionValuation(physicalMovies);
+  const valuationHook = useCollectionValuation({
+    movies: physicalMovies,
+    movieDetails: physicalMovieDetails,
+  });
+  const { valuation: valuationData, loading: valuationLoading, refresh: refreshValuation, moviePrices } = valuationHook;
 
   // Fetch collection data
   const fetchPhysicalMovies = useCallback(async () => {
@@ -554,7 +548,7 @@ export default function Collection() {
           comparison = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
           break;
         case "price":
-          comparison = (a.purchase_price || 0) - (b.purchase_price || 0);
+          comparison = (a.price || 0) - (b.price || 0);
           break;
         default:
           comparison = 0;
@@ -647,8 +641,12 @@ export default function Collection() {
             >
               {loading ? (
                 <div className="space-y-6">
-                  <CollectionHeaderSkeleton />
-                  <MovieGridSkeleton count={8} columns={4} />
+                  <Skeleton className="h-24 w-full rounded-xl" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <Skeleton key={i} className="aspect-[2/3] rounded-lg" />
+                    ))}
+                  </div>
                 </div>
               ) : physicalMovies.length === 0 ? (
                 <EmptyCollection onAddMovie={() => setAddSheetOpen(true)} />
@@ -721,10 +719,19 @@ export default function Collection() {
               exit={{ opacity: 0, x: -20 }}
             >
               <ValuationDashboardPremium
-                movies={physicalMovies}
-                movieDetails={physicalMovieDetails}
-                valuationData={valuationData}
-                isLoading={valuationLoading}
+                valuation={valuationData}
+                movies={physicalMovies.map(m => ({
+                  tmdbId: m.tmdb_id,
+                  title: physicalMovieDetails[m.tmdb_id]?.title || `Film #${m.tmdb_id}`,
+                  format: m.format,
+                  posterPath: physicalMovieDetails[m.tmdb_id]?.poster_path,
+                  purchasePrice: m.price ? m.price * 100 : undefined,
+                  releaseYear: physicalMovieDetails[m.tmdb_id]?.release_date 
+                    ? new Date(physicalMovieDetails[m.tmdb_id].release_date!).getFullYear()
+                    : undefined,
+                }))}
+                moviePrices={moviePrices}
+                loading={valuationLoading}
                 onRefresh={refreshValuation}
               />
             </motion.div>

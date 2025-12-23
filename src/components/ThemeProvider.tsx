@@ -1,10 +1,10 @@
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 
-type ThemeProviderProps = Omit<React.ComponentProps<typeof NextThemesProvider>, 'forcedTheme' | 'enableSystem'>;
+type ThemeProviderProps = React.ComponentProps<typeof NextThemesProvider>;
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return (
-    <NextThemesProvider {...props} forcedTheme="dark" enableSystem={false}>
+    <NextThemesProvider {...props}>
       {children}
     </NextThemesProvider>
   );

@@ -4,7 +4,17 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { XP_SOURCES, getXpProgress, getTitleForLevel, type Rarity, RARITY_CONFIG } from "@/data/videoClubData";
+import { getXpProgress, getTitleForLevel, type Rarity, RARITY_CONFIG } from "@/data/videoClubData";
+
+// XP source values
+const XP_SOURCES = {
+  DVD: 25,
+  "Blu-ray": 30,
+  "4K UHD": 40,
+  VHS: 50,
+  Laserdisc: 60,
+  review: 15,
+};
 
 export interface XpGain {
   amount: number;
@@ -76,8 +86,8 @@ export async function addXpToUser(userId: string, xpAmount: number): Promise<{
     
     const oldProgress = getXpProgress(currentXp);
     const newProgress = getXpProgress(newTotal);
-    const levelUp = newProgress.currentLevel > oldProgress.currentLevel;
-    const newTitle = getTitleForLevel(newProgress.currentLevel);
+    const levelUp = newProgress.level > oldProgress.level;
+    const newTitle = getTitleForLevel(newProgress.level);
 
     // Mettre à jour le profil
     const { error: updateError } = await supabase
@@ -94,7 +104,7 @@ export async function addXpToUser(userId: string, xpAmount: number): Promise<{
       success: true,
       newTotal,
       levelUp,
-      newLevel: newProgress.currentLevel,
+      newLevel: newProgress.level,
       newTitle,
     };
   } catch (error) {
@@ -156,7 +166,7 @@ export async function recalculateUserXp(userId: string): Promise<number> {
     totalXp += (reviewCount || 0) * XP_SOURCES.review;
 
     // Mettre à jour le profil
-    const newTitle = getTitleForLevel(getXpProgress(totalXp).currentLevel);
+    const newTitle = getTitleForLevel(getXpProgress(totalXp).level);
     await supabase
       .from("profiles")
       .update({ 
