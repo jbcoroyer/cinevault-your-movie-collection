@@ -1,44 +1,47 @@
 /**
- * CineVault - Collection Page (CORRIGÉ)
- *
- * Page principale de gestion de la collection physique
- * Avec valorisation basée sur les vrais prix eBay
- *
- * CORRECTIONS:
- * - ValuationDashboardPremium reçoit maintenant les vraies données
- * - Préparation correcte des données pour les widgets
- * - Intégration complète avec useCollectionValuation
+ * CineVault - Collection Page AMÉLIORÉE
+ * 
+ * AMÉLIORATIONS INTÉGRÉES:
+ * - FAB (Floating Action Button) pour l'ajout
+ * - Bottom Sheet au lieu de Dialog sur mobile
+ * - Pull-to-refresh
+ * - Skeleton loaders
+ * - Page transitions fluides
+ * - Tabs animés Collection/Valuation
+ * - Sticky filters
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getPhysicalMovies,
   PhysicalMovie,
   PhysicalFormat,
   deletePhysicalMovie,
-  addPhysicalMovie,
 } from "@/services/physicalMovies";
 import { getMovieDetails, MovieDetails, Movie } from "@/services/tmdb";
 import { CollectionShowcase } from "@/components/guest/CollectionShowcase";
-import { ShelfView } from "@/components/collection/ShelfView";
-import { CollectionFiltersDrawer } from "@/components/collection/CollectionFilters";
 import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
-import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
 import { BarcodeScannerDialog } from "@/components/barcode";
 import { useCollectionFilters } from "@/hooks/useCollectionFilters";
 
-// ============================================
-// Sprint 2 Imports - Valorisation
-// ============================================
+// NEW IMPORTS - Améliorations
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { AddMovieSheet } from "@/components/AddMovieSheet";
+import { AnimatedPage, ListStagger } from "@/components/ui/PageTransition";
+import { 
+  CollectionHeaderSkeleton, 
+  MovieGridSkeleton,
+  CollectionCardSkeleton 
+} from "@/components/ui/Skeleton";
+import { showXPToast } from "@/components/gamification/XPToast";
+
+// Valuation imports
 import { ValuationDashboardPremium } from "@/components/collection/ValuationDashboardPremium";
-import { PriceCard } from "@/components/collection/PriceCard";
-import { ValueEvolutionChart } from "@/components/collection/ValueEvolutionChart";
 import { useCollectionValuation } from "@/hooks/useCollectionValuation";
 
 import { cn } from "@/lib/utils";
@@ -54,7 +57,17 @@ import {
   TrendingUp,
   Trash2,
   X,
+  Film,
+  Star,
+  Search,
+  Sparkles,
+  Filter,
+  Grid3X3,
+  LayoutList,
+  Image,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -73,14 +86,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getImageUrl } from "@/services/tmdb";
 
-// ============================================
 // Types
-// ============================================
-
 type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition" | "market_value";
 type SortOrder = "asc" | "desc";
 type ViewMode = "collection" | "valuation";
+type DisplayMode = "grid" | "list" | "poster";
 
 interface ExtendedMovieDetails extends MovieDetails {
   director?: string;
@@ -97,35 +109,293 @@ const sortLabels: Record<SortBy, string> = {
   condition: "État",
 };
 
-const conditionOrder = { mint: 1, very_good: 2, good: 3, acceptable: 4 };
+const formatLabels: Record<PhysicalFormat, { label: string; color: string }> = {
+  dvd: { label: "DVD", color: "bg-blue-500" },
+  bluray: { label: "Blu-ray", color: "bg-indigo-500" },
+  "4k": { label: "4K UHD", color: "bg-purple-500" },
+  steelbook: { label: "Steelbook", color: "bg-amber-500" },
+  collector: { label: "Collector", color: "bg-rose-500" },
+  vhs: { label: "VHS", color: "bg-orange-500" },
+  laserdisc: { label: "LaserDisc", color: "bg-cyan-500" },
+};
 
 // ============================================
-// Component
+// Sub-components
+// ============================================
+
+/**
+ * Collection Movie Card with animations
+ */
+const CollectionMovieCard = ({
+  movie,
+  details,
+  isSelected,
+  selectionMode,
+  onSelect,
+  onEdit,
+  onClick,
+}: {
+  movie: PhysicalMovie;
+  details?: ExtendedMovieDetails;
+  isSelected: boolean;
+  selectionMode: boolean;
+  onSelect: () => void;
+  onEdit: () => void;
+  onClick: () => void;
+}) => {
+  const posterUrl = details?.poster_path 
+    ? getImageUrl(details.poster_path, "w342") 
+    : null;
+
+  const formatConfig = formatLabels[movie.format];
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={selectionMode ? onSelect : onClick}
+      className={cn(
+        "group relative bg-card rounded-xl overflow-hidden",
+        "border border-border/50 transition-all duration-300",
+        "hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/10",
+        isSelected && "ring-2 ring-amber-500 border-amber-500",
+        "cursor-pointer"
+      )}
+    >
+      {/* Selection checkbox */}
+      {selectionMode && (
+        <div className={cn(
+          "absolute top-2 left-2 z-10 w-6 h-6 rounded-full",
+          "flex items-center justify-center",
+          "transition-all duration-200",
+          isSelected 
+            ? "bg-amber-500 text-white" 
+            : "bg-background/80 border border-border"
+        )}>
+          {isSelected && <span className="text-xs font-bold">✓</span>}
+        </div>
+      )}
+
+      {/* Format Badge */}
+      <div className="absolute top-2 right-2 z-10">
+        <Badge className={cn("text-xs text-white", formatConfig.color)}>
+          {formatConfig.label}
+        </Badge>
+      </div>
+
+      {/* Poster */}
+      <div className="aspect-[2/3] bg-muted overflow-hidden">
+        {posterUrl ? (
+          <img
+            src={posterUrl}
+            alt={details?.title || "Movie"}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+            <Film className="w-12 h-12 text-muted-foreground/50" />
+          </div>
+        )}
+
+        {/* Hover overlay */}
+        <div className={cn(
+          "absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent",
+          "opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+          "flex items-end p-3"
+        )}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="w-full"
+          >
+            Modifier
+          </Button>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="p-3">
+        <h3 className="font-medium text-sm line-clamp-1">
+          {details?.title || "Chargement..."}
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          {details?.release_date?.substring(0, 4) || "—"}
+        </p>
+        
+        {/* Rating */}
+        {details?.vote_average && details.vote_average > 0 && (
+          <div className="flex items-center gap-1 mt-1">
+            <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+            <span className="text-xs text-amber-500 font-medium">
+              {details.vote_average.toFixed(1)}
+            </span>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
+/**
+ * Empty State Component
+ */
+const EmptyCollection = ({ onAddMovie }: { onAddMovie: () => void }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center py-16 px-4 text-center"
+    >
+      <div className="w-20 h-20 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6">
+        <Library className="w-10 h-10 text-amber-500" />
+      </div>
+      <h3 className="text-xl font-display font-bold mb-2">
+        Votre collection est vide
+      </h3>
+      <p className="text-muted-foreground mb-6 max-w-sm">
+        Commencez à ajouter vos DVD, Blu-ray et éditions collector pour voir votre collection prendre vie.
+      </p>
+      <Button
+        onClick={onAddMovie}
+        className="bg-amber-500 hover:bg-amber-600 text-white gap-2"
+      >
+        <Plus className="w-4 h-4" />
+        Ajouter mon premier film
+      </Button>
+    </motion.div>
+  );
+};
+
+/**
+ * Sticky Filter Bar
+ */
+const StickyFilterBar = ({
+  activeFilterCount,
+  sortBy,
+  sortOrder,
+  onSortChange,
+  onFilterClick,
+  displayMode,
+  onDisplayModeChange,
+}: {
+  activeFilterCount: number;
+  sortBy: SortBy;
+  sortOrder: SortOrder;
+  onSortChange: (sort: SortBy) => void;
+  onFilterClick: () => void;
+  displayMode: DisplayMode;
+  onDisplayModeChange: (mode: DisplayMode) => void;
+}) => {
+  return (
+    <motion.div
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className={cn(
+        "sticky top-14 md:top-0 z-30 py-3 -mx-4 px-4",
+        "bg-background/80 backdrop-blur-xl border-b border-border/50"
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        {/* Filter button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onFilterClick}
+          className="gap-2"
+        >
+          <Filter className="w-4 h-4" />
+          Filtres
+          {activeFilterCount > 0 && (
+            <Badge className="ml-1 bg-amber-500 text-white text-xs px-1.5">
+              {activeFilterCount}
+            </Badge>
+          )}
+        </Button>
+
+        {/* Sort dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <ArrowUpDown className="w-4 h-4" />
+              <span className="hidden sm:inline">{sortLabels[sortBy]}</span>
+              <ChevronDown className="w-3 h-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {Object.entries(sortLabels).map(([key, label]) => (
+              <DropdownMenuItem
+                key={key}
+                onClick={() => onSortChange(key as SortBy)}
+                className={cn(sortBy === key && "bg-accent")}
+              >
+                {label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Display mode toggle */}
+        <div className="hidden sm:flex items-center gap-1 p-1 bg-muted rounded-lg">
+          {[
+            { mode: "grid" as DisplayMode, icon: Grid3X3 },
+            { mode: "list" as DisplayMode, icon: LayoutList },
+            { mode: "poster" as DisplayMode, icon: Image },
+          ].map(({ mode, icon: Icon }) => (
+            <button
+              key={mode}
+              onClick={() => onDisplayModeChange(mode)}
+              className={cn(
+                "p-1.5 rounded-md transition-colors",
+                displayMode === mode 
+                  ? "bg-background text-foreground shadow-sm" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className="w-4 h-4" />
+            </button>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// ============================================
+// Main Component
 // ============================================
 
 export default function Collection() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // View mode state (Collection vs Valuation)
+  // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>("collection");
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("grid");
 
   // Collection state
   const [physicalMovies, setPhysicalMovies] = useState<PhysicalMovie[]>([]);
   const [physicalMovieDetails, setPhysicalMovieDetails] = useState<Record<number, ExtendedMovieDetails>>({});
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  // Sheet/Dialog states
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingMovie, setEditingMovie] = useState<PhysicalMovie | null>(null);
   const [editingMovieDetails, setEditingMovieDetails] = useState<Movie | null>(null);
-
-  // Selected movie for valuation detail
-  const [selectedMovie, setSelectedMovie] = useState<PhysicalMovie | null>(null);
 
   // Selection mode for bulk delete
   const [selectionMode, setSelectionMode] = useState(false);
@@ -153,101 +423,91 @@ export default function Collection() {
     activeFilterCount,
   } = useCollectionFilters(physicalMovies, physicalMovieDetails);
 
-  // ============================================
-  // Sprint 2: Valuation Hook
-  // ============================================
-  const {
-    valuation,
-    moviePrices,
-    loading: valuationLoading,
-    refreshing: valuationRefreshing,
-    lastUpdated: valuationLastUpdated,
-    coverage,
-    refresh: refreshValuation,
-    getMovieValuation,
-    formatValue,
-  } = useCollectionValuation({
-    movies: physicalMovies,
-    movieDetails: physicalMovieDetails,
-    autoRefresh: false,
-  });
+  // Valuation hook
+  const { 
+    valuationData, 
+    isLoading: valuationLoading, 
+    refreshValuation 
+  } = useCollectionValuation(physicalMovies);
 
-  // ============================================
-  // CORRECTION: Préparer les données pour le dashboard
-  // ============================================
-  const moviesForDashboard = useMemo(() => {
-    return physicalMovies.map((movie) => {
-      const details = physicalMovieDetails[movie.tmdb_id];
-      return {
-        tmdbId: movie.tmdb_id,
-        title: details?.title || `Film #${movie.tmdb_id}`,
-        format: movie.format,
-        posterPath: details?.poster_path,
-        // IMPORTANT: Convertir en centimes pour le dashboard
-        purchasePrice: movie.price ? Math.round(movie.price * 100) : undefined,
-        releaseYear: details?.release_date ? new Date(details.release_date).getFullYear() : undefined,
-      };
-    });
-  }, [physicalMovies, physicalMovieDetails]);
-
-  // ============================================
-  // Data Fetching
-  // ============================================
-
-  const fetchPhysicalMovies = async () => {
+  // Fetch collection data
+  const fetchPhysicalMovies = useCallback(async () => {
     if (!user) return;
 
-    setLoading(true);
-    const data = await getPhysicalMovies(user.id);
-    setPhysicalMovies(data);
+    try {
+      const movies = await getPhysicalMovies(user.id);
+      setPhysicalMovies(movies);
 
-    const details: Record<number, ExtendedMovieDetails> = {};
-    await Promise.all(
-      data.map(async (pm) => {
-        try {
-          if (!details[pm.tmdb_id]) {
-            const movieDetail = await getMovieDetails(pm.tmdb_id);
-            const director = movieDetail.credits?.crew.find((c) => c.job === "Director")?.name;
-            details[pm.tmdb_id] = { ...movieDetail, director };
+      // Fetch movie details in parallel
+      const detailsMap: Record<number, ExtendedMovieDetails> = {};
+      await Promise.all(
+        movies.map(async (movie) => {
+          try {
+            const details = await getMovieDetails(movie.tmdb_id);
+            if (details) {
+              detailsMap[movie.tmdb_id] = details;
+            }
+          } catch (error) {
+            console.error(`Error fetching details for ${movie.tmdb_id}:`, error);
           }
-        } catch (error) {
-          console.error(`Error fetching movie ${pm.tmdb_id}:`, error);
-        }
-      }),
-    );
-    setPhysicalMovieDetails(details);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchPhysicalMovies();
+        })
+      );
+      setPhysicalMovieDetails(detailsMap);
+    } catch (error) {
+      console.error("Error fetching collection:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger la collection",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
     }
   }, [user]);
 
-  // ============================================
-  // Handlers
-  // ============================================
+  useEffect(() => {
+    if (user && !authLoading) {
+      fetchPhysicalMovies();
+    } else if (!authLoading && !user) {
+      setLoading(false);
+    }
+  }, [user, authLoading, fetchPhysicalMovies]);
 
-  // Toggle sort order
-  const toggleSortOrder = () => {
-    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  // Pull to refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchPhysicalMovies();
+    showXPToast(5, "Collection actualisée", "bonus");
   };
 
-  // Toggle movie selection
-  const toggleMovieSelection = (movieId: string) => {
-    setSelectedIds((prev) => {
+  // Handle movie added
+  const handleMovieAdded = () => {
+    fetchPhysicalMovies();
+    showXPToast(25, "Film ajouté !", "xp");
+  };
+
+  // Edit handlers
+  const handleEditMovie = (movie: PhysicalMovie) => {
+    setEditingMovie(movie);
+    setEditingMovieDetails(physicalMovieDetails[movie.tmdb_id] as Movie || null);
+    setEditDialogOpen(true);
+  };
+
+  // Selection handlers
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(movieId)) {
-        newSet.delete(movieId);
+      if (newSet.has(id)) {
+        newSet.delete(id);
       } else {
-        newSet.add(movieId);
+        newSet.add(id);
       }
       return newSet;
     });
   };
 
-  // Handle bulk delete
+  // Bulk delete
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
 
@@ -259,14 +519,13 @@ export default function Collection() {
         await deletePhysicalMovie(id);
         successCount++;
       } catch (error) {
-        console.error(`Error deleting movie ${id}:`, error);
+        console.error("Error deleting movie:", error);
       }
     }
 
     if (successCount > 0) {
       toast({
-        title: `${successCount} film${successCount > 1 ? "s" : ""} supprimé${successCount > 1 ? "s" : ""}`,
-        description: "Votre collection a été mise à jour.",
+        title: `${successCount} film${successCount > 1 ? 's' : ''} supprimé${successCount > 1 ? 's' : ''}`,
       });
       fetchPhysicalMovies();
     }
@@ -277,466 +536,237 @@ export default function Collection() {
     setIsDeleting(false);
   };
 
-  // Exit selection mode
-  const exitSelectionMode = () => {
-    setSelectionMode(false);
-    setSelectedIds(new Set());
-  };
+  // Sort filtered movies
+  const sortedMovies = useMemo(() => {
+    const sorted = [...filteredMovies].sort((a, b) => {
+      const detailsA = physicalMovieDetails[a.tmdb_id];
+      const detailsB = physicalMovieDetails[b.tmdb_id];
 
-  // Handle selected movies from barcode scanner
-  const handleMoviesSelected = async (
-    selectedMovies: Array<{
-      movie: Movie;
-      format: PhysicalFormat;
-      ean?: string;
-    }>,
-  ) => {
-    if (!user || selectedMovies.length === 0) return;
-
-    let addedCount = 0;
-    for (const { movie, format } of selectedMovies) {
-      try {
-        await addPhysicalMovie(user.id, {
-          tmdb_id: movie.id,
-          format,
-          condition: "good",
-        });
-        addedCount++;
-      } catch (error) {
-        console.error(`Error adding scanned movie ${movie.title}:`, error);
+      let comparison = 0;
+      switch (sortBy) {
+        case "title":
+          comparison = (detailsA?.title || "").localeCompare(detailsB?.title || "");
+          break;
+        case "year":
+          comparison = (detailsA?.release_date || "").localeCompare(detailsB?.release_date || "");
+          break;
+        case "added":
+          comparison = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          break;
+        case "price":
+          comparison = (a.purchase_price || 0) - (b.purchase_price || 0);
+          break;
+        default:
+          comparison = 0;
       }
-    }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+    return sorted;
+  }, [filteredMovies, physicalMovieDetails, sortBy, sortOrder]);
 
-    if (addedCount > 0) {
-      toast({
-        title: `${addedCount} film${addedCount > 1 ? "s" : ""} ajouté${addedCount > 1 ? "s" : ""}`,
-        description: "Votre collection a été mise à jour.",
-      });
-      fetchPhysicalMovies();
-    }
-  };
-
-  // Handle movie click in valuation mode
-  const handleValuationMovieClick = (tmdbId: number) => {
-    const movie = physicalMovies.find((m) => m.tmdb_id === tmdbId);
-    if (movie) {
-      setSelectedMovie(movie);
-    }
-  };
-
-  // ============================================
-  // Sorting Logic
-  // ============================================
-
-  const sortedMovies = [...filteredMovies].sort((a, b) => {
-    const detailsA = physicalMovieDetails[a.tmdb_id];
-    const detailsB = physicalMovieDetails[b.tmdb_id];
-    let compare = 0;
-
-    switch (sortBy) {
-      case "title":
-        compare = (detailsA?.title || "").localeCompare(detailsB?.title || "");
-        break;
-      case "year":
-        const yearA = detailsA?.release_date ? new Date(detailsA.release_date).getFullYear() : 0;
-        const yearB = detailsB?.release_date ? new Date(detailsB.release_date).getFullYear() : 0;
-        compare = yearA - yearB;
-        break;
-      case "price":
-        compare = (a.price || 0) - (b.price || 0);
-        break;
-      case "market_value":
-        // Sprint 2: Sort by market value
-        const priceA = moviePrices.get(`${a.tmdb_id}-${a.format}`)?.median || 0;
-        const priceB = moviePrices.get(`${b.tmdb_id}-${b.format}`)?.median || 0;
-        compare = priceA - priceB;
-        break;
-      case "genre":
-        const genreA = detailsA?.genres?.[0]?.name || "";
-        const genreB = detailsB?.genres?.[0]?.name || "";
-        compare = genreA.localeCompare(genreB);
-        break;
-      case "director":
-        compare = (detailsA?.director || "").localeCompare(detailsB?.director || "");
-        break;
-      case "added":
-        compare = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        break;
-      case "condition":
-        const condA = conditionOrder[a.condition as keyof typeof conditionOrder] || 99;
-        const condB = conditionOrder[b.condition as keyof typeof conditionOrder] || 99;
-        compare = condA - condB;
-        break;
-    }
-
-    return sortOrder === "asc" ? compare : -compare;
-  });
-
-  // ============================================
-  // Loading & Guest States
-  // ============================================
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+  // Show guest view if not logged in
+  if (!authLoading && !user) {
+    return <CollectionShowcase />;
   }
-
-  // Show showcase for non-authenticated users
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background pb-20 md:pb-8">
-        <Header />
-        <main className="pt-14 md:pt-0">
-          <CollectionShowcase />
-        </main>
-        <BottomNav />
-      </div>
-    );
-  }
-
-  // ============================================
-  // Main Render
-  // ============================================
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
+    <AnimatedPage className="min-h-screen bg-background pb-24">
       <Header />
 
-      <div className="container mx-auto px-4 py-6 pt-16 md:pt-6">
-        {/* Header Section with Tabs */}
-        <div className="flex flex-col gap-4 mb-6">
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold font-display">Ma Vidéothèque</h1>
-              <p className="text-muted-foreground text-sm">
-                {physicalMovies.length} film{physicalMovies.length > 1 ? "s" : ""} dans votre collection
-                {viewMode === "collection" &&
-                  hasActiveFilters &&
-                  ` • ${filteredMovies.length} affiché${filteredMovies.length > 1 ? "s" : ""}`}
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {viewMode === "collection" && (
-                <>
-                  <Button variant="outline" size="sm" onClick={() => setScannerOpen(true)} className="gap-2">
-                    <Scan className="w-4 h-4" />
-                    <span className="hidden sm:inline">Scanner</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setAddDialogOpen(true)}
-                    className="gap-2 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span className="hidden sm:inline">Ajouter</span>
-                  </Button>
-                </>
-              )}
-              {viewMode === "valuation" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={refreshValuation}
-                  disabled={valuationRefreshing}
-                  className="gap-2"
-                >
-                  <RefreshCw className={cn("w-4 h-4", valuationRefreshing && "animate-spin")} />
-                  {valuationRefreshing ? "Analyse..." : "Actualiser les prix"}
-                </Button>
-              )}
-            </div>
+      <main className="container mx-auto px-4 pt-4">
+        {/* Page Title */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between mb-4"
+        >
+          <div>
+            <h1 className="text-2xl font-display font-bold">Ma Collection</h1>
+            <p className="text-sm text-muted-foreground">
+              {physicalMovies.length} film{physicalMovies.length !== 1 ? 's' : ''} • {" "}
+              {Object.keys(formatLabels).map(format => {
+                const count = physicalMovies.filter(m => m.format === format).length;
+                return count > 0 ? `${count} ${formatLabels[format as PhysicalFormat].label}` : null;
+              }).filter(Boolean).join(", ")}
+            </p>
           </div>
 
-          {/* View Mode Tabs */}
+          {/* Selection mode toggle */}
+          {physicalMovies.length > 0 && (
+            <Button
+              variant={selectionMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setSelectionMode(!selectionMode);
+                setSelectedIds(new Set());
+              }}
+            >
+              {selectionMode ? (
+                <>
+                  <X className="w-4 h-4 mr-1" />
+                  Annuler
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Sélectionner
+                </>
+              )}
+            </Button>
+          )}
+        </motion.div>
+
+        {/* View Mode Tabs */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-            <TabsList className="grid w-full max-w-[320px] grid-cols-2">
-              <TabsTrigger value="collection" className="gap-2">
+            <TabsList className="w-full max-w-sm mb-4">
+              <TabsTrigger value="collection" className="flex-1 gap-2">
                 <Library className="w-4 h-4" />
                 Collection
               </TabsTrigger>
-              <TabsTrigger value="valuation" className="gap-2">
-                <DollarSign className="w-4 h-4" />
+              <TabsTrigger value="valuation" className="flex-1 gap-2">
+                <TrendingUp className="w-4 h-4" />
                 Valorisation
-                {valuation && valuation.totalValueMedian > 0 && (
-                  <span className="ml-1 text-[10px] font-bold text-green-500">
-                    {formatValue(valuation.totalValueMedian)}
-                  </span>
-                )}
               </TabsTrigger>
             </TabsList>
           </Tabs>
-        </div>
+        </motion.div>
 
-        {/* ============================================ */}
-        {/* VIEW: COLLECTION */}
-        {/* ============================================ */}
-        {viewMode === "collection" && (
-          <div className="mt-6">
-            {/* Collection Controls */}
-            <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                {/* Filters */}
-                <CollectionFiltersDrawer
-                  filters={filters}
-                  filterOptions={filterOptions}
-                  toggleFormat={toggleFormat}
-                  toggleCondition={toggleCondition}
-                  toggleGenre={toggleGenre}
-                  toggleDecade={toggleDecade}
-                  toggleDirector={toggleDirector}
-                  setPriceRange={setPriceRange}
-                  resetFilters={resetFilters}
-                  hasActiveFilters={hasActiveFilters}
-                  activeFilterCount={activeFilterCount}
-                />
-
-                {/* Sort Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <ArrowUpDown className="w-4 h-4" />
-                      {sortLabels[sortBy]}
-                      <ChevronDown className="w-3 h-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    {Object.entries(sortLabels).map(([key, label]) => (
-                      <DropdownMenuItem
-                        key={key}
-                        onClick={() => setSortBy(key as SortBy)}
-                        className={cn(sortBy === key && "bg-accent")}
-                      >
-                        {label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Sort Order Toggle */}
-                <Button variant="ghost" size="sm" onClick={toggleSortOrder}>
-                  {sortOrder === "asc" ? "↑" : "↓"}
-                </Button>
-              </div>
-
-              {/* Selection Mode Toggle */}
-              <div className="flex items-center gap-2">
-                {selectionMode ? (
-                  <>
-                    <Badge variant="secondary">
-                      {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
-                    </Badge>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setDeleteConfirmOpen(true)}
-                      disabled={selectedIds.size === 0}
-                      className="gap-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Supprimer
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Sélection</span>
-                    <Switch checked={selectionMode} onCheckedChange={setSelectionMode} />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Collection Grid */}
-            {loading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <div key={i} className="aspect-[2/3] rounded-xl bg-muted animate-pulse" />
-                ))}
-              </div>
-            ) : sortedMovies.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <Library className="w-16 h-16 text-muted-foreground/30 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  {hasActiveFilters ? "Aucun résultat" : "Votre collection est vide"}
-                </h3>
-                <p className="text-muted-foreground mb-4 max-w-md">
-                  {hasActiveFilters
-                    ? "Essayez de modifier vos filtres"
-                    : "Commencez à ajouter des films à votre collection en scannant vos DVD/Blu-ray ou en recherchant manuellement"}
-                </p>
-                {!hasActiveFilters && (
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setScannerOpen(true)}
-                      className="gap-2 border-videoclub-cyan/30 hover:bg-videoclub-cyan/10"
-                    >
-                      <Scan className="w-4 h-4" />
-                      Scanner un code-barres
-                    </Button>
-                    <Button
-                      onClick={() => setAddDialogOpen(true)}
-                      className="gap-2 bg-gradient-to-r from-videoclub-cyan to-videoclub-magenta"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Ajouter manuellement
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <ShelfView
-                movies={sortedMovies}
-                movieDetailsMap={physicalMovieDetails}
-                onMovieClick={(movie, details) => {
-                  if (selectionMode) {
-                    toggleMovieSelection(movie.id);
-                  } else {
-                    // CORRECTION: Ouvrir le dialog d'édition (avec alertes de prix)
-                    setEditingMovie(movie);
-                    setEditingMovieDetails(details);
-                    setEditDialogOpen(true);
-                  }
-                }}
-                selectionMode={selectionMode}
-                selectedIds={selectedIds}
-              />
-            )}
-          </div>
-        )}
-
-        {/* ============================================ */}
-        {/* VIEW: VALUATION (Sprint 2 - CORRIGÉ) */}
-        {/* ============================================ */}
-        {viewMode === "valuation" && (
-          <div className="mt-6 space-y-6">
-            {/* 
-              CORRECTION MAJEURE: 
-              On passe maintenant les vraies données au dashboard
-              au lieu de laisser le composant utiliser des données mockées
-            */}
-            <ValuationDashboardPremium
-              valuation={valuation}
-              movies={moviesForDashboard}
-              moviePrices={moviePrices}
-              loading={valuationLoading}
-              refreshing={valuationRefreshing}
-              lastUpdated={valuationLastUpdated}
-              onRefresh={refreshValuation}
-              onMovieClick={handleValuationMovieClick}
-            />
-
-            {/* Selected Movie Price Evolution */}
-            {selectedMovie && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-primary" />
-                    Évolution du prix: {physicalMovieDetails[selectedMovie.tmdb_id]?.title}
-                  </h3>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedMovie(null)}>
-                    <X className="w-4 h-4 mr-1" />
-                    Fermer
-                  </Button>
+        {/* Content based on view mode */}
+        <AnimatePresence mode="wait">
+          {viewMode === "collection" ? (
+            <motion.div
+              key="collection"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              {loading ? (
+                <div className="space-y-6">
+                  <CollectionHeaderSkeleton />
+                  <MovieGridSkeleton count={8} columns={4} />
                 </div>
-                <ValueEvolutionChart
-                  tmdbId={selectedMovie.tmdb_id}
-                  format={selectedMovie.format}
-                  title={physicalMovieDetails[selectedMovie.tmdb_id]?.title || ""}
-                  purchasePrice={selectedMovie.price || undefined}
-                />
-              </div>
-            )}
+              ) : physicalMovies.length === 0 ? (
+                <EmptyCollection onAddMovie={() => setAddSheetOpen(true)} />
+              ) : (
+                <>
+                  {/* Sticky Filter Bar */}
+                  <StickyFilterBar
+                    activeFilterCount={activeFilterCount}
+                    sortBy={sortBy}
+                    sortOrder={sortOrder}
+                    onSortChange={setSortBy}
+                    onFilterClick={() => setFiltersOpen(true)}
+                    displayMode={displayMode}
+                    onDisplayModeChange={setDisplayMode}
+                  />
 
-            {/* Films de la collection avec prix */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Library className="w-5 h-5 text-primary" />
-                Films de votre collection
-              </h3>
-              <p className="text-sm text-muted-foreground">Cliquez sur un film pour voir l'évolution de son prix</p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {physicalMovies.map((movie) => {
-                  const details = physicalMovieDetails[movie.tmdb_id];
-                  const priceData = moviePrices.get(`${movie.tmdb_id}-${movie.format}`);
-                  const isSelected = selectedMovie?.id === movie.id;
-
-                  return (
-                    <div
-                      key={movie.id}
-                      onClick={() => setSelectedMovie(movie)}
-                      className={cn(
-                        "cursor-pointer transition-all duration-200",
-                        "rounded-lg overflow-hidden border-2",
-                        isSelected
-                          ? "border-primary shadow-lg shadow-primary/20 scale-105"
-                          : "border-transparent hover:border-primary/50",
-                      )}
+                  {/* Selection action bar */}
+                  {selectionMode && selectedIds.size > 0 && (
+                    <motion.div
+                      initial={{ y: 50, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      className="fixed bottom-20 left-4 right-4 z-40 p-4 bg-card border border-border rounded-2xl shadow-xl"
                     >
-                      <div className="relative aspect-[2/3] bg-muted">
-                        {details?.poster_path ? (
-                          <img
-                            src={`https://image.tmdb.org/t/p/w185${details.poster_path}`}
-                            alt={details.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Library className="w-8 h-8 text-muted-foreground/50" />
-                          </div>
-                        )}
-
-                        {/* Format Badge */}
-                        <div className="absolute top-1 left-1">
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] px-1.5 py-0 bg-black/70 text-white border-0"
-                          >
-                            {movie.format.toUpperCase()}
-                          </Badge>
-                        </div>
-
-                        {/* Price Overlay */}
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-2">
-                          <p className="text-white text-xs font-medium truncate">
-                            {details?.title || `Film #${movie.tmdb_id}`}
-                          </p>
-                          {priceData ? (
-                            <p className="text-green-400 text-sm font-bold">{(priceData.median / 100).toFixed(2)} €</p>
-                          ) : (
-                            <p className="text-zinc-500 text-xs">Prix inconnu</p>
-                          )}
-                        </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">
+                          {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
+                        </span>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setDeleteConfirmOpen(true)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Supprimer
+                        </Button>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+                    </motion.div>
+                  )}
 
-      {/* ============================================ */}
-      {/* Dialogs */}
-      {/* ============================================ */}
+                  {/* Movies Grid */}
+                  <div className={cn(
+                    "grid gap-4 mt-4",
+                    displayMode === "grid" && "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5",
+                    displayMode === "poster" && "grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6",
+                    displayMode === "list" && "grid-cols-1"
+                  )}>
+                    <AnimatePresence>
+                      {sortedMovies.map((movie, index) => (
+                        <CollectionMovieCard
+                          key={movie.id}
+                          movie={movie}
+                          details={physicalMovieDetails[movie.tmdb_id]}
+                          isSelected={selectedIds.has(movie.id)}
+                          selectionMode={selectionMode}
+                          onSelect={() => toggleSelection(movie.id)}
+                          onEdit={() => handleEditMovie(movie)}
+                          onClick={() => navigate(`/movie/${movie.tmdb_id}`)}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="valuation"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <ValuationDashboardPremium
+                movies={physicalMovies}
+                movieDetails={physicalMovieDetails}
+                valuationData={valuationData}
+                isLoading={valuationLoading}
+                onRefresh={refreshValuation}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
 
-      {/* Add Movie Dialog */}
-      <AddPhysicalMovieDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onMovieAdded={fetchPhysicalMovies} />
+      {/* FAB - Only show when not in selection mode */}
+      {!selectionMode && viewMode === "collection" && (
+        <FloatingActionButton
+          actions={[
+            {
+              icon: Search,
+              label: "Rechercher un film",
+              onClick: () => setAddSheetOpen(true),
+              color: "bg-blue-500/20",
+            },
+            {
+              icon: Scan,
+              label: "Scanner un code-barres",
+              onClick: () => setScannerOpen(true),
+              color: "bg-green-500/20",
+            },
+          ]}
+        />
+      )}
 
-      {/* Barcode Scanner Dialog */}
-      <BarcodeScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} onMoviesSelected={handleMoviesSelected} />
+      {/* Add Movie Bottom Sheet */}
+      <AddMovieSheet
+        isOpen={addSheetOpen}
+        onClose={() => setAddSheetOpen(false)}
+        onMovieAdded={handleMovieAdded}
+      />
 
-      {/* Edit Movie Dialog */}
+      {/* Barcode Scanner */}
+      <BarcodeScannerDialog
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onMoviesSelected={handleMovieAdded}
+      />
+
+      {/* Edit Dialog */}
       <EditPhysicalMovieDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
@@ -745,7 +775,7 @@ export default function Collection() {
         onMovieUpdated={fetchPhysicalMovies}
       />
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -753,7 +783,7 @@ export default function Collection() {
               Supprimer {selectedIds.size} film{selectedIds.size > 1 ? "s" : ""} ?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Les films sélectionnés seront définitivement supprimés de votre collection.
+              Cette action est irréversible. Les films sélectionnés seront définitivement supprimés.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -770,6 +800,6 @@ export default function Collection() {
       </AlertDialog>
 
       <BottomNav />
-    </div>
+    </AnimatedPage>
   );
 }
