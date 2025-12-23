@@ -19,12 +19,6 @@ import { MobileHeader } from "./components/MobileHeader";
 import OnboardingWizard from "./components/OnboardingWizard";
 import { GamificationManager } from "./components/gamification/GamificationManager";
 import Marketplace from "@/pages/Marketplace";
-import ListingDetail from "@/pages/ListingDetail";
-import Cart from "@/pages/Cart";
-import Checkout from "@/pages/Checkout";
-import Orders from "@/pages/Orders";
-import Sell from "@/pages/Sell";
-import CreateListing from "@/pages/CreateListing";
 
 // Pages
 import Index from "./pages/Index";
@@ -96,13 +90,6 @@ const App = () => (
                 <MobileHeader />
                 <Routes>
                   <Route path="/marketplace" element={<Marketplace />} />
-                  <Route path="/listing/:id" element={<ListingDetail />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/orders" element={<Orders />} />
-                  <Route path="/orders/:orderId" element={<Orders />} />
-                  <Route path="/sell" element={<Sell />} />
-                  <Route path="/sell/new" element={<CreateListing />} />
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
