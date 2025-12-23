@@ -341,46 +341,6 @@ async function createChallengeCompletedNotification(userId: string, challenge: a
   }
 }
 
-    // Récupérer ou créer la progression
-    const { data: existingProgress } = await supabase
-      .from('user_challenges')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('challenge_id', challenge.id)
-      .eq('week_start', weekStart)
-      .single();
-
-    if (existingProgress?.is_completed) continue;
-
-    if (existingProgress) {
-      const newProgress = existingProgress.current_progress + 1;
-      const isCompleted = newProgress >= challenge.target_count;
-
-      await supabase
-        .from('user_challenges')
-        .update({
-          current_progress: newProgress,
-          is_completed: isCompleted,
-          completed_at: isCompleted ? new Date().toISOString() : null
-        })
-        .eq('id', existingProgress.id);
-    } else {
-      const isCompleted = challenge.target_count <= 1;
-      
-      await supabase
-        .from('user_challenges')
-        .insert({
-          user_id: userId,
-          challenge_id: challenge.id,
-          week_start: weekStart,
-          current_progress: 1,
-          is_completed: isCompleted,
-          completed_at: isCompleted ? new Date().toISOString() : null
-        });
-    }
-  }
-}
-
 // Réclamer la récompense d'un défi
 async function claimChallengeReward(userId: string, challengeId: string) {
   const now = new Date();
