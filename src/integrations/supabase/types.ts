@@ -385,6 +385,87 @@ export type Database = {
           },
         ]
       }
+      ebay_alerts: {
+        Row: {
+          condition: string | null
+          created_at: string | null
+          currency: string | null
+          ebay_item_id: string
+          end_time: string | null
+          id: string
+          image_url: string | null
+          is_auction: boolean | null
+          is_dismissed: boolean | null
+          is_seen: boolean | null
+          item_url: string
+          location: string | null
+          price_cents: number
+          seller_feedback_score: number | null
+          seller_name: string | null
+          shipping_cost_cents: number | null
+          title: string
+          user_id: string
+          wishlist_id: string
+        }
+        Insert: {
+          condition?: string | null
+          created_at?: string | null
+          currency?: string | null
+          ebay_item_id: string
+          end_time?: string | null
+          id?: string
+          image_url?: string | null
+          is_auction?: boolean | null
+          is_dismissed?: boolean | null
+          is_seen?: boolean | null
+          item_url: string
+          location?: string | null
+          price_cents: number
+          seller_feedback_score?: number | null
+          seller_name?: string | null
+          shipping_cost_cents?: number | null
+          title: string
+          user_id: string
+          wishlist_id: string
+        }
+        Update: {
+          condition?: string | null
+          created_at?: string | null
+          currency?: string | null
+          ebay_item_id?: string
+          end_time?: string | null
+          id?: string
+          image_url?: string | null
+          is_auction?: boolean | null
+          is_dismissed?: boolean | null
+          is_seen?: boolean | null
+          item_url?: string
+          location?: string | null
+          price_cents?: number
+          seller_feedback_score?: number | null
+          seller_name?: string | null
+          shipping_cost_cents?: number | null
+          title?: string
+          user_id?: string
+          wishlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ebay_alerts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ebay_alerts_wishlist_id_fkey"
+            columns: ["wishlist_id"]
+            isOneToOne: false
+            referencedRelation: "wishlist"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_badges: {
         Row: {
           created_at: string | null
@@ -1232,6 +1313,65 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      public_collections: {
+        Row: {
+          created_at: string | null
+          custom_description: string | null
+          custom_title: string | null
+          id: string
+          is_enabled: boolean | null
+          last_viewed_at: string | null
+          share_code: string
+          show_conditions: boolean | null
+          show_notes: boolean | null
+          show_purchase_prices: boolean | null
+          show_values: boolean | null
+          updated_at: string | null
+          user_id: string
+          view_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_description?: string | null
+          custom_title?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_viewed_at?: string | null
+          share_code: string
+          show_conditions?: boolean | null
+          show_notes?: boolean | null
+          show_purchase_prices?: boolean | null
+          show_values?: boolean | null
+          updated_at?: string | null
+          user_id: string
+          view_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_description?: string | null
+          custom_title?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_viewed_at?: string | null
+          share_code?: string
+          show_conditions?: boolean | null
+          show_notes?: boolean | null
+          show_purchase_prices?: boolean | null
+          show_values?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_collections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
@@ -2164,6 +2304,62 @@ export type Database = {
         }
         Relationships: []
       }
+      wishlist: {
+        Row: {
+          created_at: string | null
+          desired_formats: string[] | null
+          ebay_tracking_enabled: boolean | null
+          id: string
+          max_price: number | null
+          notes: string | null
+          poster_path: string | null
+          priority: string | null
+          release_year: number | null
+          title: string
+          tmdb_id: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          desired_formats?: string[] | null
+          ebay_tracking_enabled?: boolean | null
+          id?: string
+          max_price?: number | null
+          notes?: string | null
+          poster_path?: string | null
+          priority?: string | null
+          release_year?: number | null
+          title: string
+          tmdb_id: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          desired_formats?: string[] | null
+          ebay_tracking_enabled?: boolean | null
+          id?: string
+          max_price?: number | null
+          notes?: string | null
+          poster_path?: string | null
+          priority?: string | null
+          release_year?: number | null
+          title?: string
+          tmdb_id?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2172,6 +2368,7 @@ export type Database = {
       archive_daily_prices: { Args: never; Returns: undefined }
       cleanup_expired_price_cache: { Args: never; Returns: undefined }
       generate_order_number: { Args: never; Returns: string }
+      generate_share_code: { Args: never; Returns: string }
       get_price_evolution: {
         Args: { p_days?: number; p_format: string; p_tmdb_id: number }
         Returns: {
@@ -2182,6 +2379,10 @@ export type Database = {
         }[]
       }
       get_xp_for_format: { Args: { format_name: string }; Returns: number }
+      increment_collection_views: {
+        Args: { p_share_code: string }
+        Returns: undefined
+      }
       update_seller_stats: { Args: { seller_uuid: string }; Returns: undefined }
     }
     Enums: {

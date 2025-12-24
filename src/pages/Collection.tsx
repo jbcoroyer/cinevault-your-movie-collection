@@ -33,7 +33,6 @@ import { ShelfView } from "@/components/collection/ShelfView";
 import { PosterWallView } from "@/components/collection/PosterWallView";
 import { CollectionFiltersDrawer, ActiveFiltersBar } from "@/components/collection/CollectionFilters";
 import { CollectionCTA } from "@/components/collection/CollectionCTA";
-import { CollectionSearch } from "@/components/collection/CollectionSearch";
 
 // Valuation & Wishlist imports
 import { ValuationDashboardPremium } from "@/components/collection/ValuationDashboardPremium";
@@ -87,7 +86,7 @@ import {
 type SortBy = "title" | "year" | "price" | "added" | "condition" | "format";
 type SortOrder = "asc" | "desc";
 type ViewMode = "collection" | "valuation" | "wishlist";
-type DisplayMode = "shelf" | "grid" | "poster";
+type DisplayMode = "shelf" | "grid";
 
 interface ExtendedMovieDetails extends MovieDetails {
   director?: string;
@@ -181,7 +180,6 @@ const DisplayModeSwitcher = ({
   const modes = [
     { id: "shelf" as DisplayMode, icon: Library, label: "Étagère" },
     { id: "grid" as DisplayMode, icon: Grid3X3, label: "Grille" },
-    { id: "poster" as DisplayMode, icon: LayoutGrid, label: "Posters" },
   ];
 
   return (
@@ -819,17 +817,10 @@ export default function Collection() {
                     {displayMode === "shelf" ? (
                       <ShelfView
                         movies={sortedMovies}
-                        movieDetails={physicalMovieDetails}
-                        onMovieClick={handleEditMovie}
+                        movieDetailsMap={physicalMovieDetails}
+                        onMovieClick={(pm, details) => handleEditMovie(pm)}
                         selectionMode={selectionMode}
                         selectedIds={selectedIds}
-                        onToggleSelect={toggleSelection}
-                      />
-                    ) : displayMode === "poster" ? (
-                      <PosterWallView
-                        movies={sortedMovies}
-                        movieDetails={physicalMovieDetails}
-                        onMovieClick={handleEditMovie}
                       />
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -860,9 +851,13 @@ export default function Collection() {
               exit={{ opacity: 0, x: -20 }}
             >
               <ValuationDashboardPremium
+                valuation={null}
                 movies={sortedMovies.map(m => ({
-                  ...m,
-                  priceCents: m.price ? m.price * 100 : undefined,
+                  tmdbId: m.tmdb_id,
+                  title: physicalMovieDetails[m.tmdb_id]?.title || "Film",
+                  format: m.format,
+                  posterPath: physicalMovieDetails[m.tmdb_id]?.poster_path,
+                  purchasePrice: m.price ? m.price * 100 : undefined,
                   releaseYear: physicalMovieDetails[m.tmdb_id]?.release_date 
                     ? new Date(physicalMovieDetails[m.tmdb_id].release_date!).getFullYear()
                     : undefined,

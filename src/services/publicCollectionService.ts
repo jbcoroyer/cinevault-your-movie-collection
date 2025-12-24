@@ -60,25 +60,27 @@ export const getPublicCollectionSettings = async (
     console.error("Error fetching public collection settings:", error);
   }
 
-  return data as PublicCollectionSettings | null;
+  return data as unknown as PublicCollectionSettings | null;
 };
 
 export const createPublicCollectionSettings = async (
   userId: string,
   settings?: Partial<PublicCollectionSettings>
 ): Promise<PublicCollectionSettings | null> => {
+  const insertData = {
+    user_id: userId,
+    is_enabled: settings?.is_enabled ?? true,
+    show_values: settings?.show_values ?? true,
+    show_purchase_prices: settings?.show_purchase_prices ?? false,
+    show_conditions: settings?.show_conditions ?? true,
+    show_notes: settings?.show_notes ?? false,
+    custom_title: settings?.custom_title ?? null,
+    custom_description: settings?.custom_description ?? null,
+  };
+
   const { data, error } = await supabase
     .from("public_collections")
-    .insert({
-      user_id: userId,
-      is_enabled: settings?.is_enabled ?? true,
-      show_values: settings?.show_values ?? true,
-      show_purchase_prices: settings?.show_purchase_prices ?? false,
-      show_conditions: settings?.show_conditions ?? true,
-      show_notes: settings?.show_notes ?? false,
-      custom_title: settings?.custom_title ?? null,
-      custom_description: settings?.custom_description ?? null,
-    })
+    .insert(insertData as any)
     .select()
     .single();
 
@@ -87,7 +89,7 @@ export const createPublicCollectionSettings = async (
     throw error;
   }
 
-  return data as PublicCollectionSettings;
+  return data as unknown as PublicCollectionSettings;
 };
 
 export const updatePublicCollectionSettings = async (
@@ -109,7 +111,7 @@ export const updatePublicCollectionSettings = async (
     throw error;
   }
 
-  return data as PublicCollectionSettings;
+  return data as unknown as PublicCollectionSettings;
 };
 
 export const togglePublicCollection = async (
@@ -151,25 +153,31 @@ export const getPublicCollectionByCode = async (
 ): Promise<PublicCollectionData | null> => {
   try {
     // Fetch settings
-    const { data: settings, error: settingsError } = await supabase
+    const { data: settingsData, error: settingsError } = await supabase
       .from("public_collections")
       .select("*")
       .eq("share_code", shareCode)
       .eq("is_enabled", true)
       .single();
 
-    if (settingsError || !settings) {
+    if (settingsError || !settingsData) {
       console.error("Public collection not found:", settingsError);
       return null;
     }
 
-    // Increment view count
-    await supabase.rpc('increment_collection_views', { p_share_code: shareCode });
+    const settings = settingsData as unknown as PublicCollectionSettings;
+
+    // Increment view count (best effort, don't fail if it doesn't work)
+    try {
+      await supabase.rpc('increment_collection_views' as any, { p_share_code: shareCode });
+    } catch (e) {
+      console.warn("Could not increment view count:", e);
+    }
 
     // Fetch profile
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("username, display_name, avatar_url")
+      .select("username, avatar_url")
       .eq("id", settings.user_id)
       .single();
 
@@ -203,10 +211,10 @@ export const getPublicCollectionByCode = async (
     });
 
     return {
-      settings: settings as PublicCollectionSettings,
+      settings,
       profile: {
-        username: profile.username,
-        display_name: profile.display_name,
+        username: profile.username || "Collectionneur",
+        display_name: null,
         avatar_url: profile.avatar_url,
       },
       movies: typedMovies,
