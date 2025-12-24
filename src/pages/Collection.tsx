@@ -86,7 +86,9 @@ export default function Collection() {
   // Filter hooks
   const {
     filters,
+    filteredMovies: hookFilteredMovies,
     filterOptions,
+    setSearch: setFilterSearch,
     toggleFormat,
     toggleCondition,
     toggleGenre,
@@ -96,8 +98,7 @@ export default function Collection() {
     resetFilters,
     hasActiveFilters,
     activeFilterCount,
-    setFilterOptions,
-  } = useCollectionFilters();
+  } = useCollectionFilters(movies, movieDetails);
 
   // Valuation hook
   const {
@@ -124,11 +125,6 @@ export default function Collection() {
 
       // Load movie details
       const detailsMap: Record<number, MovieDetails> = {};
-      const genres = new Set<string>();
-      const decades = new Set<string>();
-      const directors = new Set<string>();
-      let minPrice = Infinity;
-      let maxPrice = 0;
 
       await Promise.all(
         collection.map(async (pm) => {
@@ -136,27 +132,6 @@ export default function Collection() {
             const details = await getMovieDetails(pm.tmdb_id);
             if (details) {
               detailsMap[pm.tmdb_id] = details;
-
-              // Collect filter options
-              details.genres?.forEach((g) => genres.add(g.name));
-
-              if (details.release_date) {
-                const year = new Date(details.release_date).getFullYear();
-                const decade = `${Math.floor(year / 10) * 10}s`;
-                decades.add(decade);
-              }
-
-              // Get director from credits
-              const director = details.credits?.crew?.find((c) => c.job === "Director");
-              if (director) {
-                directors.add(director.name);
-              }
-            }
-
-            // Track price range
-            if (pm.price) {
-              minPrice = Math.min(minPrice, pm.price);
-              maxPrice = Math.max(maxPrice, pm.price);
             }
           } catch (e) {
             console.error(`Failed to load details for ${pm.tmdb_id}`);
@@ -165,17 +140,6 @@ export default function Collection() {
       );
 
       setMovieDetails(detailsMap);
-      
-      // Update filter options
-      setFilterOptions({
-        genres: Array.from(genres).sort(),
-        decades: Array.from(decades).sort().reverse(),
-        directors: Array.from(directors).sort(),
-        priceRange: {
-          min: minPrice === Infinity ? 0 : minPrice,
-          max: maxPrice === 0 ? 100 : maxPrice,
-        },
-      });
     } catch (error) {
       console.error("Failed to load collection:", error);
       toast({
@@ -186,7 +150,7 @@ export default function Collection() {
     } finally {
       setLoading(false);
     }
-  }, [user, setFilterOptions]);
+  }, [user]);
 
   useEffect(() => {
     loadCollection();
@@ -201,69 +165,12 @@ export default function Collection() {
     }
   }, [activeTab, setSearchParams]);
 
-  // Filter and search movies
-  const filteredMovies = useMemo(() => {
-    let result = movies;
+  // Use hook filtered movies with search
+  useEffect(() => {
+    setFilterSearch(searchQuery);
+  }, [searchQuery, setFilterSearch]);
 
-    // Apply search
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter((movie) => {
-        const details = movieDetails[movie.tmdb_id];
-        return details?.title?.toLowerCase().includes(query);
-      });
-    }
-
-    // Apply format filter
-    if (filters.formats.length > 0) {
-      result = result.filter((m) => filters.formats.includes(m.format));
-    }
-
-    // Apply condition filter
-    if (filters.conditions.length > 0) {
-      result = result.filter((m) => m.condition && filters.conditions.includes(m.condition));
-    }
-
-    // Apply genre filter
-    if (filters.genres.length > 0) {
-      result = result.filter((m) => {
-        const details = movieDetails[m.tmdb_id];
-        return details?.genres?.some((g) => filters.genres.includes(g.name));
-      });
-    }
-
-    // Apply decade filter
-    if (filters.decades.length > 0) {
-      result = result.filter((m) => {
-        const details = movieDetails[m.tmdb_id];
-        if (!details?.release_date) return false;
-        const year = new Date(details.release_date).getFullYear();
-        const decade = `${Math.floor(year / 10) * 10}s`;
-        return filters.decades.includes(decade);
-      });
-    }
-
-    // Apply director filter
-    if (filters.directors.length > 0) {
-      result = result.filter((m) => {
-        const details = movieDetails[m.tmdb_id];
-        const director = details?.credits?.crew?.find((c) => c.job === "Director");
-        return director && filters.directors.includes(director.name);
-      });
-    }
-
-    // Apply price range
-    if (filters.priceMin !== null || filters.priceMax !== null) {
-      result = result.filter((m) => {
-        if (!m.price) return filters.priceMin === null;
-        if (filters.priceMin !== null && m.price < filters.priceMin) return false;
-        if (filters.priceMax !== null && m.price > filters.priceMax) return false;
-        return true;
-      });
-    }
-
-    return result;
-  }, [movies, movieDetails, searchQuery, filters]);
+  const filteredMovies = hookFilteredMovies;
 
   // Handlers
   const handleMovieClick = (movie: PhysicalMovie) => {
@@ -529,8 +436,8 @@ export default function Collection() {
               ) : (
                 <ShelfView 
                   movies={filteredMovies} 
-                  movieDetails={movieDetails}
-                  onMovieClick={handleMovieClick}
+                  movieDetailsMap={movieDetails}
+                  onMovieClick={(pm, details) => handleMovieClick(pm)}
                 />
               )}
             </TabsContent>
@@ -572,19 +479,18 @@ export default function Collection() {
       {/* Dialogs */}
       {editingMovie && (
         <EditPhysicalMovieDialog
-          movie={editingMovie}
+          physicalMovie={editingMovie}
           movieDetails={movieDetails[editingMovie.tmdb_id] || null}
           open={!!editingMovie}
           onOpenChange={(open) => !open && setEditingMovie(null)}
-          onUpdated={handleMovieUpdated}
-          onDeleted={handleMovieUpdated}
+          onMovieUpdated={handleMovieUpdated}
         />
       )}
 
       <AddPhysicalMovieDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
-        onAdded={handleMovieAdded}
+        onMovieAdded={handleMovieAdded}
       />
 
       <FloatingDock />
