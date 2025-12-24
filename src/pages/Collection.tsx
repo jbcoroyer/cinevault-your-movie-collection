@@ -1,12 +1,12 @@
 /**
  * CineVault — Collection Page Complète
- * 
+ *
  * Page de collection avec tous les onglets:
  * - Grille (vue par défaut)
  * - Étagère (shelf view)
  * - Valorisation (valuation dashboard)
  * - Wishlist
- * 
+ *
  * Design: Radical Minimalist + Premium
  */
 
@@ -23,29 +23,24 @@ import { CollectionFiltersDrawer, ActiveFiltersBar } from "@/components/collecti
 import { useCollectionFilters } from "@/hooks/useCollectionFilters";
 import { useCollectionValuation } from "@/hooks/useCollectionValuation";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  getPhysicalMovies,
-  PhysicalMovie,
-  PhysicalFormat,
-  deletePhysicalMovie,
-} from "@/services/physicalMovies";
+import { getPhysicalMovies, PhysicalMovie, PhysicalFormat, deletePhysicalMovie } from "@/services/physicalMovies";
 import { getMovieDetails, MovieDetails, Movie, getImageUrl } from "@/services/tmdb";
 import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
 import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { 
-  Plus, 
-  Search, 
-  X, 
-  SlidersHorizontal, 
-  Grid3X3, 
+import {
+  Plus,
+  Search,
+  X,
+  SlidersHorizontal,
+  Grid3X3,
   BookOpen,
   TrendingUp,
   Heart,
   RefreshCw,
   Share2,
-  MoreVertical
+  MoreVertical,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -71,7 +66,7 @@ export default function Collection() {
 
   // Get tab from URL or default to grid
   const initialTab = (searchParams.get("tab") as CollectionTab) || "grid";
-  
+
   // State
   const [activeTab, setActiveTab] = useState<CollectionTab>(initialTab);
   const [movies, setMovies] = useState<PhysicalMovie[]>([]);
@@ -86,9 +81,7 @@ export default function Collection() {
   // Filter hooks
   const {
     filters,
-    filteredMovies: hookFilteredMovies,
     filterOptions,
-    setSearch: setFilterSearch,
     toggleFormat,
     toggleCondition,
     toggleGenre,
@@ -98,7 +91,8 @@ export default function Collection() {
     resetFilters,
     hasActiveFilters,
     activeFilterCount,
-  } = useCollectionFilters(movies, movieDetails);
+    setFilterOptions,
+  } = useCollectionFilters();
 
   // Valuation hook
   const {
@@ -117,7 +111,7 @@ export default function Collection() {
   // Load collection
   const loadCollection = useCallback(async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
       const collection = await getPhysicalMovies(user.id);
@@ -125,6 +119,11 @@ export default function Collection() {
 
       // Load movie details
       const detailsMap: Record<number, MovieDetails> = {};
+      const genres = new Set<string>();
+      const decades = new Set<string>();
+      const directors = new Set<string>();
+      let minPrice = Infinity;
+      let maxPrice = 0;
 
       await Promise.all(
         collection.map(async (pm) => {
@@ -132,14 +131,46 @@ export default function Collection() {
             const details = await getMovieDetails(pm.tmdb_id);
             if (details) {
               detailsMap[pm.tmdb_id] = details;
+
+              // Collect filter options
+              details.genres?.forEach((g) => genres.add(g.name));
+
+              if (details.release_date) {
+                const year = new Date(details.release_date).getFullYear();
+                const decade = `${Math.floor(year / 10) * 10}s`;
+                decades.add(decade);
+              }
+
+              // Get director from credits
+              const director = details.credits?.crew?.find((c) => c.job === "Director");
+              if (director) {
+                directors.add(director.name);
+              }
+            }
+
+            // Track price range
+            if (pm.price) {
+              minPrice = Math.min(minPrice, pm.price);
+              maxPrice = Math.max(maxPrice, pm.price);
             }
           } catch (e) {
             console.error(`Failed to load details for ${pm.tmdb_id}`);
           }
-        })
+        }),
       );
 
       setMovieDetails(detailsMap);
+
+      // Update filter options
+      setFilterOptions({
+        genres: Array.from(genres).sort(),
+        decades: Array.from(decades).sort().reverse(),
+        directors: Array.from(directors).sort(),
+        priceRange: {
+          min: minPrice === Infinity ? 0 : minPrice,
+          max: maxPrice === 0 ? 100 : maxPrice,
+        },
+      });
     } catch (error) {
       console.error("Failed to load collection:", error);
       toast({
@@ -150,7 +181,7 @@ export default function Collection() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, setFilterOptions]);
 
   useEffect(() => {
     loadCollection();
@@ -165,12 +196,69 @@ export default function Collection() {
     }
   }, [activeTab, setSearchParams]);
 
-  // Use hook filtered movies with search
-  useEffect(() => {
-    setFilterSearch(searchQuery);
-  }, [searchQuery, setFilterSearch]);
+  // Filter and search movies
+  const filteredMovies = useMemo(() => {
+    let result = movies;
 
-  const filteredMovies = hookFilteredMovies;
+    // Apply search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((movie) => {
+        const details = movieDetails[movie.tmdb_id];
+        return details?.title?.toLowerCase().includes(query);
+      });
+    }
+
+    // Apply format filter
+    if (filters.formats.length > 0) {
+      result = result.filter((m) => filters.formats.includes(m.format));
+    }
+
+    // Apply condition filter
+    if (filters.conditions.length > 0) {
+      result = result.filter((m) => m.condition && filters.conditions.includes(m.condition));
+    }
+
+    // Apply genre filter
+    if (filters.genres.length > 0) {
+      result = result.filter((m) => {
+        const details = movieDetails[m.tmdb_id];
+        return details?.genres?.some((g) => filters.genres.includes(g.name));
+      });
+    }
+
+    // Apply decade filter
+    if (filters.decades.length > 0) {
+      result = result.filter((m) => {
+        const details = movieDetails[m.tmdb_id];
+        if (!details?.release_date) return false;
+        const year = new Date(details.release_date).getFullYear();
+        const decade = `${Math.floor(year / 10) * 10}s`;
+        return filters.decades.includes(decade);
+      });
+    }
+
+    // Apply director filter
+    if (filters.directors.length > 0) {
+      result = result.filter((m) => {
+        const details = movieDetails[m.tmdb_id];
+        const director = details?.credits?.crew?.find((c) => c.job === "Director");
+        return director && filters.directors.includes(director.name);
+      });
+    }
+
+    // Apply price range
+    if (filters.priceMin !== null || filters.priceMax !== null) {
+      result = result.filter((m) => {
+        if (!m.price) return filters.priceMin === null;
+        if (filters.priceMin !== null && m.price < filters.priceMin) return false;
+        if (filters.priceMax !== null && m.price > filters.priceMax) return false;
+        return true;
+      });
+    }
+
+    return result;
+  }, [movies, movieDetails, searchQuery, filters]);
 
   // Handlers
   const handleMovieClick = (movie: PhysicalMovie) => {
@@ -196,16 +284,9 @@ export default function Collection() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center px-4">
-          <h1 className="font-display text-display-md text-white mb-4">
-            SIGN IN TO VIEW
-          </h1>
-          <p className="text-white/50 mb-8">
-            Create an account to start your collection
-          </p>
-          <button
-            onClick={() => navigate("/auth")}
-            className="btn-minimal-filled"
-          >
+          <h1 className="font-display text-display-md text-white mb-4">SIGN IN TO VIEW</h1>
+          <p className="text-white/50 mb-8">Create an account to start your collection</p>
+          <button onClick={() => navigate("/auth")} className="btn-minimal-filled">
             Sign In
           </button>
         </div>
@@ -224,9 +305,7 @@ export default function Collection() {
           {/* Title Row */}
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="font-display text-display-sm md:text-display-md text-white">
-                COLLECTION
-              </h1>
+              <h1 className="font-display text-display-sm md:text-display-md text-white">COLLECTION</h1>
               <p className="text-white/40 text-sm mt-1">
                 {movies.length} {movies.length === 1 ? "film" : "films"}
                 {valuation && valuation.totalValueMedian > 0 && (
@@ -244,7 +323,7 @@ export default function Collection() {
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center",
                   "border border-white/20 transition-all duration-300",
-                  showSearch ? "bg-white text-black" : "text-white/50 hover:text-white"
+                  showSearch ? "bg-white text-black" : "text-white/50 hover:text-white",
                 )}
               >
                 {showSearch ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
@@ -338,29 +417,29 @@ export default function Collection() {
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="w-full bg-white/5 border border-white/10 p-1 rounded-xl">
-              <TabsTrigger 
-                value="grid" 
+              <TabsTrigger
+                value="grid"
                 className="flex-1 data-[state=active]:bg-white data-[state=active]:text-black gap-2 rounded-lg"
               >
                 <Grid3X3 className="w-4 h-4" />
                 <span className="hidden sm:inline">Grille</span>
               </TabsTrigger>
-              <TabsTrigger 
-                value="shelf" 
+              <TabsTrigger
+                value="shelf"
                 className="flex-1 data-[state=active]:bg-white data-[state=active]:text-black gap-2 rounded-lg"
               >
                 <BookOpen className="w-4 h-4" />
                 <span className="hidden sm:inline">Étagère</span>
               </TabsTrigger>
-              <TabsTrigger 
-                value="valuation" 
+              <TabsTrigger
+                value="valuation"
                 className="flex-1 data-[state=active]:bg-white data-[state=active]:text-black gap-2 rounded-lg"
               >
                 <TrendingUp className="w-4 h-4" />
                 <span className="hidden sm:inline">Valorisation</span>
               </TabsTrigger>
-              <TabsTrigger 
-                value="wishlist" 
+              <TabsTrigger
+                value="wishlist"
                 className="flex-1 data-[state=active]:bg-white data-[state=active]:text-black gap-2 rounded-lg relative"
               >
                 <Heart className="w-4 h-4" />
@@ -382,7 +461,7 @@ export default function Collection() {
                   ))}
                 </div>
               ) : filteredMovies.length === 0 ? (
-                <EmptyCollectionState 
+                <EmptyCollectionState
                   hasFilters={hasActiveFilters || !!searchQuery}
                   onReset={() => {
                     resetFilters();
@@ -425,7 +504,7 @@ export default function Collection() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                 </div>
               ) : filteredMovies.length === 0 ? (
-                <EmptyCollectionState 
+                <EmptyCollectionState
                   hasFilters={hasActiveFilters || !!searchQuery}
                   onReset={() => {
                     resetFilters();
@@ -434,8 +513,8 @@ export default function Collection() {
                   onAdd={() => setShowAddDialog(true)}
                 />
               ) : (
-                <ShelfView 
-                  movies={filteredMovies} 
+                <ShelfView
+                  movies={filteredMovies}
                   movieDetailsMap={movieDetails}
                   onMovieClick={(pm, details) => handleMovieClick(pm)}
                 />
@@ -479,19 +558,16 @@ export default function Collection() {
       {/* Dialogs */}
       {editingMovie && (
         <EditPhysicalMovieDialog
-          physicalMovie={editingMovie}
+          movie={editingMovie}
           movieDetails={movieDetails[editingMovie.tmdb_id] || null}
           open={!!editingMovie}
           onOpenChange={(open) => !open && setEditingMovie(null)}
-          onMovieUpdated={handleMovieUpdated}
+          onUpdated={handleMovieUpdated}
+          onDeleted={handleMovieUpdated}
         />
       )}
 
-      <AddPhysicalMovieDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
-        onMovieAdded={handleMovieAdded}
-      />
+      <AddPhysicalMovieDialog open={showAddDialog} onOpenChange={setShowAddDialog} onAdded={handleMovieAdded} />
 
       <FloatingDock />
     </div>
@@ -514,24 +590,18 @@ const EmptyCollectionState = ({
     <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mb-6">
       <Grid3X3 className="w-10 h-10 text-white/20" />
     </div>
-    
+
     {hasFilters ? (
       <>
-        <h3 className="text-xl font-display font-bold text-white mb-2">
-          Aucun résultat
-        </h3>
-        <p className="text-white/50 mb-6 max-w-sm">
-          Aucun film ne correspond à vos critères de recherche.
-        </p>
+        <h3 className="text-xl font-display font-bold text-white mb-2">Aucun résultat</h3>
+        <p className="text-white/50 mb-6 max-w-sm">Aucun film ne correspond à vos critères de recherche.</p>
         <Button onClick={onReset} variant="outline" className="border-white/20 text-white">
           Réinitialiser les filtres
         </Button>
       </>
     ) : (
       <>
-        <h3 className="text-xl font-display font-bold text-white mb-2">
-          Commencez votre collection
-        </h3>
+        <h3 className="text-xl font-display font-bold text-white mb-2">Commencez votre collection</h3>
         <p className="text-white/50 mb-6 max-w-sm">
           Ajoutez votre premier DVD, Blu-ray ou 4K pour commencer à suivre votre collection.
         </p>
