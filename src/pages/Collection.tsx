@@ -82,6 +82,7 @@ export default function Collection() {
   const {
     filters,
     filterOptions,
+    setSearch,
     toggleFormat,
     toggleCondition,
     toggleGenre,
@@ -91,8 +92,7 @@ export default function Collection() {
     resetFilters,
     hasActiveFilters,
     activeFilterCount,
-    setFilterOptions,
-  } = useCollectionFilters();
+  } = useCollectionFilters(movies, movieDetails);
 
   // Valuation hook
   const {
@@ -119,39 +119,18 @@ export default function Collection() {
 
       // Load movie details
       const detailsMap: Record<number, MovieDetails> = {};
-      const genres = new Set<string>();
-      const decades = new Set<string>();
-      const directors = new Set<string>();
-      let minPrice = Infinity;
-      let maxPrice = 0;
 
       await Promise.all(
         collection.map(async (pm) => {
           try {
             const details = await getMovieDetails(pm.tmdb_id);
             if (details) {
-              detailsMap[pm.tmdb_id] = details;
-
-              // Collect filter options
-              details.genres?.forEach((g) => genres.add(g.name));
-
-              if (details.release_date) {
-                const year = new Date(details.release_date).getFullYear();
-                const decade = `${Math.floor(year / 10) * 10}s`;
-                decades.add(decade);
-              }
-
-              // Get director from credits
+              // Get director from credits and add to details
               const director = details.credits?.crew?.find((c) => c.job === "Director");
-              if (director) {
-                directors.add(director.name);
-              }
-            }
-
-            // Track price range
-            if (pm.price) {
-              minPrice = Math.min(minPrice, pm.price);
-              maxPrice = Math.max(maxPrice, pm.price);
+              detailsMap[pm.tmdb_id] = {
+                ...details,
+                director: director?.name,
+              } as MovieDetails & { director?: string };
             }
           } catch (e) {
             console.error(`Failed to load details for ${pm.tmdb_id}`);
@@ -160,17 +139,6 @@ export default function Collection() {
       );
 
       setMovieDetails(detailsMap);
-
-      // Update filter options
-      setFilterOptions({
-        genres: Array.from(genres).sort(),
-        decades: Array.from(decades).sort().reverse(),
-        directors: Array.from(directors).sort(),
-        priceRange: {
-          min: minPrice === Infinity ? 0 : minPrice,
-          max: maxPrice === 0 ? 100 : maxPrice,
-        },
-      });
     } catch (error) {
       console.error("Failed to load collection:", error);
       toast({
@@ -181,7 +149,7 @@ export default function Collection() {
     } finally {
       setLoading(false);
     }
-  }, [user, setFilterOptions]);
+  }, [user]);
 
   useEffect(() => {
     loadCollection();
@@ -558,16 +526,15 @@ export default function Collection() {
       {/* Dialogs */}
       {editingMovie && (
         <EditPhysicalMovieDialog
-          movie={editingMovie}
+          physicalMovie={editingMovie}
           movieDetails={movieDetails[editingMovie.tmdb_id] || null}
           open={!!editingMovie}
           onOpenChange={(open) => !open && setEditingMovie(null)}
-          onUpdated={handleMovieUpdated}
-          onDeleted={handleMovieUpdated}
+          onMovieUpdated={handleMovieUpdated}
         />
       )}
 
-      <AddPhysicalMovieDialog open={showAddDialog} onOpenChange={setShowAddDialog} onAdded={handleMovieAdded} />
+      <AddPhysicalMovieDialog open={showAddDialog} onOpenChange={setShowAddDialog} onMovieAdded={handleMovieAdded} />
 
       <FloatingDock />
     </div>
