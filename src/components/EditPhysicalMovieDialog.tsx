@@ -97,6 +97,7 @@ export const EditPhysicalMovieDialog: React.FC<EditPhysicalMovieDialogProps> = (
     setLoadingPrice(true);
     try {
       const priceData = await lookupPrice(
+        movieDetails.id,
         movieDetails.title,
         physicalMovie?.format || "bluray"
       );
@@ -189,7 +190,7 @@ export const EditPhysicalMovieDialog: React.FC<EditPhysicalMovieDialogProps> = (
                   <div className="mt-2">
                     <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
                       <TrendingUp className="w-3 h-3 mr-1" />
-                      Valeur: {formatPrice(marketPrice.averagePrice)}
+                      Valeur: {formatPrice(marketPrice.median)}
                     </Badge>
                   </div>
                 ) : null}
@@ -349,10 +350,16 @@ export const EditPhysicalMovieDialog: React.FC<EditPhysicalMovieDialogProps> = (
         <PriceAlertDialog
           open={alertDialogOpen}
           onOpenChange={setAlertDialogOpen}
-          tmdbId={physicalMovie.tmdb_id}
-          movieTitle={movieDetails.title}
-          format={format}
-          currentMarketPrice={marketPrice?.averagePrice}
+          movie={{
+            tmdbId: physicalMovie.tmdb_id,
+            title: movieDetails.title,
+            format: format,
+            posterPath: movieDetails.poster_path,
+            currentPrice: marketPrice?.median,
+          }}
+          onCreateAlert={async () => {}}
+          onDeleteAlert={async () => {}}
+          onToggleAlert={async () => {}}
         />
       )}
     </>
