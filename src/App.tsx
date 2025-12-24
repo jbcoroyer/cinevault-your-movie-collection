@@ -20,6 +20,7 @@ import { MobileHeader } from "./components/MobileHeader";
 import OnboardingWizard from "./components/OnboardingWizard";
 import { GamificationManager } from "./components/gamification/GamificationManager";
 import { XPToastProvider } from "./components/gamification/XPToast";
+import PublicCollection from "@/pages/PublicCollection";
 
 // Pages
 import Index from "./pages/Index";
@@ -63,11 +64,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     return <OnboardingWizard />;
   }
 
-  return (
-    <GamificationManager>
-      {children}
-    </GamificationManager>
-  );
+  return <GamificationManager>{children}</GamificationManager>;
 }
 
 // Animated routes wrapper
@@ -77,6 +74,7 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait" initial={false}>
       <Routes location={location} key={location.pathname}>
+        <Route path="/c/:shareCode" element={<PublicCollection />} />
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
