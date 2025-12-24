@@ -3,62 +3,53 @@
 @tailwind utilities;
 
 /* ============================================
-   CINEVAULT 2.0 — ENHANCED DESIGN SYSTEM
-   Glassmorphism + Bento + Smooth Animations
+   CINEVAULT — RADICAL MINIMALIST DESIGN SYSTEM
+   Monochrome • Swiss Design • Gallery Aesthetic
    ============================================ */
 
-@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Bebas+Neue&display=swap");
 
 /* ============================================
-   CSS VARIABLES — DESIGN TOKENS
+   CSS VARIABLES — MONOCHROME TOKENS
    ============================================ */
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 25% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
+    /* Force dark mode only for this aesthetic */
+    --background: 0 0% 2%;
+    --foreground: 0 0% 100%;
+    
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 100%;
+    
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 100%;
 
-    /* Amber/Gold accent - like the "Vault" logo */
-    --primary: 38 92% 50%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary is white for this monochrome theme */
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 2%;
 
-    --secondary: 220 14% 92%;
-    --secondary-foreground: 220 25% 15%;
+    --secondary: 0 0% 8%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 14% 90%;
-    --muted-foreground: 220 10% 40%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 63%;
 
-    --accent: 38 92% 50%;
+    --accent: 0 0% 15%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+    
+    --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 88%;
-    --input: 220 13% 88%;
-    --ring: 38 92% 50%;
-    --radius: 0.75rem;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 100%;
+    --radius: 0.5rem;
 
     /* Glass Tokens */
-    --glass-bg: 0 0% 100% / 0.7;
-    --glass-border: 0 0% 100% / 0.5;
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-
-    /* Aurora Colors */
-    --aurora-1: 38 100% 60%;
-    --aurora-2: 25 100% 55%;
-    --aurora-3: 45 100% 65%;
-
-    /* Gold */
-    --gold: 45 93% 47%;
-
-    /* Video Club colors */
-    --videoclub-cyan: 187 89% 48%;
-    --videoclub-magenta: 280 100% 70%;
-    --videoclub-gold: 45 93% 47%;
+    --glass-bg: 0 0% 0% / 0.5;
+    --glass-border: 0 0% 100% / 0.1;
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
 
     /* Transition timing */
     --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
@@ -66,42 +57,34 @@
   }
 
   .dark {
-    /* VIDEO CLUB NÉO-RÉTRO THEME */
-    --background: 240 10% 4%;
-    --foreground: 0 0% 95%;
-    --card: 240 10% 8%;
-    --card-foreground: 0 0% 95%;
-    --popover: 240 10% 8%;
-    --popover-foreground: 0 0% 95%;
+    /* Same as root - always dark */
+    --background: 0 0% 2%;
+    --foreground: 0 0% 100%;
+    
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 100%;
+    
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 100%;
 
-    /* Cyan accent - Néon */
-    --primary: 187 89% 48%;
-    --primary-foreground: 240 10% 4%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 2%;
 
-    --secondary: 240 10% 14%;
-    --secondary-foreground: 0 0% 90%;
+    --secondary: 0 0% 8%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 10% 18%;
-    --muted-foreground: 240 5% 55%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 63%;
 
-    --accent: 280 100% 70%;
-    --accent-foreground: 240 10% 4%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 100%;
+    
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 10% 20%;
-    --input: 240 10% 20%;
-    --ring: 187 89% 48%;
-
-    /* Glass - darker */
-    --glass-bg: 240 10% 4% / 0.8;
-    --glass-border: 0 0% 100% / 0.1;
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-
-    /* Aurora - darker */
-    --aurora-1: 187 100% 50%;
-    --aurora-2: 280 100% 60%;
-    --aurora-3: 45 100% 50%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 100%;
   }
 }
 
@@ -117,11 +100,13 @@
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+    background-color: #050505;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    background-color: #050505;
   }
 
   /* Prevent overscroll bounce on iOS */
@@ -129,14 +114,33 @@
     overscroll-behavior-y: none;
   }
 
-  /* Selection color */
+  /* Selection color - subtle */
   ::selection {
-    @apply bg-primary/30 text-foreground;
+    @apply bg-white/20 text-foreground;
   }
 
   /* Focus visible - accessibility */
   :focus-visible {
-    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+    @apply outline-none ring-1 ring-white/30 ring-offset-1 ring-offset-background;
+  }
+
+  /* Scrollbar - minimal */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -145,52 +149,51 @@
    ============================================ */
 
 @layer components {
-  /* Glass effect */
+  /* Glass effect - heavy glassmorphism */
   .glass {
-    background: hsl(var(--glass-bg));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid hsl(var(--glass-border));
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  /* Gradient text */
-  .text-gradient {
-    @apply bg-clip-text text-transparent;
-    @apply bg-gradient-to-r from-primary to-accent;
+  .glass-heavy {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
-  .text-gradient-gold {
-    @apply bg-clip-text text-transparent;
-    @apply bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500;
+  /* Minimal button styles */
+  .btn-minimal {
+    @apply px-6 py-3 text-sm font-medium tracking-wide uppercase;
+    @apply border border-white/20 bg-transparent text-white;
+    @apply transition-all duration-300;
+    @apply hover:bg-white hover:text-black;
+    @apply active:scale-[0.98];
   }
 
-  /* Glow effects */
-  .glow-primary {
-    box-shadow: 0 0 20px -5px hsl(var(--primary) / 0.4);
+  .btn-minimal-filled {
+    @apply px-6 py-3 text-sm font-medium tracking-wide uppercase;
+    @apply border border-white bg-white text-black;
+    @apply transition-all duration-300;
+    @apply hover:bg-transparent hover:text-white;
+    @apply active:scale-[0.98];
   }
 
-  .glow-gold {
-    box-shadow: 0 0 20px -5px hsl(var(--gold) / 0.4);
+  /* Input minimal - bottom border only */
+  .input-minimal {
+    @apply w-full bg-transparent border-0 border-b border-white/20;
+    @apply py-3 px-0 text-white placeholder:text-white/40;
+    @apply focus:outline-none focus:border-white/50;
+    @apply transition-colors duration-300;
   }
 
-  /* Card hover effect */
-  .card-hover {
-    @apply transition-all duration-300 ease-out;
-    @apply hover:shadow-lg hover:-translate-y-1;
-    @apply hover:border-primary/30;
-  }
-
-  /* Movie card specific hover */
-  .movie-card-hover {
-    @apply transition-all duration-300 ease-out;
-    @apply hover:shadow-xl hover:shadow-primary/10;
-    @apply hover:scale-[1.02];
-  }
-
-  /* Button press effect */
-  .btn-press {
-    @apply transition-transform duration-150 ease-out;
-    @apply active:scale-95;
+  /* Card minimal */
+  .card-minimal {
+    @apply border border-white/[0.08] bg-white/[0.02];
+    @apply transition-all duration-500;
+    @apply hover:border-white/20;
   }
 
   /* Scrollbar hide */
@@ -205,11 +208,17 @@
 
   /* Safe area padding for iOS */
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-bottom: max(env(safe-area-inset-bottom, 0), 1rem);
   }
 
   .pt-safe {
     padding-top: env(safe-area-inset-top, 0);
+  }
+
+  /* Movie poster overlay for mobile */
+  .poster-overlay {
+    @apply absolute inset-x-0 bottom-0 px-2 pb-2 pt-8;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, transparent 100%);
   }
 }
 
@@ -229,12 +238,12 @@
   }
 
   .animate-shimmer {
-    animation: shimmer 1.5s ease-in-out infinite;
+    animation: shimmer 2s ease-in-out infinite;
   }
 
   /* Skeleton with shimmer */
   .skeleton {
-    @apply relative overflow-hidden bg-muted;
+    @apply relative overflow-hidden bg-white/5;
   }
 
   .skeleton::after {
@@ -243,40 +252,10 @@
     background: linear-gradient(
       90deg,
       transparent,
-      hsl(var(--foreground) / 0.05),
+      rgba(255, 255, 255, 0.03),
       transparent
     );
-    animation: shimmer 1.5s ease-in-out infinite;
-  }
-
-  /* Pulse glow - for FAB */
-  @keyframes pulse-glow {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
-    }
-    50% {
-      box-shadow: 0 0 20px 8px hsl(var(--primary) / 0.2);
-    }
-  }
-
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-
-  /* Float animation */
-  @keyframes float {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-8px);
-    }
-  }
-
-  .animate-float {
-    animation: float 4s ease-in-out infinite;
+    animation: shimmer 2s ease-in-out infinite;
   }
 
   /* Fade in */
@@ -290,14 +269,14 @@
   }
 
   .animate-fade-in {
-    animation: fade-in 0.3s ease-out forwards;
+    animation: fade-in 0.4s ease-out forwards;
   }
 
   /* Fade in up */
   @keyframes fade-in-up {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(16px);
     }
     to {
       opacity: 1;
@@ -313,7 +292,7 @@
   @keyframes scale-in {
     from {
       opacity: 0;
-      transform: scale(0.95);
+      transform: scale(0.96);
     }
     to {
       opacity: 1;
@@ -325,40 +304,20 @@
     animation: scale-in 0.3s ease-out forwards;
   }
 
-  /* Spin slow */
-  .animate-spin-slow {
-    animation: spin 3s linear infinite;
-  }
-
-  /* Bounce subtle */
-  @keyframes bounce-subtle {
-    0%,
-    100% {
+  /* Slide up */
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
       transform: translateY(0);
     }
-    50% {
-      transform: translateY(-4px);
-    }
   }
 
-  .animate-bounce-subtle {
-    animation: bounce-subtle 1s ease-in-out infinite;
-  }
-
-  /* Confetti */
-  @keyframes confetti {
-    0% {
-      transform: translateY(0) rotate(0deg);
-      opacity: 1;
-    }
-    100% {
-      transform: translateY(-100px) rotate(720deg);
-      opacity: 0;
-    }
-  }
-
-  .animate-confetti {
-    animation: confetti 1s ease-out forwards;
+  .animate-slide-up {
+    animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 }
 
@@ -402,20 +361,11 @@
 }
 
 /* ============================================
-   FRAMER MOTION HELPERS
-   ============================================ */
-
-/* Prevent flash on initial load */
-[data-framer-motion-layout-wrapper] {
-  will-change: transform;
-}
-
-/* ============================================
    MOBILE-SPECIFIC OVERRIDES
    ============================================ */
 
 @media (max-width: 768px) {
-  /* Larger touch targets */
+  /* Larger touch targets - 44px minimum */
   button,
   a,
   [role="button"] {
@@ -430,11 +380,14 @@
 }
 
 /* ============================================
-   PRINT STYLES
+   TYPOGRAPHY UTILITIES
    ============================================ */
 
-@media print {
-  .no-print {
-    display: none !important;
-  }
+.text-display {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.text-body {
+  font-family: 'Inter', sans-serif;
 }
