@@ -76,8 +76,6 @@ function BadgeCard({ badge }: { badge: Badge }) {
   const IconComponent = ICON_MAP[badge.icon_name] || Trophy;
 
   return (
-     <div className="min-h-screen bg-background pb-24 md:pb-8">
-      <MinimalHeader />
     <div
       className={cn(
         "aspect-square p-4 flex flex-col items-center justify-center text-center transition-all",
@@ -85,7 +83,10 @@ function BadgeCard({ badge }: { badge: Badge }) {
       )}
     >
       <div
-        className={cn("w-10 h-10 flex items-center justify-center mb-3", isLocked ? "text-muted-foreground/30" : "")}
+        className={cn(
+          "w-10 h-10 flex items-center justify-center mb-3",
+          isLocked ? "text-muted-foreground/30" : "",
+        )}
         style={{ color: isLocked ? undefined : rarityConfig.color }}
       >
         {isLocked ? <Lock className="w-5 h-5" /> : <IconComponent className="w-6 h-6" />}
