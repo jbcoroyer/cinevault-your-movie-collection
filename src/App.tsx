@@ -1,10 +1,7 @@
 /**
- * CineVault - App.tsx AMÉLIORÉ
- *
- * INTÉGRATIONS:
- * - XPToastProvider pour les notifications de gain XP
- * - GamificationManager pour les bonus quotidiens
- * - Transitions de page fluides
+ * CineVault — Radical Minimalist App
+ * 
+ * Force dark mode, minimal UI
  */
 
 import { Toaster } from "@/components/ui/toaster";
@@ -15,12 +12,11 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { BadgeNotificationProvider } from "./contexts/BadgeNotificationContext";
-import { ThemeProvider } from "./components/ThemeProvider";
-import { MobileHeader } from "./components/MobileHeader";
 import OnboardingWizard from "./components/OnboardingWizard";
 import { GamificationManager } from "./components/gamification/GamificationManager";
 import { XPToastProvider } from "./components/gamification/XPToast";
 import PublicCollection from "@/pages/PublicCollection";
+import { useEffect } from "react";
 
 // Pages
 import Index from "./pages/Index";
@@ -44,20 +40,29 @@ import Marketplace from "./pages/Marketplace";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 5,
       retry: 1,
     },
   },
 });
 
-// Layout component with conditional mobile header
+// Force dark mode
+function DarkModeEnforcer({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+    document.documentElement.style.colorScheme = 'dark';
+  }, []);
+  
+  return <>{children}</>;
+}
+
+// Layout component
 function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
   const isAuthPage = location.pathname === "/auth" || location.pathname === "/forgot-password";
 
-  // Show onboarding for new users
   const showOnboarding = user && !loading && !localStorage.getItem(`onboarding_complete_${user.id}`);
 
   if (showOnboarding && !isAuthPage) {
@@ -100,16 +105,15 @@ function AnimatedRoutes() {
 // Main App component
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+    <DarkModeEnforcer>
       <TooltipProvider delayDuration={300}>
         <Toaster />
-        <Sonner position="top-center" />
+        <Sonner position="top-center" theme="dark" />
         <BrowserRouter>
           <AuthProvider>
             <BadgeNotificationProvider>
               <XPToastProvider>
                 <AppLayout>
-                  <MobileHeader />
                   <AnimatedRoutes />
                 </AppLayout>
               </XPToastProvider>
@@ -117,7 +121,7 @@ const App = () => (
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
-    </ThemeProvider>
+    </DarkModeEnforcer>
   </QueryClientProvider>
 );
 
