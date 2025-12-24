@@ -76,6 +76,25 @@ function BadgeCard({ badge }: { badge: Badge }) {
   const IconComponent = ICON_MAP[badge.icon_name] || Trophy;
 
   return (
+      <div className="min-h-screen bg-background pb-24 md:pb-8">
+      <MinimalHeader />
+
+      <main className="pt-4 md:pt-24">
+        {/* Header Section */}
+        <section className="px-4 md:px-12 py-4 md:py-8">
+          {/* Title Row */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="font-display text-display-sm md:text-display-md text-white">BADGES</h1>
+              <p className="text-white/40 text-sm mt-1">
+                {movies.length} {movies.length === 1 ? "film" : "films"}
+                {valuation && valuation.totalValueMedian > 0 && (
+                  <span className="ml-2 text-green-400">
+                    • {(valuation.totalValueMedian / 100).toLocaleString("fr-FR")} €
+                  </span>
+                )}
+              </p>
+            </div>
     <div
       className={cn(
         "aspect-square p-4 flex flex-col items-center justify-center text-center transition-all",
