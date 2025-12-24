@@ -77,11 +77,6 @@ function BadgeCard({ badge }: { badge: Badge }) {
   const IconComponent = ICON_MAP[badge.icon_name] || Trophy;
 
   return (
-     <div 
-       className="min-h-screen bg-background pb-24 md:pb-8">
-    <MinimalHeader />
-    
-    <main className="pt-20 md:pt-24 px-4 md:px-12">
     <div
       className={cn(
         "aspect-square p-4 flex flex-col items-center justify-center text-center transition-all",
@@ -110,10 +105,7 @@ function BadgeCard({ badge }: { badge: Badge }) {
       <div className="mt-2">
         {isLocked ? (
           <div className="w-8 h-0.5 bg-border rounded-full overflow-hidden">
-            <div
-              className="h-full bg-muted-foreground/30 rounded-full"
-              style={{ width: `${badge.progress || 0}%` }}
-            />
+            <div className="h-full bg-muted-foreground/30 rounded-full" style={{ width: `${badge.progress || 0}%` }} />
           </div>
         ) : (
           <span className="text-[10px] uppercase tracking-wider" style={{ color: rarityConfig.color }}>
@@ -121,12 +113,6 @@ function BadgeCard({ badge }: { badge: Badge }) {
           </span>
         )}
       </div>
-      </main>
-      
-      <FloatingDock />
-    </div>
-  );
-}
     </div>
   );
 }
@@ -165,13 +151,37 @@ export default function Badges() {
 
   if (authLoading) {
     return (
-      return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
-      <MinimalHeader />
-      {/* ... contenu loading ... */}
-      <FloatingDock />
-    </div>
-  );
+      <div className="min-h-screen bg-background pb-24 md:pb-8">
+        <header>
+          <MinimalHeader />
+        </header>
+        <main className="pt-20 md:pt-24 px-4 md:px-12">
+          <div className="max-w-6xl mx-auto">
+            <div className="h-10 w-40 bg-card animate-pulse mb-8" />
+
+            <div className="grid grid-cols-2 gap-px bg-border mb-12">
+              <div className="bg-background p-6">
+                <div className="h-4 w-20 bg-card animate-pulse mb-4" />
+                <div className="h-8 w-16 bg-card animate-pulse mb-2" />
+                <div className="h-1 w-full bg-card" />
+              </div>
+              <div className="bg-background p-6">
+                <div className="h-4 w-20 bg-card animate-pulse mb-4" />
+                <div className="h-8 w-24 bg-card animate-pulse mb-2" />
+                <div className="h-1 w-full bg-card" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-px bg-border">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="aspect-square bg-card animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </main>
+        <FloatingDock />
+      </div>
+    );
   }
 
   if (!user) {
