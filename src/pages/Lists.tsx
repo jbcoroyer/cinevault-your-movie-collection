@@ -95,7 +95,11 @@ export default function Lists() {
     const newList = await createList(title, description, isPublic);
     if (newList && moviesList.length > 0) {
       for (const movie of moviesList) {
-        await addMovieToList(newList.id, movie.tmdb_id);
+        await addMovieToList(newList.id, {
+          tmdb_id: movie.tmdb_id,
+          title: movie.title,
+          poster_path: movie.poster_path || '',
+        });
       }
     }
     setIsCreateOpen(false);
