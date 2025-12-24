@@ -1,14 +1,13 @@
 /**
- * CineVault - Collection Page AMÉLIORÉE
+ * CineVault - Collection Page REFAITE
  * 
- * AMÉLIORATIONS INTÉGRÉES:
- * - FAB (Floating Action Button) pour l'ajout
- * - Bottom Sheet au lieu de Dialog sur mobile
- * - Pull-to-refresh
- * - Skeleton loaders
- * - Page transitions fluides
- * - Tabs animés Collection/Valuation
- * - Sticky filters
+ * AMÉLIORATIONS:
+ * - CTA engageant en haut de page
+ * - Navigation Collection/Valorisation/Wishlist
+ * - Vue "Mur de posters" ajoutée
+ * - Recherche locale dans la collection
+ * - Fix padding mobile pour header
+ * - Dialog d'édition au clic sur un film
  */
 
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -22,25 +21,28 @@ import {
   PhysicalMovie,
   PhysicalFormat,
   deletePhysicalMovie,
+  formatLabels,
 } from "@/services/physicalMovies";
-import { getMovieDetails, MovieDetails, Movie } from "@/services/tmdb";
+import { getMovieDetails, MovieDetails, Movie, getImageUrl } from "@/services/tmdb";
 import { CollectionShowcase } from "@/components/guest/CollectionShowcase";
 import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
+import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
 import { BarcodeScannerDialog } from "@/components/barcode";
 import { useCollectionFilters } from "@/hooks/useCollectionFilters";
 import { ShelfView } from "@/components/collection/ShelfView";
+import { PosterWallView } from "@/components/collection/PosterWallView";
 import { CollectionFiltersDrawer, ActiveFiltersBar } from "@/components/collection/CollectionFilters";
+import { CollectionCTA } from "@/components/collection/CollectionCTA";
+import { CollectionSearch } from "@/components/collection/CollectionSearch";
 
-// NEW IMPORTS - Améliorations
-import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
-import { AddMovieSheet } from "@/components/AddMovieSheet";
-import { AnimatedPage, ListStagger } from "@/components/ui/PageTransition";
+// Valuation & Wishlist imports
+import { ValuationDashboardPremium } from "@/components/collection/ValuationDashboardPremium";
+import { WishlistView } from "@/components/collection/WishlistView";
+import { useCollectionValuation } from "@/hooks/useCollectionValuation";
+
+import { AnimatedPage } from "@/components/ui/PageTransition";
 import { Skeleton } from "@/components/ui/skeleton";
 import { showXPToast } from "@/components/gamification/XPToast";
-
-// Valuation imports
-import { ValuationDashboardPremium } from "@/components/collection/ValuationDashboardPremium";
-import { useCollectionValuation } from "@/hooks/useCollectionValuation";
 
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -50,8 +52,6 @@ import {
   Library,
   ChevronDown,
   Scan,
-  DollarSign,
-  RefreshCw,
   TrendingUp,
   Trash2,
   X,
@@ -59,11 +59,13 @@ import {
   Star,
   Search,
   Grid3X3,
+  LayoutGrid,
+  Heart,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,13 +82,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getImageUrl } from "@/services/tmdb";
 
 // Types
-type SortBy = "title" | "year" | "price" | "genre" | "director" | "added" | "condition" | "market_value";
+type SortBy = "title" | "year" | "price" | "added" | "condition" | "format";
 type SortOrder = "asc" | "desc";
-type ViewMode = "collection" | "valuation";
-type DisplayMode = "shelf" | "grid";
+type ViewMode = "collection" | "valuation" | "wishlist";
+type DisplayMode = "shelf" | "grid" | "poster";
 
 interface ExtendedMovieDetails extends MovieDetails {
   director?: string;
@@ -95,77 +96,165 @@ interface ExtendedMovieDetails extends MovieDetails {
 const sortLabels: Record<SortBy, string> = {
   title: "Titre",
   year: "Année",
-  price: "Prix d'achat",
-  market_value: "Valeur marché",
-  genre: "Genre",
-  director: "Réalisateur",
-  added: "Date d'ajout",
+  price: "Prix",
+  added: "Récent",
   condition: "État",
+  format: "Format",
 };
 
-const formatLabels: Record<PhysicalFormat, { label: string; color: string }> = {
-  dvd: { label: "DVD", color: "bg-blue-500" },
-  bluray: { label: "Blu-ray", color: "bg-indigo-500" },
-  "4k": { label: "4K UHD", color: "bg-purple-500" },
-  steelbook: { label: "Steelbook", color: "bg-amber-500" },
-  collector: { label: "Collector", color: "bg-rose-500" },
+const FORMAT_CONFIG: Record<PhysicalFormat, { label: string; color: string }> = {
+  dvd: { label: "DVD", color: "bg-slate-500" },
+  bluray: { label: "Blu-ray", color: "bg-blue-600" },
+  "4k": { label: "4K UHD", color: "bg-purple-600" },
+  steelbook: { label: "Steelbook", color: "bg-amber-600" },
+  collector: { label: "Collector", color: "bg-red-600" },
 };
 
 // ============================================
-// Sub-components
+// Navigation Tabs Component
 // ============================================
+const NavigationTabs = ({
+  viewMode,
+  onViewModeChange,
+  collectionCount,
+  wishlistCount,
+}: {
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
+  collectionCount: number;
+  wishlistCount: number;
+}) => {
+  const tabs = [
+    { id: "collection" as ViewMode, label: "Collection", icon: Library, count: collectionCount },
+    { id: "valuation" as ViewMode, label: "Valorisation", icon: TrendingUp },
+    { id: "wishlist" as ViewMode, label: "Wishlist", icon: Heart, count: wishlistCount },
+  ];
 
-/**
- * Collection Movie Card with animations
- */
-const CollectionMovieCard = ({
+  return (
+    <div className="flex gap-1 p-1 bg-muted/50 rounded-xl backdrop-blur-sm">
+      {tabs.map((tab) => {
+        const isActive = viewMode === tab.id;
+        const Icon = tab.icon;
+        
+        return (
+          <motion.button
+            key={tab.id}
+            onClick={() => onViewModeChange(tab.id)}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all",
+              isActive 
+                ? "bg-background text-foreground shadow-sm" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Icon className="w-4 h-4" />
+            <span className="hidden sm:inline">{tab.label}</span>
+            {tab.count !== undefined && tab.count > 0 && (
+              <Badge 
+                variant="secondary" 
+                className={cn(
+                  "text-xs px-1.5 py-0",
+                  isActive ? "bg-primary/10 text-primary" : "bg-muted"
+                )}
+              >
+                {tab.count}
+              </Badge>
+            )}
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+};
+
+// ============================================
+// Display Mode Switcher
+// ============================================
+const DisplayModeSwitcher = ({
+  displayMode,
+  onDisplayModeChange,
+}: {
+  displayMode: DisplayMode;
+  onDisplayModeChange: (mode: DisplayMode) => void;
+}) => {
+  const modes = [
+    { id: "shelf" as DisplayMode, icon: Library, label: "Étagère" },
+    { id: "grid" as DisplayMode, icon: Grid3X3, label: "Grille" },
+    { id: "poster" as DisplayMode, icon: LayoutGrid, label: "Posters" },
+  ];
+
+  return (
+    <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
+      {modes.map(({ id, icon: Icon, label }) => (
+        <button
+          key={id}
+          onClick={() => onDisplayModeChange(id)}
+          className={cn(
+            "p-1.5 rounded-md transition-colors flex items-center gap-1.5",
+            displayMode === id 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+          title={label}
+        >
+          <Icon className="w-4 h-4" />
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// ============================================
+// Movie Grid Card
+// ============================================
+const MovieGridCard = ({
   movie,
   details,
   isSelected,
   selectionMode,
-  onSelect,
+  onToggleSelect,
   onEdit,
-  onClick,
 }: {
   movie: PhysicalMovie;
-  details?: ExtendedMovieDetails;
+  details: ExtendedMovieDetails | null;
   isSelected: boolean;
   selectionMode: boolean;
-  onSelect: () => void;
+  onToggleSelect: () => void;
   onEdit: () => void;
-  onClick: () => void;
 }) => {
-  const posterUrl = details?.poster_path 
-    ? getImageUrl(details.poster_path, "w342") 
-    : null;
+  const formatConfig = FORMAT_CONFIG[movie.format] || FORMAT_CONFIG.dvd;
+  const posterUrl = details?.poster_path ? getImageUrl(details.poster_path, "w342") : null;
 
-  const formatConfig = formatLabels[movie.format];
+  const handleClick = () => {
+    if (selectionMode) {
+      onToggleSelect();
+    } else {
+      onEdit();
+    }
+  };
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ y: -4 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={selectionMode ? onSelect : onClick}
+      exit={{ opacity: 0, scale: 0.9 }}
       className={cn(
-        "group relative bg-card rounded-xl overflow-hidden",
-        "border border-border/50 transition-all duration-300",
-        "hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/10",
-        isSelected && "ring-2 ring-amber-500 border-amber-500",
-        "cursor-pointer"
+        "group relative rounded-xl overflow-hidden cursor-pointer",
+        "bg-card border border-border/50",
+        "hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5",
+        "transition-all duration-300",
+        isSelected && "ring-2 ring-primary"
       )}
+      onClick={handleClick}
     >
       {/* Selection checkbox */}
       {selectionMode && (
         <div className={cn(
-          "absolute top-2 left-2 z-10 w-6 h-6 rounded-full",
-          "flex items-center justify-center",
-          "transition-all duration-200",
+          "absolute top-2 left-2 z-20 w-6 h-6 rounded-full flex items-center justify-center",
           isSelected 
-            ? "bg-amber-500 text-white" 
+            ? "bg-primary text-primary-foreground" 
             : "bg-background/80 border border-border"
         )}>
           {isSelected && <span className="text-xs font-bold">✓</span>}
@@ -237,9 +326,9 @@ const CollectionMovieCard = ({
   );
 };
 
-/**
- * Empty State Component
- */
+// ============================================
+// Empty State Component
+// ============================================
 const EmptyCollection = ({ onAddMovie }: { onAddMovie: () => void }) => {
   return (
     <motion.div
@@ -247,7 +336,7 @@ const EmptyCollection = ({ onAddMovie }: { onAddMovie: () => void }) => {
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-16 px-4 text-center"
     >
-      <div className="w-20 h-20 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6">
+      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center mb-6">
         <Library className="w-10 h-10 text-amber-500" />
       </div>
       <h3 className="text-xl font-display font-bold mb-2">
@@ -258,52 +347,65 @@ const EmptyCollection = ({ onAddMovie }: { onAddMovie: () => void }) => {
       </p>
       <Button
         onClick={onAddMovie}
-        className="bg-amber-500 hover:bg-amber-600 text-white gap-2"
+        size="lg"
+        className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white gap-2"
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-5 h-5" />
         Ajouter mon premier film
       </Button>
     </motion.div>
   );
 };
 
-/**
- * Sticky Filter Bar
- */
+// ============================================
+// Sticky Filter Bar
+// ============================================
 const StickyFilterBar = ({
   sortBy,
   onSortChange,
   displayMode,
   onDisplayModeChange,
+  searchQuery,
+  onSearchChange,
   filterProps,
 }: {
   sortBy: SortBy;
   onSortChange: (sort: SortBy) => void;
   displayMode: DisplayMode;
   onDisplayModeChange: (mode: DisplayMode) => void;
-  filterProps: {
-    filters: ReturnType<typeof useCollectionFilters>["filters"];
-    filterOptions: ReturnType<typeof useCollectionFilters>["filterOptions"];
-    toggleFormat: ReturnType<typeof useCollectionFilters>["toggleFormat"];
-    toggleCondition: ReturnType<typeof useCollectionFilters>["toggleCondition"];
-    toggleGenre: ReturnType<typeof useCollectionFilters>["toggleGenre"];
-    toggleDecade: ReturnType<typeof useCollectionFilters>["toggleDecade"];
-    toggleDirector: ReturnType<typeof useCollectionFilters>["toggleDirector"];
-    setPriceRange: ReturnType<typeof useCollectionFilters>["setPriceRange"];
-    resetFilters: ReturnType<typeof useCollectionFilters>["resetFilters"];
-    hasActiveFilters: ReturnType<typeof useCollectionFilters>["hasActiveFilters"];
-    activeFilterCount: ReturnType<typeof useCollectionFilters>["activeFilterCount"];
-  };
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  filterProps: any;
 }) => {
   return (
     <motion.div
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       className={cn(
-        "sticky top-14 md:top-0 z-30 py-3 -mx-4 px-4",
+        "sticky top-16 md:top-0 z-30 py-3 -mx-4 px-4",
         "bg-background/80 backdrop-blur-xl border-b border-border/50"
       )}
     >
+      {/* Search bar */}
+      <div className="relative mb-3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Rechercher dans ma collection..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="pl-10 bg-muted/50 border-0"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => onSearchChange("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
       <div className="flex items-center justify-between gap-2">
         {/* Filter drawer */}
         <CollectionFiltersDrawer {...filterProps} />
@@ -330,28 +432,11 @@ const StickyFilterBar = ({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Display mode toggle - Shelf & Grid only */}
-        <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
-          {[
-            { mode: "shelf" as DisplayMode, icon: Library, label: "Étagère" },
-            { mode: "grid" as DisplayMode, icon: Grid3X3, label: "Grille" },
-          ].map(({ mode, icon: Icon, label }) => (
-            <button
-              key={mode}
-              onClick={() => onDisplayModeChange(mode)}
-              className={cn(
-                "p-1.5 rounded-md transition-colors flex items-center gap-1.5",
-                displayMode === mode 
-                  ? "bg-background text-foreground shadow-sm" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-              title={label}
-            >
-              <Icon className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs">{label}</span>
-            </button>
-          ))}
-        </div>
+        {/* Display mode toggle */}
+        <DisplayModeSwitcher
+          displayMode={displayMode}
+          onDisplayModeChange={onDisplayModeChange}
+        />
       </div>
 
       {/* Active filters bar */}
@@ -367,7 +452,6 @@ const StickyFilterBar = ({
 // ============================================
 // Main Component
 // ============================================
-
 export default function Collection() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -382,8 +466,11 @@ export default function Collection() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Sheet/Dialog states
-  const [addSheetOpen, setAddSheetOpen] = useState(false);
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Dialog states
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
 
   // Edit dialog state
@@ -400,6 +487,9 @@ export default function Collection() {
   // Sort state
   const [sortBy, setSortBy] = useState<SortBy>("added");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+
+  // Wishlist count (mock for now)
+  const [wishlistCount, setWishlistCount] = useState(0);
 
   // Use collection filters hook
   const {
@@ -468,13 +558,6 @@ export default function Collection() {
     }
   }, [user, authLoading, fetchPhysicalMovies]);
 
-  // Pull to refresh
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await fetchPhysicalMovies();
-    showXPToast(5, "Collection actualisée", "bonus");
-  };
-
   // Handle movie added
   const handleMovieAdded = () => {
     fetchPhysicalMovies();
@@ -530,9 +613,26 @@ export default function Collection() {
     setIsDeleting(false);
   };
 
+  // Filter by search query
+  const searchFilteredMovies = useMemo(() => {
+    if (!searchQuery.trim()) return filteredMovies;
+    
+    const query = searchQuery.toLowerCase();
+    return filteredMovies.filter(movie => {
+      const details = physicalMovieDetails[movie.tmdb_id];
+      if (!details) return false;
+      
+      return (
+        details.title?.toLowerCase().includes(query) ||
+        details.original_title?.toLowerCase().includes(query) ||
+        movie.format.toLowerCase().includes(query)
+      );
+    });
+  }, [filteredMovies, physicalMovieDetails, searchQuery]);
+
   // Sort filtered movies
   const sortedMovies = useMemo(() => {
-    const sorted = [...filteredMovies].sort((a, b) => {
+    const sorted = [...searchFilteredMovies].sort((a, b) => {
       const detailsA = physicalMovieDetails[a.tmdb_id];
       const detailsB = physicalMovieDetails[b.tmdb_id];
 
@@ -550,13 +650,16 @@ export default function Collection() {
         case "price":
           comparison = (a.price || 0) - (b.price || 0);
           break;
+        case "format":
+          comparison = a.format.localeCompare(b.format);
+          break;
         default:
           comparison = 0;
       }
       return sortOrder === "asc" ? comparison : -comparison;
     });
     return sorted;
-  }, [filteredMovies, physicalMovieDetails, sortBy, sortOrder]);
+  }, [searchFilteredMovies, physicalMovieDetails, sortBy, sortOrder]);
 
   // Show guest view if not logged in
   if (!authLoading && !user) {
@@ -567,67 +670,73 @@ export default function Collection() {
     <AnimatedPage className="min-h-screen bg-background pb-24">
       <Header />
 
-      <main className="container mx-auto px-4 pt-4">
-        {/* Page Title */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-4"
-        >
-          <div>
-            <h1 className="text-2xl font-display font-bold">Ma Collection</h1>
-            <p className="text-sm text-muted-foreground">
-              {physicalMovies.length} film{physicalMovies.length !== 1 ? 's' : ''} • {" "}
-              {Object.keys(formatLabels).map(format => {
-                const count = physicalMovies.filter(m => m.format === format).length;
-                return count > 0 ? `${count} ${formatLabels[format as PhysicalFormat].label}` : null;
-              }).filter(Boolean).join(", ")}
-            </p>
-          </div>
+      {/* Main content with mobile padding fix */}
+      <main className="container mx-auto px-4 pt-20 md:pt-4">
+        
+        {/* CTA Section - Always visible at top */}
+        <CollectionCTA
+          onAddToCollection={() => setAddDialogOpen(true)}
+          onScanBarcode={() => setScannerOpen(true)}
+          totalMovies={physicalMovies.length}
+        />
 
-          {/* Selection mode toggle */}
-          {physicalMovies.length > 0 && (
-            <Button
-              variant={selectionMode ? "default" : "outline"}
-              size="sm"
-              onClick={() => {
-                setSelectionMode(!selectionMode);
-                setSelectedIds(new Set());
-              }}
-            >
-              {selectionMode ? (
-                <>
-                  <X className="w-4 h-4 mr-1" />
-                  Annuler
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Sélectionner
-                </>
-              )}
-            </Button>
-          )}
-        </motion.div>
+        {/* Stats summary */}
+        {physicalMovies.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between mb-4 mt-6"
+          >
+            <div>
+              <h1 className="text-2xl font-display font-bold">Ma Collection</h1>
+              <p className="text-sm text-muted-foreground">
+                {physicalMovies.length} film{physicalMovies.length !== 1 ? 's' : ''} • {" "}
+                {Object.entries(FORMAT_CONFIG).map(([format, config]) => {
+                  const count = physicalMovies.filter(m => m.format === format).length;
+                  return count > 0 ? `${count} ${config.label}` : null;
+                }).filter(Boolean).join(", ")}
+              </p>
+            </div>
 
-        {/* View Mode Tabs */}
+            {/* Selection mode toggle */}
+            {physicalMovies.length > 0 && (
+              <Button
+                variant={selectionMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setSelectionMode(!selectionMode);
+                  setSelectedIds(new Set());
+                }}
+              >
+                {selectionMode ? (
+                  <>
+                    <X className="w-4 h-4 mr-1" />
+                    Annuler
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Sélectionner
+                  </>
+                )}
+              </Button>
+            )}
+          </motion.div>
+        )}
+
+        {/* Navigation Tabs */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
+          className="mb-4"
         >
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-            <TabsList className="w-full max-w-sm mb-4">
-              <TabsTrigger value="collection" className="flex-1 gap-2">
-                <Library className="w-4 h-4" />
-                Collection
-              </TabsTrigger>
-              <TabsTrigger value="valuation" className="flex-1 gap-2">
-                <TrendingUp className="w-4 h-4" />
-                Valorisation
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <NavigationTabs
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            collectionCount={physicalMovies.length}
+            wishlistCount={wishlistCount}
+          />
         </motion.div>
 
         {/* Content based on view mode */}
@@ -649,7 +758,7 @@ export default function Collection() {
                   </div>
                 </div>
               ) : physicalMovies.length === 0 ? (
-                <EmptyCollection onAddMovie={() => setAddSheetOpen(true)} />
+                <EmptyCollection onAddMovie={() => setAddDialogOpen(true)} />
               ) : (
                 <>
                   {/* Sticky Filter Bar */}
@@ -658,6 +767,8 @@ export default function Collection() {
                     onSortChange={setSortBy}
                     displayMode={displayMode}
                     onDisplayModeChange={setDisplayMode}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
                     filterProps={{
                       filters,
                       filterOptions,
@@ -696,35 +807,42 @@ export default function Collection() {
                     </motion.div>
                   )}
 
-                  {/* Movies Display - Shelf or Grid */}
+                  {/* Search results info */}
+                  {searchQuery && (
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {sortedMovies.length} résultat{sortedMovies.length !== 1 ? 's' : ''} pour "{searchQuery}"
+                    </p>
+                  )}
+
+                  {/* Movies Display */}
                   <div className="mt-4">
                     {displayMode === "shelf" ? (
                       <ShelfView
                         movies={sortedMovies}
-                        movieDetailsMap={physicalMovieDetails}
-                        onMovieClick={(pm, details) => {
-                          if (selectionMode) {
-                            toggleSelection(pm.id);
-                          } else {
-                            navigate(`/movie/${pm.tmdb_id}`);
-                          }
-                        }}
+                        movieDetails={physicalMovieDetails}
+                        onMovieClick={handleEditMovie}
                         selectionMode={selectionMode}
                         selectedIds={selectedIds}
+                        onToggleSelect={toggleSelection}
+                      />
+                    ) : displayMode === "poster" ? (
+                      <PosterWallView
+                        movies={sortedMovies}
+                        movieDetails={physicalMovieDetails}
+                        onMovieClick={handleEditMovie}
                       />
                     ) : (
-                      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         <AnimatePresence>
                           {sortedMovies.map((movie) => (
-                            <CollectionMovieCard
+                            <MovieGridCard
                               key={movie.id}
                               movie={movie}
-                              details={physicalMovieDetails[movie.tmdb_id]}
+                              details={physicalMovieDetails[movie.tmdb_id] || null}
                               isSelected={selectedIds.has(movie.id)}
                               selectionMode={selectionMode}
-                              onSelect={() => toggleSelection(movie.id)}
+                              onToggleSelect={() => toggleSelection(movie.id)}
                               onEdit={() => handleEditMovie(movie)}
-                              onClick={() => navigate(`/movie/${movie.tmdb_id}`)}
                             />
                           ))}
                         </AnimatePresence>
@@ -734,7 +852,7 @@ export default function Collection() {
                 </>
               )}
             </motion.div>
-          ) : (
+          ) : viewMode === "valuation" ? (
             <motion.div
               key="valuation"
               initial={{ opacity: 0, x: 20 }}
@@ -742,13 +860,9 @@ export default function Collection() {
               exit={{ opacity: 0, x: -20 }}
             >
               <ValuationDashboardPremium
-                valuation={valuationData}
-                movies={physicalMovies.map(m => ({
-                  tmdbId: m.tmdb_id,
-                  title: physicalMovieDetails[m.tmdb_id]?.title || `Film #${m.tmdb_id}`,
-                  format: m.format,
-                  posterPath: physicalMovieDetails[m.tmdb_id]?.poster_path,
-                  purchasePrice: m.price ? m.price * 100 : undefined,
+                movies={sortedMovies.map(m => ({
+                  ...m,
+                  priceCents: m.price ? m.price * 100 : undefined,
                   releaseYear: physicalMovieDetails[m.tmdb_id]?.release_date 
                     ? new Date(physicalMovieDetails[m.tmdb_id].release_date!).getFullYear()
                     : undefined,
@@ -758,34 +872,23 @@ export default function Collection() {
                 onRefresh={refreshValuation}
               />
             </motion.div>
+          ) : (
+            <motion.div
+              key="wishlist"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <WishlistView onCountChange={setWishlistCount} />
+            </motion.div>
           )}
         </AnimatePresence>
       </main>
 
-      {/* FAB - Only show when not in selection mode */}
-      {!selectionMode && viewMode === "collection" && (
-        <FloatingActionButton
-          actions={[
-            {
-              icon: Search,
-              label: "Rechercher un film",
-              onClick: () => setAddSheetOpen(true),
-              color: "bg-blue-500/20",
-            },
-            {
-              icon: Scan,
-              label: "Scanner un code-barres",
-              onClick: () => setScannerOpen(true),
-              color: "bg-green-500/20",
-            },
-          ]}
-        />
-      )}
-
-      {/* Add Movie Bottom Sheet */}
-      <AddMovieSheet
-        isOpen={addSheetOpen}
-        onClose={() => setAddSheetOpen(false)}
+      {/* Add Movie Dialog */}
+      <AddPhysicalMovieDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
         onMovieAdded={handleMovieAdded}
       />
 
