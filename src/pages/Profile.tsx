@@ -1,5 +1,11 @@
 /**
  * CineVault - Profile Page - Radical Minimalist Design
+ *
+ * Page de profil utilisateur avec:
+ * - MinimalHeader + FloatingDock (navigation cohérente)
+ * - Support profil propre ET profil d'autres utilisateurs
+ * - Edition inline
+ * - Stats et Top 5
  */
 
 import { useState, useEffect } from "react";
@@ -10,11 +16,13 @@ import { useUserMovies } from "@/hooks/useUserMovies";
 import { useUserTopMovies } from "@/hooks/useUserTopMovies";
 import { useFollows } from "@/hooks/useFollows";
 import { supabase } from "@/integrations/supabase/client";
+import { MinimalHeader } from "@/components/MinimalHeader";
+import { FloatingDock } from "@/components/FloatingDock";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Edit2, Check, UserPlus, UserMinus, Eye, Heart, Disc, Trophy, Settings, X } from "lucide-react";
+import { Edit2, Check, UserPlus, UserMinus, Eye, Heart, Disc, Trophy, Settings, X, ArrowLeft } from "lucide-react";
 import { Top5Section } from "@/components/Top5Section";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { FollowListDialog } from "@/components/FollowListDialog";
@@ -58,78 +66,69 @@ export default function Profile() {
   const [followersOpen, setFollowersOpen] = useState(false);
   const [followingOpen, setFollowingOpen] = useState(false);
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-6 h-6 border border-foreground/20 border-t-foreground rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user && !userId) {
-    return (
-      <div className="min-h-screen bg-background pb-32">
-        <main className="px-4 md:px-12 pt-8 md:pt-16 max-w-4xl mx-auto text-center py-20">
-          <p className="text-muted-foreground mb-6">Connectez-vous pour voir votre profil</p>
-          <Button
-            onClick={() => navigate("/auth")}
-            className="bg-transparent border border-border text-foreground hover:bg-foreground hover:text-background"
-          >
-            Se connecter
-          </Button>
-        </main>
-      </div>
-    );
-  }
-
+  // Fetch profile data
   useEffect(() => {
-    const loadProfile = async () => {
+    const fetchProfile = async () => {
       if (!targetUserId) {
         setLoadingProfile(false);
         return;
       }
 
-      setLoadingProfile(true);
       try {
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", targetUserId)
-          .single();
+        const { data, error } = await supabase.from("profiles").select("*").eq("id", targetUserId).single();
 
         if (error) throw error;
-        setProfileData(profile);
-        setEditedUsername(profile?.username || "");
-        setEditedBio(profile?.bio || "");
-
-        const movies = await getPhysicalMovies(targetUserId);
-        setPhysicalCount(movies.length);
-
-        const { count } = await supabase
-          .from("user_badges")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", targetUserId);
-        setBadgeCount(count || 0);
-
+        setProfileData(data as ProfileData);
+        setEditedUsername(data?.username || "");
+        setEditedBio(data?.bio || "");
       } catch (error) {
-        console.error("Error loading profile:", error);
+        console.error("Error fetching profile:", error);
       } finally {
         setLoadingProfile(false);
       }
     };
 
-    loadProfile();
+    fetchProfile();
+  }, [targetUserId]);
+
+  // Fetch physical collection count
+  useEffect(() => {
+    const fetchPhysicalCount = async () => {
+      if (!targetUserId) return;
+      const movies = await getPhysicalMovies(targetUserId);
+      setPhysicalCount(movies.length);
+    };
+    fetchPhysicalCount();
+  }, [targetUserId]);
+
+  // Fetch badge count
+  useEffect(() => {
+    const fetchBadgeCount = async () => {
+      if (!targetUserId) return;
+      const { count } = await supabase
+        .from("user_badges")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", targetUserId);
+      setBadgeCount(count || 0);
+    };
+    fetchBadgeCount();
   }, [targetUserId]);
 
   const handleSaveProfile = async () => {
-    if (!user) return;
+    if (!editedUsername.trim()) {
+      toast({ title: "Erreur", description: "Le nom d'utilisateur ne peut pas être vide", variant: "destructive" });
+      return;
+    }
 
     try {
       await updateProfile({
         username: editedUsername.trim(),
-        bio: editedBio.trim(),
+        bio: editedBio.trim() || null,
       });
       await refreshProfile();
+      setProfileData((prev) =>
+        prev ? { ...prev, username: editedUsername.trim(), bio: editedBio.trim() || null } : null,
+      );
       setIsEditing(false);
       toast({ title: "Profil mis à jour" });
     } catch (error) {
@@ -140,43 +139,92 @@ export default function Profile() {
   const watchedCount = userMovies.filter((m) => m.status === "watched").length;
   const favoritesCount = userMovies.filter((m) => m.is_favorite).length;
 
-  if (loadingProfile) {
+  // Loading state
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-background pb-32">
-        <main className="px-4 md:px-12 pt-8 md:pt-16 max-w-4xl mx-auto">
-          <div className="animate-pulse space-y-8">
-            <div className="flex gap-6">
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-card" />
-              <div className="flex-1 space-y-4 pt-4">
-                <div className="h-6 bg-card rounded w-1/3" />
-                <div className="h-4 bg-card rounded w-2/3" />
-              </div>
-            </div>
-          </div>
+      <div className="min-h-screen bg-background pb-24 md:pb-8">
+        <MinimalHeader />
+        <main className="pt-20 md:pt-24 px-4 md:px-12 flex items-center justify-center">
+          <div className="w-6 h-6 border border-white/20 border-t-white rounded-full animate-spin" />
         </main>
+        <FloatingDock />
       </div>
     );
   }
 
+  // Not logged in and no userId
+  if (!user && !userId) {
+    return (
+      <div className="min-h-screen bg-background pb-24 md:pb-8">
+        <MinimalHeader />
+        <main className="pt-20 md:pt-24 px-4 md:px-12 max-w-4xl mx-auto text-center py-20">
+          <p className="text-white/50 mb-6">Connectez-vous pour voir votre profil</p>
+          <Button onClick={() => navigate("/auth")} className="bg-white text-black hover:bg-white/90">
+            Se connecter
+          </Button>
+        </main>
+        <FloatingDock />
+      </div>
+    );
+  }
+
+  // Loading profile
+  if (loadingProfile) {
+    return (
+      <div className="min-h-screen bg-background pb-24 md:pb-8">
+        <MinimalHeader />
+        <main className="pt-20 md:pt-24 px-4 md:px-12 max-w-4xl mx-auto">
+          <div className="animate-pulse space-y-8">
+            <div className="flex gap-6">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white/5" />
+              <div className="flex-1 space-y-4 pt-4">
+                <div className="h-6 bg-white/5 rounded w-1/3" />
+                <div className="h-4 bg-white/5 rounded w-2/3" />
+              </div>
+            </div>
+          </div>
+        </main>
+        <FloatingDock />
+      </div>
+    );
+  }
+
+  // Profile not found
   if (!profileData) {
     return (
-      <div className="min-h-screen bg-background pb-32">
-        <main className="px-4 md:px-12 pt-8 md:pt-16 max-w-4xl mx-auto text-center py-20">
-          <p className="text-muted-foreground">Profil non trouvé</p>
+      <div className="min-h-screen bg-background pb-24 md:pb-8">
+        <MinimalHeader />
+        <main className="pt-20 md:pt-24 px-4 md:px-12 max-w-4xl mx-auto text-center py-20">
+          <p className="text-white/50 mb-4">Profil non trouvé</p>
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            Retour
+          </Button>
         </main>
+        <FloatingDock />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32">
-      <main className="px-4 md:px-12 pt-8 md:pt-16 max-w-4xl mx-auto">
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
+      <MinimalHeader />
+
+      <main className="pt-20 md:pt-24 px-4 md:px-12 max-w-4xl mx-auto">
+        {/* Back button for other users' profiles */}
+        {!isOwnProfile && (
+          <motion.button
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-white/50 hover:text-white mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Retour</span>
+          </motion.button>
+        )}
+
         {/* Profile Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-12"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
           <div className="flex flex-col md:flex-row gap-6 md:gap-8">
             {/* Avatar */}
             <div className="flex-shrink-0">
@@ -186,11 +234,11 @@ export default function Profile() {
                   onUploadComplete={async (url) => {
                     await updateProfile({ avatar_url: url });
                     await refreshProfile();
-                    setProfileData((prev) => prev ? { ...prev, avatar_url: url } : null);
+                    setProfileData((prev) => (prev ? { ...prev, avatar_url: url } : null));
                   }}
                 />
               ) : (
-                <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-card border border-border flex items-center justify-center overflow-hidden">
+                <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
                   {profileData.avatar_url ? (
                     <img
                       src={profileData.avatar_url}
@@ -198,7 +246,7 @@ export default function Profile() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-2xl md:text-3xl font-bold text-muted-foreground">
+                    <span className="text-2xl md:text-3xl font-bold text-white/30">
                       {(profileData.username || "U").slice(0, 2).toUpperCase()}
                     </span>
                   )}
@@ -210,108 +258,120 @@ export default function Profile() {
             <div className="flex-1">
               {isEditing ? (
                 <div className="space-y-4">
-                  <input
+                  <Input
                     value={editedUsername}
                     onChange={(e) => setEditedUsername(e.target.value)}
                     placeholder="Nom d'utilisateur"
-                    className="w-full bg-transparent border-0 border-b border-border focus:border-foreground outline-none text-xl font-bold py-2"
+                    className="bg-white/5 border-white/10 text-white"
                   />
-                  <textarea
+                  <Textarea
                     value={editedBio}
                     onChange={(e) => setEditedBio(e.target.value)}
-                    placeholder="Bio"
-                    rows={2}
-                    className="w-full bg-transparent border-0 border-b border-border focus:border-foreground outline-none resize-none py-2 text-muted-foreground"
+                    placeholder="Bio (optionnel)"
+                    className="bg-white/5 border-white/10 text-white resize-none"
+                    rows={3}
                   />
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={handleSaveProfile}
-                      className="bg-foreground text-background hover:bg-foreground/90 min-h-[44px]"
-                    >
-                      <Check className="w-4 h-4 mr-2" />
+                  <div className="flex gap-2">
+                    <Button onClick={handleSaveProfile} size="sm" className="bg-white text-black hover:bg-white/90">
+                      <Check className="w-4 h-4 mr-1" />
                       Enregistrer
                     </Button>
                     <Button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setEditedUsername(profileData.username || "");
+                        setEditedBio(profileData.bio || "");
+                      }}
+                      size="sm"
                       variant="outline"
-                      onClick={() => setIsEditing(false)}
-                      className="border-border min-h-[44px]"
+                      className="border-white/20"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-4 h-4 mr-1" />
+                      Annuler
                     </Button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-xl md:text-2xl font-bold">@{profileData.username}</h1>
-                    {profileData.current_title && (
-                      <span className="px-2 py-1 text-xs border border-border">
-                        {profileData.current_title}
-                      </span>
-                    )}
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h1 className="font-display text-display-xs md:text-display-sm text-white">
+                        {profileData.username?.toUpperCase() || "UTILISATEUR"}
+                      </h1>
+                      {profileData.current_title && (
+                        <p className="text-amber-500 text-sm">{profileData.current_title}</p>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      {isOwnProfile ? (
+                        <>
+                          <Button
+                            onClick={() => setIsEditing(true)}
+                            size="sm"
+                            variant="outline"
+                            className="border-white/20"
+                          >
+                            <Edit2 className="w-4 h-4 mr-1" />
+                            <span className="hidden sm:inline">Modifier</span>
+                          </Button>
+                          <Button
+                            onClick={() => navigate("/settings")}
+                            size="sm"
+                            variant="outline"
+                            className="border-white/20"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          onClick={toggleFollow}
+                          disabled={followLoading}
+                          size="sm"
+                          className={cn(
+                            isFollowing
+                              ? "bg-white/10 text-white hover:bg-red-500/20 hover:text-red-400"
+                              : "bg-white text-black hover:bg-white/90",
+                          )}
+                        >
+                          {isFollowing ? (
+                            <>
+                              <UserMinus className="w-4 h-4 mr-1" />
+                              <span className="hidden sm:inline">Suivi</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="w-4 h-4 mr-1" />
+                              <span className="hidden sm:inline">Suivre</span>
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  {profileData.bio && (
-                    <p className="text-muted-foreground mb-4 text-sm md:text-base">{profileData.bio}</p>
-                  )}
-                  <div className="flex gap-6 text-sm text-muted-foreground">
-                    <button onClick={() => setFollowersOpen(true)} className="hover:text-foreground transition-colors">
-                      <strong className="text-foreground">{stats.followers}</strong> abonnés
+
+                  {profileData.bio && <p className="text-white/50 text-sm mb-4">{profileData.bio}</p>}
+
+                  {/* Follow stats */}
+                  <div className="flex gap-4 text-sm">
+                    <button
+                      onClick={() => setFollowersOpen(true)}
+                      className="text-white/70 hover:text-white transition-colors"
+                    >
+                      <span className="font-semibold text-white">{stats.followers}</span> abonnés
                     </button>
-                    <button onClick={() => setFollowingOpen(true)} className="hover:text-foreground transition-colors">
-                      <strong className="text-foreground">{stats.following}</strong> abonnements
+                    <button
+                      onClick={() => setFollowingOpen(true)}
+                      className="text-white/70 hover:text-white transition-colors"
+                    >
+                      <span className="font-semibold text-white">{stats.following}</span> abonnements
                     </button>
                   </div>
                 </>
               )}
             </div>
-
-            {/* Actions */}
-            {!isEditing && (
-              <div className="flex gap-2">
-                {isOwnProfile ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsEditing(true)}
-                      className="border-border min-h-[44px] min-w-[44px]"
-                    >
-                      <Edit2 className="w-4 h-4 md:mr-2" />
-                      <span className="hidden md:inline">Modifier</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate("/settings")}
-                      className="border-border min-h-[44px] min-w-[44px]"
-                    >
-                      <Settings className="w-4 h-4" />
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    onClick={toggleFollow}
-                    disabled={followLoading}
-                    className={cn(
-                      "min-h-[44px]",
-                      isFollowing
-                        ? "bg-transparent border border-border text-foreground hover:bg-card"
-                        : "bg-foreground text-background hover:bg-foreground/90"
-                    )}
-                  >
-                    {isFollowing ? (
-                      <>
-                        <UserMinus className="w-4 h-4 mr-2" />
-                        Abonné
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        S'abonner
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-            )}
           </div>
         </motion.div>
 
@@ -320,59 +380,72 @@ export default function Profile() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border mb-12"
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12"
         >
-          {[
-            { icon: Disc, value: physicalCount, label: "Collection", onClick: () => navigate("/collection") },
-            { icon: Eye, value: watchedCount, label: "Films vus", onClick: () => navigate("/lists") },
-            { icon: Heart, value: favoritesCount, label: "Favoris", onClick: () => navigate("/lists") },
-            { icon: Trophy, value: badgeCount, label: "Badges", onClick: () => navigate("/badges") },
-          ].map((stat) => (
-            <button
-              key={stat.label}
-              onClick={stat.onClick}
-              className="bg-background p-6 text-center hover:bg-card transition-colors min-h-[100px]"
-            >
-              <stat.icon className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">{stat.label}</div>
-            </button>
-          ))}
+          <StatCard icon={Eye} label="Films vus" value={watchedCount} />
+          <StatCard icon={Heart} label="Favoris" value={favoritesCount} />
+          <StatCard icon={Disc} label="Collection" value={physicalCount} />
+          <StatCard icon={Trophy} label="Badges" value={badgeCount} onClick={() => navigate("/badges")} />
         </motion.div>
 
-        {/* Top 5 Movies */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Top5Section
-            topMovies={topMovies}
-            onSetMovie={isOwnProfile ? setTopMovie : async () => ({ error: null })}
-            editable={isOwnProfile}
-          />
-        </motion.div>
+        {/* Top 5 */}
+        {topMovies && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <Top5Section
+              movies={topMovies}
+              onSetTopMovie={isOwnProfile ? setTopMovie : undefined}
+              isEditable={isOwnProfile}
+            />
+          </motion.div>
+        )}
       </main>
 
       {/* Follow Dialogs */}
-      {targetUserId && (
-        <>
-          <FollowListDialog
-            open={followersOpen}
-            onOpenChange={setFollowersOpen}
-            userId={targetUserId}
-            type="followers"
-            title="Abonnés"
-          />
-          <FollowListDialog
-            open={followingOpen}
-            onOpenChange={setFollowingOpen}
-            userId={targetUserId}
-            type="following"
-            title="Abonnements"
-          />
-        </>
-      )}
+      <FollowListDialog
+        open={followersOpen}
+        onOpenChange={setFollowersOpen}
+        userId={targetUserId || ""}
+        type="followers"
+      />
+      <FollowListDialog
+        open={followingOpen}
+        onOpenChange={setFollowingOpen}
+        userId={targetUserId || ""}
+        type="following"
+      />
+
+      <FloatingDock />
     </div>
+  );
+}
+
+// ============================================
+// Stat Card Component
+// ============================================
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  onClick,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: number;
+  onClick?: () => void;
+}) {
+  const Component = onClick ? "button" : "div";
+
+  return (
+    <Component
+      onClick={onClick}
+      className={cn(
+        "p-4 rounded-xl bg-white/5 border border-white/10",
+        onClick && "hover:bg-white/10 transition-colors cursor-pointer",
+      )}
+    >
+      <Icon className="w-5 h-5 text-white/50 mb-2" />
+      <p className="font-display text-xl md:text-2xl text-white">{value}</p>
+      <p className="text-xs text-white/50">{label}</p>
+    </Component>
   );
 }
