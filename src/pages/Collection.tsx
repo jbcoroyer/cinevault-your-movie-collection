@@ -84,7 +84,9 @@ export default function Collection() {
   // Filter hooks
   const {
     filters,
+    filteredMovies: hookFilteredMovies,
     filterOptions,
+    setSearch,
     toggleFormat,
     toggleCondition,
     toggleGenre,
@@ -94,8 +96,7 @@ export default function Collection() {
     resetFilters,
     hasActiveFilters,
     activeFilterCount,
-    setFilterOptions,
-  } = useCollectionFilters();
+  } = useCollectionFilters(movies, movieDetails);
 
   // Valuation hook
   const {
@@ -136,25 +137,7 @@ export default function Collection() {
       );
       setMovieDetails(details);
 
-      // Update filter options based on collection
-      const genres = new Set<string>();
-      const decades = new Set<string>();
-      const directors = new Set<string>();
-
-      Object.values(details).forEach((movie) => {
-        movie.genres?.forEach((g) => genres.add(g.name));
-        if (movie.release_date) {
-          const year = parseInt(movie.release_date.substring(0, 4));
-          const decade = Math.floor(year / 10) * 10;
-          decades.add(`${decade}s`);
-        }
-      });
-
-      setFilterOptions({
-        genres: Array.from(genres).sort(),
-        decades: Array.from(decades).sort().reverse(),
-        directors: Array.from(directors).sort(),
-      });
+      // Filter options are computed automatically by useCollectionFilters
     } catch (error) {
       console.error("Error loading collection:", error);
       toast({
@@ -163,9 +146,9 @@ export default function Collection() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+    setLoading(false);
     }
-  }, [user, setFilterOptions]);
+  }, [user]);
 
   useEffect(() => {
     loadCollection();
@@ -219,14 +202,6 @@ export default function Collection() {
         const year = parseInt(details.release_date.substring(0, 4));
         const decade = `${Math.floor(year / 10) * 10}s`;
         return filters.decades.includes(decade);
-      });
-    }
-
-    // Price range filter
-    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 500) {
-      result = result.filter((pm) => {
-        const price = pm.price || 0;
-        return price >= filters.priceRange[0] * 100 && price <= filters.priceRange[1] * 100;
       });
     }
 
@@ -537,16 +512,15 @@ export default function Collection() {
       {/* Dialogs */}
       {editingMovie && (
         <EditPhysicalMovieDialog
-          movie={editingMovie}
+          physicalMovie={editingMovie}
           movieDetails={movieDetails[editingMovie.tmdb_id] || null}
           open={!!editingMovie}
           onOpenChange={(open) => !open && setEditingMovie(null)}
-          onUpdated={handleMovieUpdated}
-          onDeleted={handleMovieUpdated}
+          onMovieUpdated={handleMovieUpdated}
         />
       )}
 
-      <AddPhysicalMovieDialog open={showAddDialog} onOpenChange={setShowAddDialog} onAdded={handleMovieAdded} />
+      <AddPhysicalMovieDialog open={showAddDialog} onOpenChange={setShowAddDialog} onMovieAdded={handleMovieAdded} />
 
       <FloatingDock />
     </div>
