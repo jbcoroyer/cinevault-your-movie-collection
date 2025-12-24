@@ -36,8 +36,6 @@ import {
   Gift,
   Lock,
 } from "lucide-react";
-   <div className="min-h-screen bg-background pb-24 md:pb-8">
-      <MinimalHeader />
 const ICON_MAP: Record<string, React.ElementType> = {
   Film,
   Disc,
