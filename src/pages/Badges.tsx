@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 import { cn } from "@/lib/utils";
 import { type Rarity, RARITY_CONFIG } from "@/data/videoClubData";
+import { MinimalHeader } from "@/components/MinimalHeader";
 import {
   Trophy,
   Film,
@@ -37,9 +38,29 @@ import {
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  Film, Disc, Users, Star, Sparkles, Crown, Library, Heart, Eye, Zap,
-  Award, Target, Flame, Shield, Gem, Tv, Clock, Gift, Trophy,
-  Clapperboard: Film, Archive: Library, Brick: Library, Store: Library,
+  Film,
+  Disc,
+  Users,
+  Star,
+  Sparkles,
+  Crown,
+  Library,
+  Heart,
+  Eye,
+  Zap,
+  Award,
+  Target,
+  Flame,
+  Shield,
+  Gem,
+  Tv,
+  Clock,
+  Gift,
+  Trophy,
+  Clapperboard: Film,
+  Archive: Library,
+  Brick: Library,
+  Store: Library,
 };
 
 const BADGE_CATEGORIES = [
@@ -59,29 +80,20 @@ function BadgeCard({ badge }: { badge: Badge }) {
     <div
       className={cn(
         "aspect-square p-4 flex flex-col items-center justify-center text-center transition-all",
-        isLocked 
-          ? "bg-card/30 border border-border/30" 
-          : "border border-border hover:border-foreground/30"
+        isLocked ? "bg-card/30 border border-border/30" : "border border-border hover:border-foreground/30",
       )}
     >
       <div
-        className={cn(
-          "w-10 h-10 flex items-center justify-center mb-3",
-          isLocked ? "text-muted-foreground/30" : ""
-        )}
+        className={cn("w-10 h-10 flex items-center justify-center mb-3", isLocked ? "text-muted-foreground/30" : "")}
         style={{ color: isLocked ? undefined : rarityConfig.color }}
       >
-        {isLocked ? (
-          <Lock className="w-5 h-5" />
-        ) : (
-          <IconComponent className="w-6 h-6" />
-        )}
+        {isLocked ? <Lock className="w-5 h-5" /> : <IconComponent className="w-6 h-6" />}
       </div>
 
       <h4
         className={cn(
           "text-xs font-medium uppercase tracking-wide leading-tight",
-          isLocked ? "text-muted-foreground/50" : "text-foreground"
+          isLocked ? "text-muted-foreground/50" : "text-foreground",
         )}
       >
         {badge.title}
@@ -90,16 +102,10 @@ function BadgeCard({ badge }: { badge: Badge }) {
       <div className="mt-2">
         {isLocked ? (
           <div className="w-8 h-0.5 bg-border rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-muted-foreground/30 rounded-full" 
-              style={{ width: `${badge.progress || 0}%` }} 
-            />
+            <div className="h-full bg-muted-foreground/30 rounded-full" style={{ width: `${badge.progress || 0}%` }} />
           </div>
         ) : (
-          <span
-            className="text-[10px] uppercase tracking-wider"
-            style={{ color: rarityConfig.color }}
-          >
+          <span className="text-[10px] uppercase tracking-wider" style={{ color: rarityConfig.color }}>
             {rarityConfig.label}
           </span>
         )}
@@ -124,10 +130,7 @@ export default function Badges() {
 
       setLoading(true);
       try {
-        const [badgesData, physicalMovies] = await Promise.all([
-          fetchAllBadges(user.id), 
-          getPhysicalMovies(user.id)
-        ]);
+        const [badgesData, physicalMovies] = await Promise.all([fetchAllBadges(user.id), getPhysicalMovies(user.id)]);
         setBadges(badgesData);
         setMovieCount(physicalMovies.length);
       } catch (error) {
@@ -171,10 +174,7 @@ export default function Badges() {
   return (
     <div className="min-h-screen bg-background pb-32">
       <main className="px-4 md:px-12 pt-8 md:pt-16 max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-heading-mobile md:text-heading-desktop font-bold mb-8">Badges</h1>
         </motion.div>
 
@@ -231,23 +231,21 @@ export default function Badges() {
                   "flex items-center gap-2 px-4 py-3 text-sm whitespace-nowrap transition-colors min-h-[44px]",
                   activeCategory === cat.id
                     ? "bg-foreground text-background"
-                    : "bg-card text-muted-foreground hover:text-foreground"
+                    : "bg-card text-muted-foreground hover:text-foreground",
                 )}
               >
                 <cat.icon className="w-4 h-4" />
                 <span>{cat.label}</span>
-                <span className="text-xs opacity-60">{unlockedCount}/{categoryBadges.length}</span>
+                <span className="text-xs opacity-60">
+                  {unlockedCount}/{categoryBadges.length}
+                </span>
               </button>
             );
           })}
         </motion.div>
 
         {/* Badges Grid */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           {loading ? (
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-px bg-border">
               {Array.from({ length: 12 }).map((_, i) => (
