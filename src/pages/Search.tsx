@@ -1,53 +1,25 @@
 /**
- * CineVault - Search Page AMÉLIORÉE
- * 
- * AMÉLIORATIONS:
- * - Skeleton shimmer pendant le chargement
- * - Stagger animation sur les résultats
- * - Auto-complete instantané
- * - Suggestions intelligentes quand 0 résultat
- * - Micro-interactions sur les posters
+ * CineVault - Search Page - Radical Minimalist Design
  */
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search as SearchIcon,
-  X,
-  Film,
-  Users,
-  SlidersHorizontal,
-  Star,
-  Sparkles,
-  Loader2,
-  TrendingUp,
-  Clock,
-} from "lucide-react";
+import { Search as SearchIcon, X, Film, Users, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Header } from "@/components/Header";
-import { BottomNav } from "@/components/BottomNav";
-import { MovieCard, MovieCardSkeleton } from "@/components/MovieCard";
+import { MinimalMovieCard } from "@/components/MinimalMovieCard";
 import { UserCard } from "@/components/UserCard";
-import { AnimatedPage, ListStagger, StaggerContainer, StaggerItem } from "@/components/ui/PageTransition";
 import {
   searchMovies,
-  getGenres,
   getPopularMovies,
-  discoverMovies,
   Movie,
-  Genre,
 } from "@/services/tmdb";
-import { searchUsers, getPopularUsers, UserProfile } from "@/services/users";
+import { searchUsers, UserProfile } from "@/services/users";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
 
 type SearchTab = "films" | "users";
 
-// Recent searches (stored in localStorage)
 const RECENT_SEARCHES_KEY = "cinevault_recent_searches";
 const MAX_RECENT_SEARCHES = 5;
 
@@ -74,37 +46,24 @@ export default function Search() {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   
-  // Search state
   const [activeTab, setActiveTab] = useState<SearchTab>("films");
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 300);
   const [isFocused, setIsFocused] = useState(false);
   
-  // Results state
   const [movies, setMovies] = useState<Movie[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [popularMovies, setPopularMovies] = useState<Movie[]>([]);
-  const [genres, setGenres] = useState<Genre[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   
-  // Loading states
   const [loadingMovies, setLoadingMovies] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingInitial, setLoadingInitial] = useState(true);
 
-  // Filters state
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selectedGenre, setSelectedGenre] = useState<number | null>(null);
-
-  // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const [genreList, popular] = await Promise.all([
-          getGenres(),
-          getPopularMovies(),
-        ]);
-        setGenres(genreList);
+        const popular = await getPopularMovies();
         setPopularMovies(popular);
         setRecentSearches(getRecentSearches());
       } catch (error) {
@@ -117,7 +76,6 @@ export default function Search() {
     loadInitialData();
   }, []);
 
-  // Search movies
   useEffect(() => {
     if (activeTab !== "films") return;
 
@@ -142,7 +100,6 @@ export default function Search() {
     search();
   }, [debouncedQuery, activeTab]);
 
-  // Search users
   useEffect(() => {
     if (activeTab !== "users") return;
 
@@ -166,13 +123,11 @@ export default function Search() {
     search();
   }, [debouncedQuery, activeTab]);
 
-  // Handle recent search click
   const handleRecentSearchClick = (searchQuery: string) => {
     setQuery(searchQuery);
     inputRef.current?.focus();
   };
 
-  // Clear search
   const handleClear = () => {
     setQuery("");
     setMovies([]);
@@ -180,31 +135,30 @@ export default function Search() {
     inputRef.current?.focus();
   };
 
-  // Display logic
   const showResults = debouncedQuery.trim().length > 0;
   const showRecentSearches = isFocused && !query && recentSearches.length > 0;
   const showPopular = !showResults && !loadingInitial;
 
   return (
-    <AnimatedPage className="min-h-screen bg-background pb-24">
-      <Header />
-
-      <main className="container mx-auto px-4 pt-4">
-        {/* Search Header */}
+    <div className="min-h-screen bg-background pb-32">
+      <main className="px-4 md:px-12 pt-8 md:pt-16 max-w-7xl mx-auto">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
+          className="mb-8"
         >
-          <h1 className="text-2xl font-display font-bold mb-4">Recherche</h1>
+          <h1 className="text-heading-mobile md:text-heading-desktop font-bold text-foreground mb-6">
+            Recherche
+          </h1>
 
-          {/* Search Input */}
+          {/* Search Input - Minimal Style */}
           <div className="relative">
             <SearchIcon className={cn(
-              "absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors",
-              isFocused ? "text-amber-500" : "text-muted-foreground"
+              "absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors",
+              isFocused ? "text-foreground" : "text-muted-foreground"
             )} />
-            <Input
+            <input
               ref={inputRef}
               placeholder="Rechercher un film, une personne..."
               value={query}
@@ -212,10 +166,10 @@ export default function Search() {
               onFocus={() => setIsFocused(true)}
               onBlur={() => setTimeout(() => setIsFocused(false), 200)}
               className={cn(
-                "pl-12 pr-12 h-12 rounded-xl text-base",
-                "bg-muted/50 border-muted",
-                "focus:bg-background focus:border-amber-500/50",
-                "transition-all duration-300"
+                "w-full pl-8 pr-8 py-3 bg-transparent border-0 border-b text-base",
+                "border-border focus:border-foreground",
+                "placeholder:text-muted-foreground",
+                "outline-none transition-colors"
               )}
             />
             <AnimatePresence>
@@ -225,7 +179,7 @@ export default function Search() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
                   onClick={handleClear}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted transition-colors"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <X className="w-4 h-4 text-muted-foreground" />
                 </motion.button>
@@ -233,18 +187,18 @@ export default function Search() {
             </AnimatePresence>
           </div>
 
-          {/* Recent searches dropdown */}
+          {/* Recent searches */}
           <AnimatePresence>
             {showRecentSearches && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mt-2 p-3 bg-card rounded-xl border border-border shadow-lg"
+                className="mt-4"
               >
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  <Clock className="w-4 h-4" />
-                  <span>Recherches récentes</span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                  <Clock className="w-3 h-3" />
+                  <span>Récentes</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {recentSearches.map((search, index) => (
@@ -253,7 +207,7 @@ export default function Search() {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1, transition: { delay: index * 0.05 } }}
                       onClick={() => handleRecentSearchClick(search)}
-                      className="px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 text-sm transition-colors"
+                      className="px-4 py-2 border border-border text-sm hover:border-foreground transition-colors min-h-[44px]"
                     >
                       {search}
                     </motion.button>
@@ -264,52 +218,65 @@ export default function Search() {
           </AnimatePresence>
         </motion.div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SearchTab)}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="films" className="gap-2">
+        {/* Tabs - Minimal */}
+        <div className="flex gap-6 mb-8 border-b border-border">
+          <button
+            onClick={() => setActiveTab("films")}
+            className={cn(
+              "pb-3 text-sm font-medium transition-colors relative",
+              activeTab === "films" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <span className="flex items-center gap-2">
               <Film className="w-4 h-4" />
               Films
-            </TabsTrigger>
-            <TabsTrigger value="users" className="gap-2">
+            </span>
+            {activeTab === "films" && (
+              <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-px bg-foreground" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("users")}
+            className={cn(
+              "pb-3 text-sm font-medium transition-colors relative",
+              activeTab === "users" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <span className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               Utilisateurs
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+            </span>
+            {activeTab === "users" && (
+              <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-px bg-foreground" />
+            )}
+          </button>
+        </div>
 
         {/* Content */}
         <AnimatePresence mode="wait">
           {activeTab === "films" ? (
             <motion.div
               key="films"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              {/* Loading state */}
+              {/* Loading */}
               {loadingMovies && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: i * 0.05 }}
-                    >
-                      <MovieCardSkeleton size="lg" />
-                    </motion.div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="aspect-[2/3] bg-card animate-pulse rounded-lg md:rounded-xl" />
                   ))}
                 </div>
               )}
 
-              {/* Search results */}
+              {/* Results */}
               {!loadingMovies && showResults && movies.length > 0 && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {movies.length} résultat{movies.length > 1 ? 's' : ''} pour "{debouncedQuery}"
+                  <p className="text-xs text-muted-foreground mb-4">
+                    {movies.length} résultat{movies.length > 1 ? 's' : ''}
                   </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
                     {movies.map((movie, index) => (
                       <motion.div
                         key={movie.id}
@@ -320,7 +287,7 @@ export default function Search() {
                           transition: { delay: index * 0.03 }
                         }}
                       >
-                        <MovieCard movie={movie} size="lg" showInfo />
+                        <MinimalMovieCard movie={movie} />
                       </motion.div>
                     ))}
                   </div>
@@ -330,57 +297,31 @@ export default function Search() {
               {/* No results */}
               {!loadingMovies && showResults && movies.length === 0 && (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-center py-12"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-20"
                 >
-                  <Film className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-                  <h3 className="text-lg font-medium mb-2">Aucun film trouvé</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Essayez avec d'autres termes de recherche
-                  </p>
-                  
-                  {/* Suggestions */}
-                  <div className="max-w-md mx-auto">
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Films populaires du moment :
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {popularMovies.slice(0, 5).map((movie) => (
-                        <motion.button
-                          key={movie.id}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setQuery(movie.title)}
-                          className="px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-sm border border-amber-500/20 hover:border-amber-500/40 transition-colors"
-                        >
-                          {movie.title}
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
+                  <Film className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
+                  <p className="text-muted-foreground">Aucun film trouvé</p>
                 </motion.div>
               )}
 
-              {/* Popular movies when no search */}
+              {/* Popular */}
               {showPopular && (
                 <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <TrendingUp className="w-5 h-5 text-amber-500" />
-                    <h2 className="text-lg font-semibold">Tendances</h2>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {popularMovies.slice(0, 10).map((movie, index) => (
+                  <h2 className="text-xs text-muted-foreground uppercase tracking-wider mb-6">Tendances</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
+                    {popularMovies.slice(0, 16).map((movie, index) => (
                       <motion.div
                         key={movie.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ 
                           opacity: 1, 
                           y: 0,
-                          transition: { delay: index * 0.05 }
+                          transition: { delay: index * 0.03 }
                         }}
                       >
-                        <MovieCard movie={movie} size="lg" showInfo />
+                        <MinimalMovieCard movie={movie} />
                       </motion.div>
                     ))}
                   </div>
@@ -389,9 +330,9 @@ export default function Search() {
 
               {/* Initial loading */}
               {loadingInitial && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <MovieCardSkeleton key={i} size="lg" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="aspect-[2/3] bg-card animate-pulse rounded-lg md:rounded-xl" />
                   ))}
                 </div>
               )}
@@ -399,28 +340,28 @@ export default function Search() {
           ) : (
             <motion.div
               key="users"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              {/* Loading state */}
+              {/* Loading */}
               {loadingUsers && (
                 <div className="space-y-3">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 bg-muted rounded-xl animate-pulse">
-                      <div className="w-12 h-12 rounded-full bg-muted-foreground/20" />
+                    <div key={i} className="flex items-center gap-4 p-4 border-b border-border animate-pulse">
+                      <div className="w-12 h-12 rounded-full bg-card" />
                       <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-muted-foreground/20 rounded w-32" />
-                        <div className="h-3 bg-muted-foreground/20 rounded w-20" />
+                        <div className="h-4 bg-card rounded w-32" />
+                        <div className="h-3 bg-card rounded w-20" />
                       </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* User results */}
+              {/* Results */}
               {!loadingUsers && showResults && users.length > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-1">
                   {users.map((user, index) => (
                     <motion.div
                       key={user.id}
@@ -430,6 +371,7 @@ export default function Search() {
                         y: 0,
                         transition: { delay: index * 0.05 }
                       }}
+                      className="border-b border-border"
                     >
                       <UserCard user={user} />
                     </motion.div>
@@ -440,24 +382,20 @@ export default function Search() {
               {/* No results */}
               {!loadingUsers && showResults && users.length === 0 && (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-center py-12"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-20"
                 >
-                  <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-                  <h3 className="text-lg font-medium mb-2">Aucun utilisateur trouvé</h3>
-                  <p className="text-muted-foreground">
-                    Essayez avec un autre nom d'utilisateur
-                  </p>
+                  <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
+                  <p className="text-muted-foreground">Aucun utilisateur trouvé</p>
                 </motion.div>
               )}
 
-              {/* Default state */}
+              {/* Default */}
               {!showResults && !loadingUsers && (
-                <div className="text-center py-12">
-                  <Sparkles className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
-                  <p className="text-muted-foreground">
-                    Recherchez des utilisateurs pour les suivre
+                <div className="text-center py-20">
+                  <p className="text-muted-foreground text-sm">
+                    Recherchez des utilisateurs
                   </p>
                 </div>
               )}
@@ -465,8 +403,6 @@ export default function Search() {
           )}
         </AnimatePresence>
       </main>
-
-      <BottomNav />
-    </AnimatedPage>
+    </div>
   );
 }
