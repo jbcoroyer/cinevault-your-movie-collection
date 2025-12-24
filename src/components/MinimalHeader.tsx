@@ -68,7 +68,7 @@ export const MinimalHeader = () => {
                 <DropdownMenuContent align="end" className="w-56 bg-background/95 backdrop-blur-xl border-white/10">
                   {/* User info */}
                   <div className="px-3 py-2">
-                    <p className="font-medium text-white">{profile?.display_name || profile?.username || "User"}</p>
+                    <p className="font-medium text-white">{profile?.username || "User"}</p>
                     {profile?.username && <p className="text-sm text-white/50">@{profile.username}</p>}
                   </div>
 
