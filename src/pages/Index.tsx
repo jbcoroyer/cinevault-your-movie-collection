@@ -15,7 +15,7 @@ import { ChevronRight, Plus, Play, TrendingUp, Clock, Star } from "lucide-react"
 import { MinimalHeader } from "../components/MinimalHeader";
 import { FloatingDock } from "../components/FloatingDock";
 import { MinimalMovieCard, MinimalMovieCardSkeleton } from "../components/MinimalMovieCard";
-import { getPopularMovies, getNowPlayingMovies, getUpcomingMovies, Movie, getImageUrl, MovieDetails, getMovieDetails } from "../services/tmdb";
+import { getPopularMovies, getNowPlayingMovies, Movie, getImageUrl, MovieDetails, getMovieDetails } from "../services/tmdb";
 import { useAuth } from "../contexts/AuthContext";
 import { getPhysicalMovies, PhysicalMovie } from "../services/physicalMovies";
 import { cn } from "../lib/utils";
@@ -101,7 +101,6 @@ export default function Index() {
 
   const [popular, setPopular] = useState<Movie[]>([]);
   const [nowPlaying, setNowPlaying] = useState<Movie[]>([]);
-  const [upcoming, setUpcoming] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [myCollection, setMyCollection] = useState<PhysicalMovie[]>([]);
   const [collectionDetails, setCollectionDetails] = useState<Record<number, MovieDetails>>({});
@@ -113,15 +112,13 @@ export default function Index() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [popularMovies, nowPlayingMovies, upcomingMovies] = await Promise.all([
+      const [popularMovies, nowPlayingMovies] = await Promise.all([
         getPopularMovies(),
         getNowPlayingMovies(),
-        getUpcomingMovies(),
       ]);
       
       setPopular(popularMovies);
       setNowPlaying(nowPlayingMovies);
-      setUpcoming(upcomingMovies);
 
       if (user) {
         const collection = await getPhysicalMovies(user.id);
@@ -334,14 +331,6 @@ export default function Index() {
           <MovieGrid movies={nowPlaying.slice(0, 6)} loading={loading} />
         </section>
 
-        {/* Coming Soon Section */}
-        <section className="px-4 md:px-12 py-8 md:py-12">
-          <SectionHeader 
-            title="COMING SOON" 
-            onSeeAll={() => navigate("/movies/upcoming")}
-          />
-          <MovieGrid movies={upcoming.slice(0, 6)} loading={loading} />
-        </section>
       </main>
 
       <FloatingDock />

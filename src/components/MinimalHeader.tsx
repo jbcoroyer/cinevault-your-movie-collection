@@ -162,7 +162,7 @@ export const MinimalHeader = () => {
                         </Avatar>
                         <div>
                           <p className="font-medium text-white">
-                            {profile?.display_name || profile?.username || "User"}
+                            {profile?.username || "User"}
                           </p>
                           <p className="text-sm text-white/50">
                             {profile?.username && `@${profile.username}`}
