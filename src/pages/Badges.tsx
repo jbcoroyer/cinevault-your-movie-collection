@@ -13,7 +13,8 @@ import { Progress } from "@/components/ui/progress";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 import { cn } from "@/lib/utils";
 import { type Rarity, RARITY_CONFIG } from "@/data/videoClubData";
-
+import { MinimalHeader } from "@/components/MinimalHeader";
+import { FloatingDock } from "@/components/FloatingDock";
 import {
   Trophy,
   Film,
@@ -76,6 +77,11 @@ function BadgeCard({ badge }: { badge: Badge }) {
   const IconComponent = ICON_MAP[badge.icon_name] || Trophy;
 
   return (
+     <div 
+       className="min-h-screen bg-background pb-24 md:pb-8">
+    <MinimalHeader />
+    
+    <main className="pt-20 md:pt-24 px-4 md:px-12">
     <div
       className={cn(
         "aspect-square p-4 flex flex-col items-center justify-center text-center transition-all",
@@ -115,6 +121,12 @@ function BadgeCard({ badge }: { badge: Badge }) {
           </span>
         )}
       </div>
+      </main>
+      
+      <FloatingDock />
+    </div>
+  );
+}
     </div>
   );
 }
@@ -153,10 +165,13 @@ export default function Badges() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-6 h-6 border border-foreground/20 border-t-foreground rounded-full animate-spin" />
-      </div>
-    );
+      return (
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
+      <MinimalHeader />
+      {/* ... contenu loading ... */}
+      <FloatingDock />
+    </div>
+  );
   }
 
   if (!user) {
