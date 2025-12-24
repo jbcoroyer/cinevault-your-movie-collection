@@ -2,7 +2,7 @@
  * CineVault - Badges Page - Radical Minimalist Design
  */
 
-import { useState, useEffect } from "react";
+import { useEffect, useState, type ElementType } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
 import { cn } from "@/lib/utils";
 import { type Rarity, RARITY_CONFIG } from "@/data/videoClubData";
-import { MinimalHeader } from "@/components/MinimalHeader";
+
 import {
   Trophy,
   Film,
@@ -36,7 +36,7 @@ import {
   Gift,
   Lock,
 } from "lucide-react";
-const ICON_MAP: Record<string, React.ElementType> = {
+const ICON_MAP: Record<string, ElementType> = {
   Film,
   Disc,
   Users,
@@ -76,25 +76,6 @@ function BadgeCard({ badge }: { badge: Badge }) {
   const IconComponent = ICON_MAP[badge.icon_name] || Trophy;
 
   return (
-      <div className="min-h-screen bg-background pb-24 md:pb-8">
-      <MinimalHeader />
-
-      <main className="pt-4 md:pt-24">
-        {/* Header Section */}
-        <section className="px-4 md:px-12 py-4 md:py-8">
-          {/* Title Row */}
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="font-display text-display-sm md:text-display-md text-white">BADGES</h1>
-              <p className="text-white/40 text-sm mt-1">
-                {movies.length} {movies.length === 1 ? "film" : "films"}
-                {valuation && valuation.totalValueMedian > 0 && (
-                  <span className="ml-2 text-green-400">
-                    • {(valuation.totalValueMedian / 100).toLocaleString("fr-FR")} €
-                  </span>
-                )}
-              </p>
-            </div>
     <div
       className={cn(
         "aspect-square p-4 flex flex-col items-center justify-center text-center transition-all",
@@ -123,7 +104,10 @@ function BadgeCard({ badge }: { badge: Badge }) {
       <div className="mt-2">
         {isLocked ? (
           <div className="w-8 h-0.5 bg-border rounded-full overflow-hidden">
-            <div className="h-full bg-muted-foreground/30 rounded-full" style={{ width: `${badge.progress || 0}%` }} />
+            <div
+              className="h-full bg-muted-foreground/30 rounded-full"
+              style={{ width: `${badge.progress || 0}%` }}
+            />
           </div>
         ) : (
           <span className="text-[10px] uppercase tracking-wider" style={{ color: rarityConfig.color }}>
@@ -137,12 +121,12 @@ function BadgeCard({ badge }: { badge: Badge }) {
 
 export default function Badges() {
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading } = useAuth();
-  const { currentLevel, currentXp, progressPercent, xpToNextLevel } = useBadgeNotification();
+  const { user, loading: authLoading } = useAuth();
+  const { currentLevel, progressPercent, xpToNextLevel } = useBadgeNotification();
 
   const [badges, setBadges] = useState<Badge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [movieCount, setMovieCount] = useState(0);
+  const [, setMovieCount] = useState(0);
   const [activeCategory, setActiveCategory] = useState("collection");
 
   useEffect(() => {
