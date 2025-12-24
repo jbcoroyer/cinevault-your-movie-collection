@@ -293,9 +293,7 @@ export default function MovieDetail() {
           <WatchedDialog
             open={watchedDialogOpen}
             onOpenChange={setWatchedDialogOpen}
-            tmdbId={movie.id}
-            title={movie.title}
-            posterPath={movie.poster_path}
+            movieTitle={movie.title}
             onSave={handleWatchedSave}
           />
           <AddToListDialog
