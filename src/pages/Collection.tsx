@@ -319,7 +319,21 @@ const Collection = () => {
   const [wishlistCount, setWishlistCount] = useState(0);
 
   // Filters hook
-  const { filters, setFilters, resetFilters, hasActiveFilters, activeFilterCount } = useCollectionFilters();
+  const {
+    filters,
+    filteredMovies: filterHookMovies,
+    filterOptions,
+    setSearch,
+    toggleFormat,
+    toggleCondition,
+    toggleGenre,
+    toggleDecade,
+    toggleDirector,
+    setPriceRange,
+    resetFilters,
+    hasActiveFilters,
+    activeFilterCount,
+  } = useCollectionFilters(physicalMovies, physicalMovieDetails);
 
   // ============================================
   // VALUATION HOOK - LA CLÉ DU FIX
@@ -420,7 +434,7 @@ const Collection = () => {
           comparison = (a.price || 0) - (b.price || 0);
           break;
         case "added":
-          comparison = new Date(a.added_at || 0).getTime() - new Date(b.added_at || 0).getTime();
+          comparison = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
           break;
         case "format":
           comparison = a.format.localeCompare(b.format);
@@ -461,8 +475,7 @@ const Collection = () => {
     }
   };
 
-  const handleMovieAdded = (movie: PhysicalMovie) => {
-    setPhysicalMovies((prev) => [movie, ...prev]);
+  const handleMovieAdded = () => {
     loadCollection(); // Reload to get details
     showXPToast(10, "Film ajouté !");
   };
@@ -557,9 +570,9 @@ const Collection = () => {
         <main className="flex-1 container mx-auto px-4 pt-20 pb-24">
           {/* CTA Section */}
           <CollectionCTA
-            movieCount={physicalMovies.length}
-            onAddClick={() => setShowAddDialog(true)}
-            onScanClick={() => setShowBarcodeScanner(true)}
+            totalMovies={physicalMovies.length}
+            onAddToCollection={() => setShowAddDialog(true)}
+            onScanBarcode={() => setShowBarcodeScanner(true)}
           />
 
           {/* Navigation Tabs */}
@@ -643,20 +656,14 @@ const Collection = () => {
                 {hasActiveFilters && (
                   <ActiveFiltersBar
                     filters={filters}
-                    onRemoveFilter={(type, value) => {
-                      if (type === "format") {
-                        setFilters({
-                          ...filters,
-                          formats: filters.formats.filter((f) => f !== value),
-                        });
-                      } else if (type === "condition") {
-                        setFilters({
-                          ...filters,
-                          conditions: filters.conditions.filter((c) => c !== value),
-                        });
-                      }
-                    }}
-                    onResetFilters={resetFilters}
+                    toggleFormat={toggleFormat}
+                    toggleCondition={toggleCondition}
+                    toggleGenre={toggleGenre}
+                    toggleDecade={toggleDecade}
+                    toggleDirector={toggleDirector}
+                    setPriceRange={setPriceRange}
+                    resetFilters={resetFilters}
+                    hasActiveFilters={hasActiveFilters}
                   />
                 )}
 
@@ -674,14 +681,14 @@ const Collection = () => {
                     <ShelfView
                       movies={filteredAndSortedMovies}
                       movieDetailsMap={physicalMovieDetails}
-                      onMovieClick={(pm) => handleEditMovie(pm)}
+                      onMovieClick={(pm, details) => handleEditMovie(pm)}
                       selectionMode={selectionMode}
                       selectedIds={selectedIds}
                     />
                   ) : displayMode === "poster" ? (
                     <PosterWallView
                       movies={filteredAndSortedMovies}
-                      movieDetailsMap={physicalMovieDetails}
+                      movieDetails={physicalMovieDetails}
                       onMovieClick={(pm) => handleEditMovie(pm)}
                     />
                   ) : (
@@ -807,9 +814,10 @@ const Collection = () => {
         <BarcodeScannerDialog
           open={showBarcodeScanner}
           onOpenChange={setShowBarcodeScanner}
-          onMovieFound={(movie) => {
+          onMoviesSelected={(movies) => {
             setShowBarcodeScanner(false);
-            // Handle barcode found movie
+            // Handle barcode found movies - reload collection
+            loadCollection();
           }}
         />
 
@@ -817,10 +825,12 @@ const Collection = () => {
           <EditPhysicalMovieDialog
             open={!!editingMovie}
             onOpenChange={(open) => !open && setEditingMovie(null)}
-            movie={editingMovie}
+            physicalMovie={editingMovie}
             movieDetails={physicalMovieDetails[editingMovie.tmdb_id]}
-            onMovieUpdated={handleMovieUpdated}
-            onDelete={() => setMovieToDelete(editingMovie)}
+            onMovieUpdated={() => {
+              loadCollection();
+              setEditingMovie(null);
+            }}
           />
         )}
 
