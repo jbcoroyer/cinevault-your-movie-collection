@@ -392,9 +392,9 @@ export default function Profile() {
         {topMovies && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <Top5Section
-              movies={topMovies}
-              onSetTopMovie={isOwnProfile ? setTopMovie : undefined}
-              isEditable={isOwnProfile}
+              topMovies={topMovies}
+              onSetMovie={setTopMovie}
+              editable={isOwnProfile}
             />
           </motion.div>
         )}
@@ -406,12 +406,14 @@ export default function Profile() {
         onOpenChange={setFollowersOpen}
         userId={targetUserId || ""}
         type="followers"
+        title="Abonnés"
       />
       <FollowListDialog
         open={followingOpen}
         onOpenChange={setFollowingOpen}
         userId={targetUserId || ""}
         type="following"
+        title="Abonnements"
       />
 
       <FloatingDock />
