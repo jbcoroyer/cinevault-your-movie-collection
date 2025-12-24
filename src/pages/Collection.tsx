@@ -4,6 +4,7 @@
  * Page de collection avec tous les onglets:
  * - Grille (vue par défaut)
  * - Étagère (shelf view)
+ * - Posters (poster wall view)
  * - Valorisation (valuation dashboard)
  * - Wishlist
  *
@@ -17,6 +18,7 @@ import { MinimalHeader } from "@/components/MinimalHeader";
 import { FloatingDock } from "@/components/FloatingDock";
 import { MinimalMovieCard, MinimalMovieCardSkeleton } from "@/components/MinimalMovieCard";
 import { ShelfView } from "@/components/collection/ShelfView";
+import { PosterWallView } from "@/components/collection/PosterWallView";
 import { ValuationDashboardPremium } from "@/components/collection/ValuationDashboardPremium";
 import { WishlistView } from "@/components/collection/WishlistView";
 import { CollectionFiltersDrawer, ActiveFiltersBar } from "@/components/collection/CollectionFilters";
@@ -41,6 +43,7 @@ import {
   RefreshCw,
   Share2,
   MoreVertical,
+  LayoutGrid,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -56,7 +59,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 
 // Types pour les onglets
-type CollectionTab = "grid" | "shelf" | "valuation" | "wishlist";
+type CollectionTab = "grid" | "shelf" | "poster" | "valuation" | "wishlist";
 
 export default function Collection() {
   const { user } = useAuth();
@@ -82,7 +85,6 @@ export default function Collection() {
   const {
     filters,
     filterOptions,
-    setSearch,
     toggleFormat,
     toggleCondition,
     toggleGenre,
@@ -92,7 +94,8 @@ export default function Collection() {
     resetFilters,
     hasActiveFilters,
     activeFilterCount,
-  } = useCollectionFilters(movies, movieDetails);
+    setFilterOptions,
+  } = useCollectionFilters();
 
   // Valuation hook
   const {
@@ -114,42 +117,55 @@ export default function Collection() {
 
     setLoading(true);
     try {
-      const collection = await getPhysicalMovies(user.id);
-      setMovies(collection);
+      const physicalMovies = await getPhysicalMovies(user.id);
+      setMovies(physicalMovies);
 
-      // Load movie details
-      const detailsMap: Record<number, MovieDetails> = {};
-
+      // Fetch movie details
+      const details: Record<number, MovieDetails> = {};
       await Promise.all(
-        collection.map(async (pm) => {
+        physicalMovies.map(async (pm) => {
           try {
-            const details = await getMovieDetails(pm.tmdb_id);
-            if (details) {
-              // Get director from credits and add to details
-              const director = details.credits?.crew?.find((c) => c.job === "Director");
-              detailsMap[pm.tmdb_id] = {
-                ...details,
-                director: director?.name,
-              } as MovieDetails & { director?: string };
+            const movieDetail = await getMovieDetails(pm.tmdb_id);
+            if (movieDetail) {
+              details[pm.tmdb_id] = movieDetail;
             }
-          } catch (e) {
-            console.error(`Failed to load details for ${pm.tmdb_id}`);
+          } catch (error) {
+            console.error(`Error fetching details for movie ${pm.tmdb_id}:`, error);
           }
         }),
       );
+      setMovieDetails(details);
 
-      setMovieDetails(detailsMap);
+      // Update filter options based on collection
+      const genres = new Set<string>();
+      const decades = new Set<string>();
+      const directors = new Set<string>();
+
+      Object.values(details).forEach((movie) => {
+        movie.genres?.forEach((g) => genres.add(g.name));
+        if (movie.release_date) {
+          const year = parseInt(movie.release_date.substring(0, 4));
+          const decade = Math.floor(year / 10) * 10;
+          decades.add(`${decade}s`);
+        }
+      });
+
+      setFilterOptions({
+        genres: Array.from(genres).sort(),
+        decades: Array.from(decades).sort().reverse(),
+        directors: Array.from(directors).sort(),
+      });
     } catch (error) {
-      console.error("Failed to load collection:", error);
+      console.error("Error loading collection:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de charger la collection",
+        description: "Impossible de charger votre collection",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, setFilterOptions]);
 
   useEffect(() => {
     loadCollection();
@@ -164,64 +180,53 @@ export default function Collection() {
     }
   }, [activeTab, setSearchParams]);
 
-  // Filter and search movies
+  // Filter movies
   const filteredMovies = useMemo(() => {
     let result = movies;
 
-    // Apply search
-    if (searchQuery.trim()) {
+    // Search filter
+    if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter((movie) => {
-        const details = movieDetails[movie.tmdb_id];
+      result = result.filter((pm) => {
+        const details = movieDetails[pm.tmdb_id];
         return details?.title?.toLowerCase().includes(query);
       });
     }
 
-    // Apply format filter
+    // Format filter
     if (filters.formats.length > 0) {
-      result = result.filter((m) => filters.formats.includes(m.format));
+      result = result.filter((pm) => filters.formats.includes(pm.format));
     }
 
-    // Apply condition filter
+    // Condition filter
     if (filters.conditions.length > 0) {
-      result = result.filter((m) => m.condition && filters.conditions.includes(m.condition));
+      result = result.filter((pm) => pm.condition && filters.conditions.includes(pm.condition));
     }
 
-    // Apply genre filter
+    // Genre filter
     if (filters.genres.length > 0) {
-      result = result.filter((m) => {
-        const details = movieDetails[m.tmdb_id];
+      result = result.filter((pm) => {
+        const details = movieDetails[pm.tmdb_id];
         return details?.genres?.some((g) => filters.genres.includes(g.name));
       });
     }
 
-    // Apply decade filter
+    // Decade filter
     if (filters.decades.length > 0) {
-      result = result.filter((m) => {
-        const details = movieDetails[m.tmdb_id];
+      result = result.filter((pm) => {
+        const details = movieDetails[pm.tmdb_id];
         if (!details?.release_date) return false;
-        const year = new Date(details.release_date).getFullYear();
+        const year = parseInt(details.release_date.substring(0, 4));
         const decade = `${Math.floor(year / 10) * 10}s`;
         return filters.decades.includes(decade);
       });
     }
 
-    // Apply director filter
-    if (filters.directors.length > 0) {
-      result = result.filter((m) => {
-        const details = movieDetails[m.tmdb_id];
-        const director = details?.credits?.crew?.find((c) => c.job === "Director");
-        return director && filters.directors.includes(director.name);
-      });
-    }
-
-    // Apply price range
-    if (filters.priceMin !== null || filters.priceMax !== null) {
-      result = result.filter((m) => {
-        if (!m.price) return filters.priceMin === null;
-        if (filters.priceMin !== null && m.price < filters.priceMin) return false;
-        if (filters.priceMax !== null && m.price > filters.priceMax) return false;
-        return true;
+    // Price range filter
+    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 500) {
+      result = result.filter((pm) => {
+        const price = pm.price || 0;
+        return price >= filters.priceRange[0] * 100 && price <= filters.priceRange[1] * 100;
       });
     }
 
@@ -312,27 +317,6 @@ export default function Collection() {
                 activeFilterCount={activeFilterCount}
               />
 
-              {/* More options */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="w-10 h-10 rounded-full flex items-center justify-center border border-white/20 text-white/50 hover:text-white transition-all">
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => navigate("/profile?tab=sharing")}>
-                    <Share2 className="w-4 h-4 mr-2" />
-                    Partager ma collection
-                  </DropdownMenuItem>
-                  {activeTab === "valuation" && (
-                    <DropdownMenuItem onClick={refreshValuation} disabled={refreshing}>
-                      <RefreshCw className={cn("w-4 h-4 mr-2", refreshing && "animate-spin")} />
-                      Actualiser les prix
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
               {/* Add button */}
               <Button
                 onClick={() => setShowAddDialog(true)}
@@ -398,6 +382,13 @@ export default function Collection() {
               >
                 <BookOpen className="w-4 h-4" />
                 <span className="hidden sm:inline">Étagère</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="poster"
+                className="flex-1 data-[state=active]:bg-white data-[state=active]:text-black gap-2 rounded-lg"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span className="hidden sm:inline">Posters</span>
               </TabsTrigger>
               <TabsTrigger
                 value="valuation"
@@ -489,6 +480,26 @@ export default function Collection() {
               )}
             </TabsContent>
 
+            {/* Poster Wall Tab */}
+            <TabsContent value="poster" className="mt-6">
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                </div>
+              ) : filteredMovies.length === 0 ? (
+                <EmptyCollectionState
+                  hasFilters={hasActiveFilters || !!searchQuery}
+                  onReset={() => {
+                    resetFilters();
+                    setSearchQuery("");
+                  }}
+                  onAdd={() => setShowAddDialog(true)}
+                />
+              ) : (
+                <PosterWallView movies={filteredMovies} movieDetails={movieDetails} onMovieClick={handleMovieClick} />
+              )}
+            </TabsContent>
+
             {/* Valuation Tab */}
             <TabsContent value="valuation" className="mt-6">
               <ValuationDashboardPremium
@@ -526,15 +537,16 @@ export default function Collection() {
       {/* Dialogs */}
       {editingMovie && (
         <EditPhysicalMovieDialog
-          physicalMovie={editingMovie}
+          movie={editingMovie}
           movieDetails={movieDetails[editingMovie.tmdb_id] || null}
           open={!!editingMovie}
           onOpenChange={(open) => !open && setEditingMovie(null)}
-          onMovieUpdated={handleMovieUpdated}
+          onUpdated={handleMovieUpdated}
+          onDeleted={handleMovieUpdated}
         />
       )}
 
-      <AddPhysicalMovieDialog open={showAddDialog} onOpenChange={setShowAddDialog} onMovieAdded={handleMovieAdded} />
+      <AddPhysicalMovieDialog open={showAddDialog} onOpenChange={setShowAddDialog} onAdded={handleMovieAdded} />
 
       <FloatingDock />
     </div>
