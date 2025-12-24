@@ -76,6 +76,8 @@ function BadgeCard({ badge }: { badge: Badge }) {
   const IconComponent = ICON_MAP[badge.icon_name] || Trophy;
 
   return (
+     <div className="min-h-screen bg-background pb-24 md:pb-8">
+      <MinimalHeader />
     <div
       className={cn(
         "aspect-square p-4 flex flex-col items-center justify-center text-center transition-all",
