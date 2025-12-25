@@ -58,13 +58,23 @@ function DarkModeEnforcer({ children }: { children: React.ReactNode }) {
 
 // Layout component
 function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, updateProfile } = useAuth();
   const location = useLocation();
 
   const isAuthPage = location.pathname === "/auth" || location.pathname === "/forgot-password";
 
-  // Show onboarding only if user exists, profile is loaded, and onboarding is not complete
-  const showOnboarding = user && profile && !loading && !profile.onboarding_complete;
+  const hasUsername = !!profile?.username?.trim();
+
+  // Auto-mark legacy accounts as onboarded (username already set)
+  useEffect(() => {
+    if (!user || !profile || loading) return;
+    if (hasUsername && !profile.onboarding_complete) {
+      updateProfile({ onboarding_complete: true });
+    }
+  }, [user, profile, loading, hasUsername, updateProfile]);
+
+  // Show onboarding only for new accounts (no username yet)
+  const showOnboarding = user && profile && !loading && !profile.onboarding_complete && !hasUsername;
 
   if (showOnboarding && !isAuthPage) {
     return <OnboardingWizard />;
