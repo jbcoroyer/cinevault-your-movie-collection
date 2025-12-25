@@ -15,6 +15,7 @@ export type Profile = {
   current_title?: string | null;
   equipped_frame?: string | null;
   equipped_theme?: string | null;
+  onboarding_complete?: boolean | null;
 };
 
 export type UserMovie = {
