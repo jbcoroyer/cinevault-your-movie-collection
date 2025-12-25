@@ -58,12 +58,13 @@ function DarkModeEnforcer({ children }: { children: React.ReactNode }) {
 
 // Layout component
 function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const location = useLocation();
 
   const isAuthPage = location.pathname === "/auth" || location.pathname === "/forgot-password";
 
-  const showOnboarding = user && !loading && !localStorage.getItem(`onboarding_complete_${user.id}`);
+  // Show onboarding only if user exists, profile is loaded, and onboarding is not complete
+  const showOnboarding = user && profile && !loading && !profile.onboarding_complete;
 
   if (showOnboarding && !isAuthPage) {
     return <OnboardingWizard />;

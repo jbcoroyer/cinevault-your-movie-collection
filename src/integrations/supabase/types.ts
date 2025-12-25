@@ -1281,6 +1281,7 @@ export type Database = {
           equipped_frame: string | null
           equipped_theme: string | null
           id: string
+          onboarding_complete: boolean | null
           popcorn_points: number | null
           streaming_services: string[] | null
           total_xp: number | null
@@ -1294,6 +1295,7 @@ export type Database = {
           equipped_frame?: string | null
           equipped_theme?: string | null
           id: string
+          onboarding_complete?: boolean | null
           popcorn_points?: number | null
           streaming_services?: string[] | null
           total_xp?: number | null
@@ -1307,6 +1309,7 @@ export type Database = {
           equipped_frame?: string | null
           equipped_theme?: string | null
           id?: string
+          onboarding_complete?: boolean | null
           popcorn_points?: number | null
           streaming_services?: string[] | null
           total_xp?: number | null
