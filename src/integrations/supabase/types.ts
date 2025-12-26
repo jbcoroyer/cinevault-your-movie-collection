@@ -167,6 +167,45 @@ export type Database = {
         }
         Relationships: []
       }
+      companies_metadata: {
+        Row: {
+          description: string | null
+          headquarters: string | null
+          homepage: string | null
+          id: number
+          logo_path: string | null
+          name: string
+          origin_country: string | null
+          parent_company_id: number | null
+          parent_company_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          description?: string | null
+          headquarters?: string | null
+          homepage?: string | null
+          id: number
+          logo_path?: string | null
+          name: string
+          origin_country?: string | null
+          parent_company_id?: number | null
+          parent_company_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          description?: string | null
+          headquarters?: string | null
+          homepage?: string | null
+          id?: number
+          logo_path?: string | null
+          name?: string
+          origin_country?: string | null
+          parent_company_id?: number | null
+          parent_company_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_bonuses: {
         Row: {
           bonus_type: string
@@ -465,6 +504,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      entity_follows: {
+        Row: {
+          created_at: string
+          entity_id: number
+          entity_image_path: string | null
+          entity_name: string
+          entity_role: string | null
+          entity_type: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: number
+          entity_image_path?: string | null
+          entity_name: string
+          entity_role?: string | null
+          entity_type: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: number
+          entity_image_path?: string | null
+          entity_name?: string
+          entity_role?: string | null
+          entity_type?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       event_badges: {
         Row: {
@@ -1375,6 +1447,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      release_notifications: {
+        Row: {
+          created_at: string
+          entity_id: number
+          entity_name: string
+          entity_role: string | null
+          entity_type: string
+          id: string
+          is_read: boolean | null
+          movie_poster_path: string | null
+          movie_title: string
+          release_date: string | null
+          tmdb_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: number
+          entity_name: string
+          entity_role?: string | null
+          entity_type: string
+          id?: string
+          is_read?: boolean | null
+          movie_poster_path?: string | null
+          movie_title: string
+          release_date?: string | null
+          tmdb_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: number
+          entity_name?: string
+          entity_role?: string | null
+          entity_type?: string
+          id?: string
+          is_read?: boolean | null
+          movie_poster_path?: string | null
+          movie_title?: string
+          release_date?: string | null
+          tmdb_id?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       reviews: {
         Row: {

@@ -163,3 +163,32 @@ export type CompanyMetadata = {
   parent_company_name: string | null;
   updated_at: string;
 };
+
+// Profile type matching Supabase profiles table
+export type Profile = {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  created_at: string | null;
+  current_title: string | null;
+  equipped_frame: string | null;
+  equipped_theme: string | null;
+  onboarding_complete: boolean | null;
+  popcorn_points: number | null;
+  streaming_services: string[] | null;
+  total_xp: number | null;
+};
+
+// UserMovie type matching Supabase user_movies table
+export type UserMovie = {
+  id: string;
+  user_id: string;
+  tmdb_id: number;
+  status: string;
+  rating: number | null;
+  review: string | null;
+  is_favorite: boolean | null;
+  watched_at: string | null;
+  created_at: string | null;
+};
