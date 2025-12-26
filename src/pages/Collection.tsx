@@ -1,52 +1,32 @@
 /**
- * CineVault — Collection Page Complète
+ * CineVault - Collection Page
  *
- * Page de collection avec tous les onglets:
- * - Grille (vue par défaut)
- * - Étagère (shelf view)
- * - Posters (poster wall view)
- * - Valorisation (valuation dashboard)
- * - Wishlist
- *
- * Design: Radical Minimalist + Premium
+ * Page de collection avec:
+ * - Vue par défaut: Étagère (shelf)
+ * - Ordre des onglets: Étagère → Grille → Valorisation → Wishlist
+ * - Vue Posters supprimée
+ * - MinimalHeader + FloatingDock
  */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MinimalHeader } from "@/components/MinimalHeader";
-import { FloatingDock } from "@/components/FloatingDock";
-import { MinimalMovieCard, MinimalMovieCardSkeleton } from "@/components/MinimalMovieCard";
-import { ShelfView } from "@/components/collection/ShelfView";
-import { PosterWallView } from "@/components/collection/PosterWallView";
-import { ValuationDashboardPremium } from "@/components/collection/ValuationDashboardPremium";
-import { WishlistView } from "@/components/collection/WishlistView";
-import { CollectionFiltersDrawer, ActiveFiltersBar } from "@/components/collection/CollectionFilters";
+import { useAuth } from "@/contexts/AuthContext";
+import { PhysicalMovie, PhysicalFormat, getPhysicalMovies, formatLabels } from "@/services/physicalMovies";
+import { getMovieDetails, MovieDetails, getImageUrl } from "@/services/tmdb";
 import { useCollectionFilters } from "@/hooks/useCollectionFilters";
 import { useCollectionValuation } from "@/hooks/useCollectionValuation";
-import { useAuth } from "@/contexts/AuthContext";
-import { getPhysicalMovies, PhysicalMovie, PhysicalFormat, deletePhysicalMovie } from "@/services/physicalMovies";
-import { getMovieDetails, MovieDetails, Movie, getImageUrl } from "@/services/tmdb";
+import { MinimalHeader } from "@/components/MinimalHeader";
+import { FloatingDock } from "@/components/FloatingDock";
+import { ShelfView } from "@/components/collection/ShelfView";
+import { MinimalMovieCard, MinimalMovieCardSkeleton } from "@/components/MinimalMovieCard";
+import { CollectionFiltersDrawer } from "@/components/collection/CollectionFiltersDrawer";
 import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
 import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
-import { cn } from "@/lib/utils";
-import { toast } from "@/hooks/use-toast";
-import {
-  Plus,
-  Search,
-  X,
-  SlidersHorizontal,
-  Grid3X3,
-  BookOpen,
-  TrendingUp,
-  Heart,
-  RefreshCw,
-  Share2,
-  MoreVertical,
-  LayoutGrid,
-} from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ValuationDashboardPremium } from "@/components/collection/ValuationDashboardPremium";
+import { WishlistView } from "@/components/collection/WishlistView";
+import { ShareCollectionDialog } from "@/components/collection/ShareCollectionDialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -58,8 +38,27 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Types pour les onglets
-type CollectionTab = "grid" | "shelf" | "poster" | "valuation" | "wishlist";
+import { cn } from "@/lib/utils";
+import {
+  Plus,
+  ArrowUpDown,
+  Library,
+  ChevronDown,
+  TrendingUp,
+  X,
+  Search,
+  Grid3X3,
+  BookOpen,
+  Heart,
+  Share2,
+} from "lucide-react";
+import { Movie } from "@/services/tmdb";
+
+// Types pour les onglets - ordre modifié, poster supprimé
+type CollectionTab = "shelf" | "grid" | "valuation" | "wishlist";
+
+// Ordre des onglets
+const TAB_ORDER: CollectionTab[] = ["shelf", "grid", "valuation", "wishlist"];
 
 export default function Collection() {
   const { user } = useAuth();
@@ -67,8 +66,8 @@ export default function Collection() {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Get tab from URL or default to grid
-  const initialTab = (searchParams.get("tab") as CollectionTab) || "grid";
+  // Get tab from URL or default to shelf (nouvelle valeur par défaut)
+  const initialTab = (searchParams.get("tab") as CollectionTab) || "shelf";
 
   // State
   const [activeTab, setActiveTab] = useState<CollectionTab>(initialTab);
@@ -121,32 +120,21 @@ export default function Collection() {
       const physicalMovies = await getPhysicalMovies(user.id);
       setMovies(physicalMovies);
 
-      // Fetch movie details
-      const details: Record<number, MovieDetails> = {};
-      await Promise.all(
-        physicalMovies.map(async (pm) => {
-          try {
-            const movieDetail = await getMovieDetails(pm.tmdb_id);
-            if (movieDetail) {
-              details[pm.tmdb_id] = movieDetail;
-            }
-          } catch (error) {
-            console.error(`Error fetching details for movie ${pm.tmdb_id}:`, error);
-          }
-        }),
-      );
-      setMovieDetails(details);
+      // Load movie details
+      const detailsPromises = physicalMovies.map((pm) => getMovieDetails(pm.tmdb_id).catch(() => null));
+      const detailsResults = await Promise.all(detailsPromises);
 
-      // Filter options are computed automatically by useCollectionFilters
+      const detailsMap: Record<number, MovieDetails> = {};
+      physicalMovies.forEach((pm, index) => {
+        if (detailsResults[index]) {
+          detailsMap[pm.tmdb_id] = detailsResults[index]!;
+        }
+      });
+      setMovieDetails(detailsMap);
     } catch (error) {
       console.error("Error loading collection:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger votre collection",
-        variant: "destructive",
-      });
     } finally {
-    setLoading(false);
+      setLoading(false);
     }
   }, [user]);
 
@@ -155,89 +143,57 @@ export default function Collection() {
   }, [loadCollection]);
 
   // Update URL when tab changes
-  useEffect(() => {
-    if (activeTab !== "grid") {
-      setSearchParams({ tab: activeTab });
-    } else {
-      setSearchParams({});
-    }
-  }, [activeTab, setSearchParams]);
+  const handleTabChange = (tab: string) => {
+    const newTab = tab as CollectionTab;
+    setActiveTab(newTab);
+    setSearchParams({ tab: newTab });
+  };
 
-  // Filter movies
+  // Filter movies by search query
   const filteredMovies = useMemo(() => {
-    let result = movies;
+    if (!searchQuery.trim()) return hookFilteredMovies;
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter((pm) => {
-        const details = movieDetails[pm.tmdb_id];
-        return details?.title?.toLowerCase().includes(query);
-      });
-    }
+    const query = searchQuery.toLowerCase();
+    return hookFilteredMovies.filter((pm) => {
+      const details = movieDetails[pm.tmdb_id];
+      if (!details) return false;
+      return (
+        details.title.toLowerCase().includes(query) || (details.original_title?.toLowerCase().includes(query) ?? false)
+      );
+    });
+  }, [hookFilteredMovies, searchQuery, movieDetails]);
 
-    // Format filter
-    if (filters.formats.length > 0) {
-      result = result.filter((pm) => filters.formats.includes(pm.format));
-    }
-
-    // Condition filter
-    if (filters.conditions.length > 0) {
-      result = result.filter((pm) => pm.condition && filters.conditions.includes(pm.condition));
-    }
-
-    // Genre filter
-    if (filters.genres.length > 0) {
-      result = result.filter((pm) => {
-        const details = movieDetails[pm.tmdb_id];
-        return details?.genres?.some((g) => filters.genres.includes(g.name));
-      });
-    }
-
-    // Decade filter
-    if (filters.decades.length > 0) {
-      result = result.filter((pm) => {
-        const details = movieDetails[pm.tmdb_id];
-        if (!details?.release_date) return false;
-        const year = parseInt(details.release_date.substring(0, 4));
-        const decade = `${Math.floor(year / 10) * 10}s`;
-        return filters.decades.includes(decade);
-      });
-    }
-
-    return result;
-  }, [movies, movieDetails, searchQuery, filters]);
-
-  // Handlers
+  // Handle movie click
   const handleMovieClick = (movie: PhysicalMovie) => {
     setEditingMovie(movie);
   };
 
+  // Handle movie updated
   const handleMovieUpdated = () => {
     loadCollection();
     setEditingMovie(null);
   };
 
+  // Handle movie added
   const handleMovieAdded = () => {
     loadCollection();
     setShowAddDialog(false);
   };
 
-  const handleTabChange = (value: string) => {
-    setActiveTab(value as CollectionTab);
-  };
-
-  // Guest view
+  // Redirect if not logged in
   if (!user) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center px-4">
-          <h1 className="font-display text-display-md text-white mb-4">SIGN IN TO VIEW</h1>
-          <p className="text-white/50 mb-8">Create an account to start your collection</p>
-          <button onClick={() => navigate("/auth")} className="btn-minimal-filled">
-            Sign In
-          </button>
-        </div>
+      <div className="min-h-screen bg-background pb-24 md:pb-8">
+        <MinimalHeader />
+        <main className="pt-20 md:pt-24 px-4 md:px-12">
+          <div className="flex flex-col items-center justify-center py-20">
+            <Library className="w-16 h-16 text-white/20 mb-4" />
+            <h2 className="text-xl font-display text-white mb-2">Connectez-vous pour voir votre collection</h2>
+            <Button onClick={() => navigate("/auth")} className="bg-white text-black hover:bg-white/90">
+              Se connecter
+            </Button>
+          </div>
+        </main>
         <FloatingDock />
       </div>
     );
@@ -247,21 +203,17 @@ export default function Collection() {
     <div className="min-h-screen bg-background pb-24 md:pb-8">
       <MinimalHeader />
 
-      <main className="pt-4 md:pt-24">
+      <main className="pt-20 md:pt-24 px-4 md:px-12">
         {/* Header Section */}
-        <section className="px-4 md:px-12 py-4 md:py-8">
-          {/* Title Row */}
+        <section className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="font-display text-display-sm md:text-display-md text-white">COLLECTION</h1>
-              <p className="text-white/40 text-sm mt-1">
-                {movies.length} {movies.length === 1 ? "film" : "films"}
-                {valuation && valuation.totalValueMedian > 0 && (
-                  <span className="ml-2 text-green-400">
-                    • {(valuation.totalValueMedian / 100).toLocaleString("fr-FR")} €
-                  </span>
-                )}
-              </p>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl md:text-3xl font-display font-bold text-white">Ma Collection</h1>
+              {movies.length > 0 && (
+                <Badge variant="secondary" className="bg-white/10 text-white border-0">
+                  {movies.length} film{movies.length > 1 ? "s" : ""}
+                </Badge>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -269,8 +221,7 @@ export default function Collection() {
               <button
                 onClick={() => setShowSearch(!showSearch)}
                 className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center",
-                  "border border-white/20 transition-all duration-300",
+                  "p-2 rounded-full transition-colors",
                   showSearch ? "bg-white text-black" : "text-white/50 hover:text-white",
                 )}
               >
@@ -323,34 +274,12 @@ export default function Collection() {
               </motion.div>
             )}
           </AnimatePresence>
+        </section>
 
-          {/* Active filters bar */}
-          {hasActiveFilters && (
-            <div className="mb-4">
-              <ActiveFiltersBar
-                filters={filters}
-                toggleFormat={toggleFormat}
-                toggleCondition={toggleCondition}
-                toggleGenre={toggleGenre}
-                toggleDecade={toggleDecade}
-                toggleDirector={toggleDirector}
-                setPriceRange={setPriceRange}
-                resetFilters={resetFilters}
-                hasActiveFilters={hasActiveFilters}
-              />
-            </div>
-          )}
-
-          {/* Tabs */}
+        {/* Tabs Section - Nouvel ordre: Étagère → Grille → Valorisation → Wishlist */}
+        <section>
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="w-full bg-white/5 border border-white/10 p-1 rounded-xl">
-              <TabsTrigger
-                value="grid"
-                className="flex-1 data-[state=active]:bg-white data-[state=active]:text-black gap-2 rounded-lg"
-              >
-                <Grid3X3 className="w-4 h-4" />
-                <span className="hidden sm:inline">Grille</span>
-              </TabsTrigger>
+            <TabsList className="w-full bg-white/5 border border-white/10 p-1 rounded-xl mb-6">
               <TabsTrigger
                 value="shelf"
                 className="flex-1 data-[state=active]:bg-white data-[state=active]:text-black gap-2 rounded-lg"
@@ -359,11 +288,11 @@ export default function Collection() {
                 <span className="hidden sm:inline">Étagère</span>
               </TabsTrigger>
               <TabsTrigger
-                value="poster"
+                value="grid"
                 className="flex-1 data-[state=active]:bg-white data-[state=active]:text-black gap-2 rounded-lg"
               >
-                <LayoutGrid className="w-4 h-4" />
-                <span className="hidden sm:inline">Posters</span>
+                <Grid3X3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Grille</span>
               </TabsTrigger>
               <TabsTrigger
                 value="valuation"
@@ -385,6 +314,30 @@ export default function Collection() {
                 )}
               </TabsTrigger>
             </TabsList>
+
+            {/* Shelf Tab (Default) */}
+            <TabsContent value="shelf" className="mt-6">
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                </div>
+              ) : filteredMovies.length === 0 ? (
+                <EmptyCollectionState
+                  hasFilters={hasActiveFilters || !!searchQuery}
+                  onReset={() => {
+                    resetFilters();
+                    setSearchQuery("");
+                  }}
+                  onAdd={() => setShowAddDialog(true)}
+                />
+              ) : (
+                <ShelfView
+                  movies={filteredMovies}
+                  movieDetailsMap={movieDetails}
+                  onMovieClick={(pm, details) => handleMovieClick(pm)}
+                />
+              )}
+            </TabsContent>
 
             {/* Grid Tab */}
             <TabsContent value="grid" className="mt-6">
@@ -431,50 +384,6 @@ export default function Collection() {
               )}
             </TabsContent>
 
-            {/* Shelf Tab */}
-            <TabsContent value="shelf" className="mt-6">
-              {loading ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                </div>
-              ) : filteredMovies.length === 0 ? (
-                <EmptyCollectionState
-                  hasFilters={hasActiveFilters || !!searchQuery}
-                  onReset={() => {
-                    resetFilters();
-                    setSearchQuery("");
-                  }}
-                  onAdd={() => setShowAddDialog(true)}
-                />
-              ) : (
-                <ShelfView
-                  movies={filteredMovies}
-                  movieDetailsMap={movieDetails}
-                  onMovieClick={(pm, details) => handleMovieClick(pm)}
-                />
-              )}
-            </TabsContent>
-
-            {/* Poster Wall Tab */}
-            <TabsContent value="poster" className="mt-6">
-              {loading ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                </div>
-              ) : filteredMovies.length === 0 ? (
-                <EmptyCollectionState
-                  hasFilters={hasActiveFilters || !!searchQuery}
-                  onReset={() => {
-                    resetFilters();
-                    setSearchQuery("");
-                  }}
-                  onAdd={() => setShowAddDialog(true)}
-                />
-              ) : (
-                <PosterWallView movies={filteredMovies} movieDetails={movieDetails} onMovieClick={handleMovieClick} />
-              )}
-            </TabsContent>
-
             {/* Valuation Tab */}
             <TabsContent value="valuation" className="mt-6">
               <ValuationDashboardPremium
@@ -514,7 +423,7 @@ export default function Collection() {
         <EditPhysicalMovieDialog
           physicalMovie={editingMovie}
           movieDetails={movieDetails[editingMovie.tmdb_id] || null}
-          open={!!editingMovie}
+          open={!editingMovie}
           onOpenChange={(open) => !open && setEditingMovie(null)}
           onMovieUpdated={handleMovieUpdated}
         />
