@@ -19,7 +19,7 @@ import { Trophy, Flame, Star, Gift } from "lucide-react";
 // XP Configuration
 // ============================================
 
-export const XP_REWARDS = {
+export const XP_REWARDS: Record<string, number> = {
   // Collection actions
   ADD_PHYSICAL_MOVIE: 50,
   ADD_PHYSICAL_4K: 75,
@@ -43,7 +43,7 @@ export const XP_REWARDS = {
   CREATE_LIST: 20,
   ADD_TO_LIST: 5,
   SHARE_COLLECTION: 50,
-} as const;
+};
 
 // ============================================
 // Gamification Manager Component
@@ -77,11 +77,11 @@ export const GamificationManager: React.FC<GamificationManagerProps> = ({
       try {
         const currentXp = lastXpRef.current;
 
-        // Update in database
-        const { error } = await supabase.rpc("add_user_xp", {
-          p_user_id: user.id,
-          p_xp_amount: amount,
-        });
+        // Update in database directly
+        const { error } = await supabase
+          .from("profiles")
+          .update({ total_xp: currentXp + amount })
+          .eq("id", user.id);
 
         if (error) throw error;
 

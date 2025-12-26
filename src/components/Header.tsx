@@ -114,7 +114,7 @@ export const Header = () => {
   const [collectionCount, setCollectionCount] = useState(0);
   const [totalXp, setTotalXp] = useState(0);
   const [streak, setStreak] = useState(0);
-  const { hasUnseenBadges } = useGamificationNotifications();
+  const { hasNewBadges } = useGamificationNotifications();
 
   // Fetch user stats
   useEffect(() => {
@@ -167,7 +167,7 @@ export const Header = () => {
       to: "/badges",
       icon: Trophy,
       label: "Badges",
-      hasBadge: hasUnseenBadges,
+      hasBadge: hasNewBadges,
     },
   ];
 
