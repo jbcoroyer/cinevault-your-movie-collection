@@ -1,12 +1,9 @@
 /**
- * CineVault - Home Components Exports
+ * CineVault - Gamification Components Exports
  *
- * Composants pour la page d'accueil refonte
+ * Phase 2: Polish Gamification
  */
 
-export { LiveActivityFeed } from "./LiveActivityFeed";
-export { CommunityStats } from "./CommunityStats";
-export { MostOwnedMovies } from "./MostOwnedMovies";
-export { TopCollectorsCarousel } from "./TopCollectorsCarousel";
-export { RareEditionsSection } from "./RareEditionsSection";
-export { WelcomeSection } from "./WelcomeSection";
+export { GamificationManager, XP_REWARDS } from "./GamificationManager";
+export { XPToastProvider, useXPToast } from "./XPToast";
+export { MobileXPIndicator } from "./MobileXPIndicator";
