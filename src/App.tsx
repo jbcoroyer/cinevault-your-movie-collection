@@ -12,11 +12,13 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { BadgeNotificationProvider } from "./contexts/BadgeNotificationContext";
+import { AddMovieProvider, useAddMovie } from "./contexts/AddMovieContext";
 import OnboardingWizard from "./components/OnboardingWizard";
 import { GamificationManager } from "./components/gamification/GamificationManager";
 import { XPToastProvider } from "./components/gamification/XPToast";
+import { AddMovieSheet } from "./components/AddMovieSheet";
 import PublicCollection from "@/pages/PublicCollection";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 
 // Pages
 import Index from "./pages/Index";
@@ -56,6 +58,25 @@ function DarkModeEnforcer({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Global Add Movie Sheet
+function GlobalAddMovieSheet() {
+  const { isOpen, closeAddMovie } = useAddMovie();
+
+  const handleMovieAdded = useCallback(() => {
+    // Invalidate queries to refresh data
+    queryClient.invalidateQueries({ queryKey: ['physical-movies'] });
+    queryClient.invalidateQueries({ queryKey: ['collection'] });
+  }, []);
+
+  return (
+    <AddMovieSheet
+      isOpen={isOpen}
+      onClose={closeAddMovie}
+      onMovieAdded={handleMovieAdded}
+    />
+  );
+}
+
 // Layout component
 function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, updateProfile } = useAuth();
@@ -80,7 +101,12 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     return <OnboardingWizard />;
   }
 
-  return <GamificationManager>{children}</GamificationManager>;
+  return (
+    <GamificationManager>
+      {children}
+      <GlobalAddMovieSheet />
+    </GamificationManager>
+  );
 }
 
 // Animated routes wrapper
@@ -123,11 +149,13 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <BadgeNotificationProvider>
-              <XPToastProvider>
-                <AppLayout>
-                  <AnimatedRoutes />
-                </AppLayout>
-              </XPToastProvider>
+              <AddMovieProvider>
+                <XPToastProvider>
+                  <AppLayout>
+                    <AnimatedRoutes />
+                  </AppLayout>
+                </XPToastProvider>
+              </AddMovieProvider>
             </BadgeNotificationProvider>
           </AuthProvider>
         </BrowserRouter>
