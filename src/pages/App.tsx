@@ -10,33 +10,33 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { BadgeNotificationProvider } from "./contexts/BadgeNotificationContext";
-import OnboardingWizard from "./components/OnboardingWizard";
-import { GamificationManager } from "./components/gamification/GamificationManager";
-import { XPToastProvider } from "./components/gamification/XPToast";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { BadgeNotificationProvider } from "@/contexts/BadgeNotificationContext";
+import OnboardingWizard from "@/components/OnboardingWizard";
+import { GamificationManager } from "@/components/gamification/GamificationManager";
+import { XPToastProvider } from "@/components/gamification/XPToast";
 import PublicCollection from "@/pages/PublicCollection";
 import { useEffect } from "react";
 
 // Pages
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-import MovieList from "./pages/MovieList";
-import MovieDetail from "./pages/MovieDetail";
-import Search from "./pages/Search";
-import Profile from "./pages/Profile";
-import Collection from "./pages/Collection";
-import Settings from "./pages/Settings";
-import Badges from "./pages/Badges";
-import Lists from "./pages/Lists";
-import ListDetail from "./pages/ListDetail";
-import PersonDetail from "./pages/PersonDetail";
-import ForgotPassword from "./pages/ForgotPassword";
-import Feed from "./pages/Feed";
-import Marketplace from "./pages/Marketplace";
-import StudioDetail from "./pages/StudioDetail";
-import Following from "./pages/Following";
+import Index from "@/pages/Index";
+import Auth from "@/pages/Auth";
+import NotFound from "@/pages/NotFound";
+import MovieList from "@/pages/MovieList";
+import MovieDetail from "@/pages/MovieDetail";
+import Search from "@/pages/Search";
+import Profile from "@/pages/Profile";
+import Collection from "@/pages/Collection";
+import Settings from "@/pages/Settings";
+import Badges from "@/pages/Badges";
+import Lists from "@/pages/Lists";
+import ListDetail from "@/pages/ListDetail";
+import PersonDetail from "@/pages/PersonDetail";
+import ForgotPassword from "@/pages/ForgotPassword";
+import Feed from "@/pages/Feed";
+import Marketplace from "@/pages/Marketplace";
+import StudioDetail from "@/pages/StudioDetail";
+import Following from "@/pages/Following";
 
 // Create a client
 const queryClient = new QueryClient({

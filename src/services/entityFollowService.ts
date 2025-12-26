@@ -35,13 +35,13 @@ export const isFollowingEntity = async (
   entityType: EntityType,
   entityId: number
 ): Promise<boolean> => {
-  const { data, error } = await supabase
-    .from("entity_follows")
+  const { data, error } = await (supabase
+    .from("entity_follows" as any)
     .select("id")
     .eq("user_id", userId)
     .eq("entity_type", entityType)
     .eq("entity_id", entityId)
-    .maybeSingle();
+    .maybeSingle());
 
   if (error) {
     console.error("Error checking follow status:", error);
@@ -62,7 +62,7 @@ export const followEntity = async (
   entityImagePath: string | null,
   entityRole: EntityRole
 ): Promise<{ success: boolean; error?: string }> => {
-  const { error } = await supabase.from("entity_follows").insert({
+  const { error } = await (supabase.from("entity_follows" as any) as any).insert({
     user_id: userId,
     entity_type: entityType,
     entity_id: entityId,
@@ -90,8 +90,8 @@ export const unfollowEntity = async (
   entityType: EntityType,
   entityId: number
 ): Promise<{ success: boolean; error?: string }> => {
-  const { error } = await supabase
-    .from("entity_follows")
+  const { error } = await (supabase
+    .from("entity_follows" as any) as any)
     .delete()
     .eq("user_id", userId)
     .eq("entity_type", entityType)
@@ -141,8 +141,8 @@ export const getFollowedEntities = async (
   userId: string,
   entityType?: EntityType
 ): Promise<FollowedEntity[]> => {
-  let query = supabase
-    .from("entity_follows")
+  let query = (supabase
+    .from("entity_follows" as any) as any)
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
@@ -158,15 +158,15 @@ export const getFollowedEntities = async (
     return [];
   }
 
-  return data as FollowedEntity[];
+  return (data || []) as FollowedEntity[];
 };
 
 /**
  * Récupère les acteurs suivis
  */
 export const getFollowedActors = async (userId: string): Promise<FollowedEntity[]> => {
-  const { data, error } = await supabase
-    .from("entity_follows")
+  const { data, error } = await (supabase
+    .from("entity_follows" as any) as any)
     .select("*")
     .eq("user_id", userId)
     .eq("entity_type", "person")
@@ -178,15 +178,15 @@ export const getFollowedActors = async (userId: string): Promise<FollowedEntity[
     return [];
   }
 
-  return data as FollowedEntity[];
+  return (data || []) as FollowedEntity[];
 };
 
 /**
  * Récupère les réalisateurs suivis
  */
 export const getFollowedDirectors = async (userId: string): Promise<FollowedEntity[]> => {
-  const { data, error } = await supabase
-    .from("entity_follows")
+  const { data, error } = await (supabase
+    .from("entity_follows" as any) as any)
     .select("*")
     .eq("user_id", userId)
     .eq("entity_type", "person")
@@ -198,15 +198,15 @@ export const getFollowedDirectors = async (userId: string): Promise<FollowedEnti
     return [];
   }
 
-  return data as FollowedEntity[];
+  return (data || []) as FollowedEntity[];
 };
 
 /**
  * Récupère les studios suivis
  */
 export const getFollowedStudios = async (userId: string): Promise<FollowedEntity[]> => {
-  const { data, error } = await supabase
-    .from("entity_follows")
+  const { data, error } = await (supabase
+    .from("entity_follows" as any) as any)
     .select("*")
     .eq("user_id", userId)
     .eq("entity_type", "company")
@@ -217,7 +217,7 @@ export const getFollowedStudios = async (userId: string): Promise<FollowedEntity
     return [];
   }
 
-  return data as FollowedEntity[];
+  return (data || []) as FollowedEntity[];
 };
 
 /**
@@ -227,8 +227,8 @@ export const getEntityFollowersCount = async (
   entityType: EntityType,
   entityId: number
 ): Promise<number> => {
-  const { count, error } = await supabase
-    .from("entity_follows")
+  const { count, error } = await (supabase
+    .from("entity_follows" as any) as any)
     .select("*", { count: "exact", head: true })
     .eq("entity_type", entityType)
     .eq("entity_id", entityId);
@@ -270,8 +270,8 @@ export const getEntityFollowStats = async (
  * Récupère les notifications de sorties non lues
  */
 export const getUnreadReleaseNotifications = async (userId: string) => {
-  const { data, error } = await supabase
-    .from("release_notifications")
+  const { data, error } = await (supabase
+    .from("release_notifications" as any) as any)
     .select("*")
     .eq("user_id", userId)
     .eq("is_read", false)
@@ -289,8 +289,8 @@ export const getUnreadReleaseNotifications = async (userId: string) => {
  * Marque une notification comme lue
  */
 export const markNotificationAsRead = async (notificationId: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from("release_notifications")
+  const { error } = await (supabase
+    .from("release_notifications" as any) as any)
     .update({ is_read: true })
     .eq("id", notificationId);
 
@@ -306,8 +306,8 @@ export const markNotificationAsRead = async (notificationId: string): Promise<bo
  * Marque toutes les notifications comme lues
  */
 export const markAllNotificationsAsRead = async (userId: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from("release_notifications")
+  const { error } = await (supabase
+    .from("release_notifications" as any) as any)
     .update({ is_read: true })
     .eq("user_id", userId)
     .eq("is_read", false);
