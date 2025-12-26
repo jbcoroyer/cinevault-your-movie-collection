@@ -230,7 +230,7 @@ export default function Index() {
               )}
             >
               <Search className="w-4 h-4" />
-              Ajouter un film
+              Chercher un film
             </button>
 
             <button
