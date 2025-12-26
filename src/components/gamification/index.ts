@@ -1,17 +1,9 @@
 /**
- * GAMIFICATION INDEX - Exports tous les composants
+ * CineVault - Gamification Components Exports
+ *
+ * Phase 2: Polish Gamification
  */
 
-export { DestinyMatrix, useDestinyStats } from "./DestinyMatrix";
-export { LootBoxReveal } from "./LootBoxReveal";
-export { PatchBadge } from "./PatchBadge";
-export { HoloBadge } from "./HoloBadge";
-export { DailyBonusDialog } from "./DailyBonusDialog";
-export { StreakMilestoneDialog } from "./StreakMilestoneDialog";
-export { GamificationManager } from "./GamificationManager";
-export { WeeklyChallenges } from "./WeeklyChallenges";
-export { SeasonalEvents } from "./SeasonalEvents";
-export { RewardsShowcase } from "./RewardsShowcase";
-export { StreakDisplay } from "./StreakDisplay";
-export { CinevaultMemberCard } from "./CinevaultMemberCard";
-export { MemberCard3DModal } from "./MemberCard3DModal";
+export { GamificationManager, XP_REWARDS } from "./GamificationManager";
+export { XPToastProvider, useXPToast } from "./XPToast";
+export { MobileXPIndicator } from "./MobileXPIndicator";
