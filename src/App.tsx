@@ -1,6 +1,6 @@
 /**
  * CineVault — Radical Minimalist App
- * 
+ *
  * Force dark mode, minimal UI
  */
 
@@ -19,7 +19,8 @@ import { XPToastProvider } from "./components/gamification/XPToast";
 import { AddMovieSheet } from "./components/AddMovieSheet";
 import PublicCollection from "@/pages/PublicCollection";
 import { useEffect, useCallback } from "react";
-
+import StudioDetail from "./pages/StudioDetail";
+import Following from "./pages/Following";
 // Pages
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -51,10 +52,10 @@ const queryClient = new QueryClient({
 // Force dark mode
 function DarkModeEnforcer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    document.documentElement.classList.add('dark');
-    document.documentElement.style.colorScheme = 'dark';
+    document.documentElement.classList.add("dark");
+    document.documentElement.style.colorScheme = "dark";
   }, []);
-  
+
   return <>{children}</>;
 }
 
@@ -64,17 +65,11 @@ function GlobalAddMovieSheet() {
 
   const handleMovieAdded = useCallback(() => {
     // Invalidate queries to refresh data
-    queryClient.invalidateQueries({ queryKey: ['physical-movies'] });
-    queryClient.invalidateQueries({ queryKey: ['collection'] });
+    queryClient.invalidateQueries({ queryKey: ["physical-movies"] });
+    queryClient.invalidateQueries({ queryKey: ["collection"] });
   }, []);
 
-  return (
-    <AddMovieSheet
-      isOpen={isOpen}
-      onClose={closeAddMovie}
-      onMovieAdded={handleMovieAdded}
-    />
-  );
+  return <AddMovieSheet isOpen={isOpen} onClose={closeAddMovie} onMovieAdded={handleMovieAdded} />;
 }
 
 // Layout component
@@ -116,6 +111,8 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait" initial={false}>
       <Routes location={location} key={location.pathname}>
+        <Route path="/studio/:id" element={<StudioDetail />} />
+        <Route path="/following" element={<Following />} />
         <Route path="/c/:shareCode" element={<PublicCollection />} />
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/" element={<Index />} />
