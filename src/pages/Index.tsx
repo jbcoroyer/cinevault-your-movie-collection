@@ -560,11 +560,10 @@ export default function Index() {
     let successCount = 0;
     for (const { movie, format } of movies) {
       try {
-        await addPhysicalMovie(
-          user.id,
-          movie.id,
-          format as "dvd" | "bluray" | "4k" | "steelbook" | "collector"
-        );
+        await addPhysicalMovie(user.id, {
+          tmdb_id: movie.id,
+          format: format as "dvd" | "bluray" | "4k" | "steelbook" | "collector",
+        });
         successCount++;
       } catch (error) {
         console.error("Failed to add movie:", error);
