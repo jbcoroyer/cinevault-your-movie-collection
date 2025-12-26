@@ -163,8 +163,6 @@ function BadgeCard({ badge }: { badge: Badge }) {
 export default function Badges() {
   const navigate = useNavigate();
   const { user, loading: authLoading, profile } = useAuth();
-  const { markBadgesAsSeen, markRewardsAsSeen } = useBadgeNotification();
-
   const [badges, setBadges] = useState<Badge[]>([]);
   const [loading, setLoading] = useState(true);
   const [collectionCount, setCollectionCount] = useState(0);
@@ -173,11 +171,6 @@ export default function Badges() {
   const totalXp = profile?.total_xp || 0;
   const { level, currentLevelXp, xpForNextLevel, progress } = calculateLevel(totalXp);
   const levelTitle = getLevelTitle(level);
-
-  useEffect(() => {
-    markBadgesAsSeen();
-    markRewardsAsSeen();
-  }, [markBadgesAsSeen, markRewardsAsSeen]);
 
   useEffect(() => {
     const loadData = async () => {
