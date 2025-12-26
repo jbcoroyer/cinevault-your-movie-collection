@@ -16,7 +16,7 @@ import {
   Trophy,
   ListVideo,
   LogIn,
-  Activity,
+  Plus,
   Zap,
   Flame,
 } from "lucide-react";
@@ -29,6 +29,7 @@ import { Button } from "./ui/button";
 import { useGamificationNotifications } from "@/hooks/useGamificationNotifications";
 import { NotificationCenter } from "./notifications";
 import { getLevelFromXp, getXpProgress } from "@/data/videoClubData";
+import { useAddMovie } from "@/contexts/AddMovieContext";
 
 /**
  * XP Badge for Desktop Header
@@ -111,6 +112,7 @@ export const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading } = useAuth();
+  const { openAddMovie } = useAddMovie();
   const [collectionCount, setCollectionCount] = useState(0);
   const [totalXp, setTotalXp] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -151,7 +153,7 @@ export const Header = () => {
     fetchStats();
   }, [user]);
 
-  // Navigation items - Feed ajouté
+  // Navigation items - Ajouter au lieu de Feed
   const navItems = [
     { to: "/", icon: Home, label: "Accueil", exact: true },
     { to: "/search", icon: Search, label: "Recherche" },
@@ -161,7 +163,6 @@ export const Header = () => {
       label: "Collection",
       isMain: true,
     },
-    { to: "/feed", icon: Activity, label: "Feed" },
     { to: "/lists", icon: ListVideo, label: "Listes" },
     {
       to: "/badges",
@@ -292,6 +293,24 @@ export const Header = () => {
         <div className="flex items-center gap-3">
           {!loading && user && (
             <>
+              {/* Add Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={openAddMovie}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-1.5 rounded-full",
+                  "bg-gradient-to-r from-amber-500 to-orange-500",
+                  "hover:from-amber-600 hover:to-orange-600",
+                  "text-white text-sm font-medium",
+                  "shadow-lg shadow-amber-500/20",
+                  "transition-all duration-300"
+                )}
+              >
+                <Plus className="w-4 h-4" />
+                Ajouter
+              </motion.button>
+
               {/* XP Badge */}
               <Link to="/badges">
                 <DesktopXPBadge totalXp={totalXp} streak={streak} />

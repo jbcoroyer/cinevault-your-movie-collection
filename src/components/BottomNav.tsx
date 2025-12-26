@@ -1,30 +1,29 @@
 /**
- * CineVault - BottomNav avec Feed/Activité intégré
+ * CineVault - BottomNav avec bouton Ajouter
  *
- * Phase 1: Navigation restructurée
- * - Accueil | Recherche | [FAB] | Feed | Collection
- * - Streak flame animée sur l'icône Collection
- * - Micro-animations au tap
+ * Navigation restructurée :
+ * - Accueil | Recherche | [Ajouter] | Collection
+ * - Le bouton Ajouter ouvre le sheet d'ajout de film
  */
 
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, Library, Activity, Flame } from "lucide-react";
+import { Home, Search, Library, Plus, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGamificationNotifications } from "@/hooks/useGamificationNotifications";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAddMovie } from "@/contexts/AddMovieContext";
 
 /**
  * BottomNav - Navigation mobile restructurée
- *
- * Nouvelle structure : Accueil | Recherche | [espace FAB] | Feed | Collection
  */
 
 export const BottomNav = () => {
   const { pathname } = useLocation();
   const { user } = useAuth();
+  const { openAddMovie } = useAddMovie();
   const { markBadgesAsSeen, markRewardsAsSeen } = useGamificationNotifications();
   const [streak, setStreak] = useState(0);
   const [tappedItem, setTappedItem] = useState<string | null>(null);
@@ -56,7 +55,7 @@ export const BottomNav = () => {
     }
   }, [pathname, markBadgesAsSeen, markRewardsAsSeen]);
 
-  // Nouvelle structure de navigation : 4 items + espace central pour FAB
+  // Navigation items: 4 items avec bouton Ajouter au centre
   const navItems = [
     {
       icon: Home,
@@ -70,12 +69,12 @@ export const BottomNav = () => {
       path: "/search",
       showBadge: false,
     },
-    // Espace central pour le FAB (géré dans Index.tsx)
+    // Bouton Ajouter (action, pas un lien)
     {
-      icon: Activity,
-      label: "Feed",
-      path: "/feed",
-      showBadge: false,
+      icon: Plus,
+      label: "Ajouter",
+      path: null, // null = action
+      isAction: true,
     },
     {
       icon: Library,
@@ -86,8 +85,8 @@ export const BottomNav = () => {
     },
   ];
 
-  const handleTap = (path: string) => {
-    setTappedItem(path);
+  const handleTap = (path: string | null) => {
+    setTappedItem(path || "action");
     // Simulate haptic feedback via vibration API
     if (navigator.vibrate) {
       navigator.vibrate(10);
@@ -102,25 +101,55 @@ export const BottomNav = () => {
 
       <div className="relative flex justify-around items-center h-16 px-2">
         {navItems.map((item, index) => {
-          const isActive =
-            item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);
+          const isActive = item.path
+            ? item.path === "/"
+              ? pathname === "/"
+              : pathname.startsWith(item.path)
+            : false;
 
-          // Ajouter un espace au milieu pour le FAB
-          const isAfterCenter = index >= 2;
+          // Bouton Ajouter (action)
+          if (item.isAction) {
+            return (
+              <button
+                key="add-button"
+                onClick={() => {
+                  handleTap(null);
+                  openAddMovie();
+                }}
+                className={cn(
+                  "relative flex flex-col items-center justify-center",
+                  "w-16 h-14 rounded-xl transition-all duration-200",
+                  tappedItem === "action" && "scale-90"
+                )}
+              >
+                <motion.div
+                  animate={{ scale: tappedItem === "action" ? 0.85 : 1 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center",
+                    "bg-gradient-to-br from-amber-500 to-orange-600",
+                    "shadow-lg shadow-amber-500/30"
+                  )}
+                >
+                  <Plus className="w-5 h-5 text-white" strokeWidth={2.5} />
+                </motion.div>
+                <span className="text-[10px] mt-1 font-medium text-amber-500">
+                  {item.label}
+                </span>
+              </button>
+            );
+          }
 
           return (
             <Link
               key={item.path}
-              to={item.path}
+              to={item.path!}
               onClick={() => handleTap(item.path)}
               className={cn(
                 "relative flex flex-col items-center justify-center",
                 "w-16 h-14 rounded-xl transition-all duration-200",
                 isActive ? "text-white" : "text-white/40",
-                tappedItem === item.path && "scale-90",
-                // Ajouter un margin pour l'espace FAB central
-                index === 1 && "mr-8",
-                index === 2 && "ml-8"
+                tappedItem === item.path && "scale-90"
               )}
             >
               {/* Icon container with streak indicator */}
