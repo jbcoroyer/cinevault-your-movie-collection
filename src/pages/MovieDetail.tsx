@@ -33,7 +33,7 @@ import { WatchedDialog } from "@/components/WatchedDialog";
 import { AddToListDialog } from "@/components/AddToListDialog";
 import { MinimalMovieCard } from "@/components/MinimalMovieCard";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Check, Heart, Clock, ListPlus, Star, Play, ExternalLink } from "lucide-react";
+import { ArrowLeft, Plus, Check, Heart, Clock, ListPlus, Star, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ============================================
@@ -41,9 +41,9 @@ import { cn } from "@/lib/utils";
 // ============================================
 
 /**
- * Watch Providers Section - Minimaliste
+ * Watch Providers Section - Minimaliste (sans liens externes)
  */
-const StreamingSection = ({ providers, link }: { providers: WatchProviders | null; link?: string }) => {
+const StreamingSection = ({ providers }: { providers: WatchProviders | null }) => {
   if (!providers?.flatrate?.length) return null;
 
   return (
@@ -54,35 +54,72 @@ const StreamingSection = ({ providers, link }: { providers: WatchProviders | nul
       </div>
       <div className="flex items-center gap-3 mt-3">
         {providers.flatrate.slice(0, 5).map((provider) => (
-          <a
-            key={provider.provider_id}
-            href={link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative"
-          >
+          <div key={provider.provider_id} className="group relative">
             <img
               src={getImageUrl(provider.logo_path, "w92") || ""}
               alt={provider.provider_name}
-              className="w-10 h-10 rounded-lg object-cover transition-transform group-hover:scale-110"
+              className="w-10 h-10 rounded-lg object-cover"
             />
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
               <span className="text-[10px] text-white/60 bg-black/80 px-2 py-1 rounded">{provider.provider_name}</span>
             </div>
-          </a>
+          </div>
         ))}
-        {link && (
-          <a
-            href={link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs text-white/40 hover:text-white/60 transition-colors ml-2"
-          >
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        )}
       </div>
     </section>
+  );
+};
+
+/**
+ * Photo Gallery - Horizontal scroll
+ */
+const PhotoGallery = ({ images, title }: { images: { file_path: string }[]; title: string }) => {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  if (!images?.length) return null;
+
+  return (
+    <>
+      <section className="mb-10">
+        <h2 className="text-xs text-white/40 uppercase tracking-wider mb-4">Photos</h2>
+        <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
+          {images.slice(0, 10).map((image, index) => (
+            <button
+              key={image.file_path}
+              onClick={() => setSelectedImage(getImageUrl(image.file_path, "original"))}
+              className="flex-shrink-0 group"
+            >
+              <img
+                src={getImageUrl(image.file_path, "w500") || ""}
+                alt={`${title} - Photo ${index + 1}`}
+                className="h-32 md:h-40 w-auto rounded-lg object-cover transition-transform group-hover:scale-105"
+              />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Lightbox */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={selectedImage}
+            alt={title}
+            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
   );
 };
 
@@ -389,7 +426,7 @@ export default function MovieDetail() {
           </div>
 
           {/* Streaming Providers - FIRST */}
-          <StreamingSection providers={providers} link={providers?.link} />
+          <StreamingSection providers={providers} />
 
           {/* Synopsis */}
           {movie.overview && (
@@ -434,6 +471,9 @@ export default function MovieDetail() {
               </div>
             </section>
           )}
+
+          {/* Photo Gallery */}
+          <PhotoGallery images={movie.images?.backdrops || []} title={movie.title} />
 
           {/* Budget & Production */}
           {(movie.budget > 0 || studios.length > 0 || countries) && (
