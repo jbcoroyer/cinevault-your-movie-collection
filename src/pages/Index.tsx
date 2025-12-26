@@ -24,7 +24,7 @@ import {
   getMovieDetails,
   getImageUrl,
 } from "@/services/tmdb";
-import { getPhysicalMovies, PhysicalMovie } from "@/services/collection";
+import { getPhysicalMovies, PhysicalMovie } from "@/services/physicalMovies";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowRight,
@@ -331,15 +331,18 @@ export default function Index() {
         const [{ count: collectionCount }, { count: badgesCount }, { data: profileData }] = await Promise.all([
           supabase.from("physical_movies").select("*", { count: "exact", head: true }).eq("user_id", user.id),
           supabase.from("user_badges").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-          supabase.from("profiles").select("level, xp").eq("id", user.id).single(),
+          supabase.from("profiles").select("total_xp").eq("id", user.id).single(),
         ]);
 
+        const totalXp = profileData?.total_xp || 0;
+        const calculatedLevel = Math.floor(totalXp / 1000) + 1;
+        
         setUserStats({
           collectionCount: collectionCount || 0,
           totalValue: (collectionCount || 0) * 15, // Estimation
           badgesCount: badgesCount || 0,
-          level: profileData?.level || 1,
-          xp: profileData?.xp || 0,
+          level: calculatedLevel,
+          xp: totalXp,
         });
 
         // Load recent activity from followed users
