@@ -1,12 +1,9 @@
 /**
- * CineVault - Index Page Refonte
+ * CineVault — Index Page
  *
- * MODIFICATIONS:
- * - Header avec stats en typographie XXL premium
- * - Chiffres qui ressortent visuellement
- * - "Ajouter un film" redirige vers /search
- * - Design homogène et premium
- * - Glassmorphism cohérent
+ * Design ultra-épuré et premium
+ * Typographie suisse, espacement généreux
+ * Chiffres en display bold pour impact visuel
  */
 
 import { useState, useEffect } from "react";
@@ -20,23 +17,11 @@ import { getPopularMovies, getNowPlayingMovies, Movie, getMovieDetails, MovieDet
 import { getPhysicalMovies, PhysicalMovie } from "@/services/physicalMovies";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { Plus, Search, Library, Trophy, TrendingUp, Sparkles, Users, ChevronRight, Disc, Zap } from "lucide-react";
+import { ChevronRight, Search, Users } from "lucide-react";
 import { LandingHero } from "@/components/LandingHero";
 
 // ============================================
-// Types
-// ============================================
-
-interface UserStats {
-  collectionCount: number;
-  estimatedValue: number;
-  badgeCount: number;
-  level: number;
-  totalXp: number;
-}
-
-// ============================================
-// Utility Functions
+// Utility
 // ============================================
 
 const getLevelFromXp = (xp: number): number => {
@@ -54,52 +39,27 @@ const getLevelFromXp = (xp: number): number => {
 };
 
 // ============================================
-// Sub Components
+// Components
 // ============================================
 
-/**
- * Section Header Component
- */
 const SectionHeader = ({ title, subtitle, onSeeAll }: { title: string; subtitle?: string; onSeeAll?: () => void }) => (
-  <div className="flex items-center justify-between mb-4 md:mb-6">
+  <div className="flex items-end justify-between mb-6">
     <div>
-      <h2 className="font-display text-lg md:text-xl font-bold text-white tracking-wide">{title}</h2>
-      {subtitle && <p className="text-sm text-white/40 mt-0.5">{subtitle}</p>}
+      <h2 className="font-display text-sm uppercase tracking-[0.2em] text-white/40">{title}</h2>
+      {subtitle && <p className="text-white/30 text-xs mt-1">{subtitle}</p>}
     </div>
     {onSeeAll && (
-      <button
-        onClick={onSeeAll}
-        className="flex items-center gap-1 text-sm text-white/50 hover:text-white transition-colors"
-      >
-        Voir tout
-        <ChevronRight className="w-4 h-4" />
+      <button onClick={onSeeAll} className="text-xs text-white/30 hover:text-white/60 transition-colors">
+        Tout voir
       </button>
     )}
   </div>
 );
 
-/**
- * Movie Grid Component
- */
-const MovieGrid = ({
-  movies,
-  loading,
-  columns = "default",
-}: {
-  movies: Movie[];
-  loading: boolean;
-  columns?: "default" | "compact";
-}) => {
+const MovieGrid = ({ movies, loading }: { movies: Movie[]; loading?: boolean }) => {
   if (loading) {
     return (
-      <div
-        className={cn(
-          "grid gap-3 md:gap-4",
-          columns === "compact"
-            ? "grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
-            : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
-        )}
-      >
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {Array.from({ length: 12 }).map((_, i) => (
           <MinimalMovieCardSkeleton key={i} />
         ))}
@@ -108,14 +68,7 @@ const MovieGrid = ({
   }
 
   return (
-    <div
-      className={cn(
-        "grid gap-3 md:gap-4",
-        columns === "compact"
-          ? "grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
-          : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
-      )}
-    >
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
       {movies.map((movie, index) => (
         <MinimalMovieCard key={movie.id} movie={movie} index={index} />
       ))}
@@ -123,166 +76,8 @@ const MovieGrid = ({
   );
 };
 
-/**
- * Quick Stats Card - Design Premium avec typographie XXL
- */
-const QuickStatsCard = ({
-  icon: Icon,
-  value,
-  label,
-  suffix,
-  onClick,
-  accentColor = "amber",
-  delay = 0,
-}: {
-  icon: React.ElementType;
-  value: number | string;
-  label: string;
-  suffix?: string;
-  onClick?: () => void;
-  accentColor?: "amber" | "green" | "purple" | "blue";
-  delay?: number;
-}) => {
-  const colors = {
-    amber: {
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
-      icon: "text-amber-500",
-      glow: "shadow-amber-500/10",
-    },
-    green: {
-      bg: "bg-emerald-500/10",
-      border: "border-emerald-500/20",
-      icon: "text-emerald-500",
-      glow: "shadow-emerald-500/10",
-    },
-    purple: {
-      bg: "bg-purple-500/10",
-      border: "border-purple-500/20",
-      icon: "text-purple-500",
-      glow: "shadow-purple-500/10",
-    },
-    blue: {
-      bg: "bg-blue-500/10",
-      border: "border-blue-500/20",
-      icon: "text-blue-500",
-      glow: "shadow-blue-500/10",
-    },
-  };
-
-  const colorSet = colors[accentColor];
-
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4 }}
-      whileHover={{ scale: 1.02, y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className={cn(
-        "relative p-4 rounded-2xl text-left transition-all duration-300",
-        "bg-white/5 backdrop-blur-sm",
-        "border border-white/10 hover:border-white/20",
-        "shadow-lg hover:shadow-xl",
-        colorSet.glow,
-        "group cursor-pointer",
-      )}
-    >
-      {/* Icon */}
-      <div
-        className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center mb-3",
-          colorSet.bg,
-          "group-hover:scale-110 transition-transform duration-300",
-        )}
-      >
-        <Icon className={cn("w-5 h-5", colorSet.icon)} />
-      </div>
-
-      {/* Value - Typographie XXL */}
-      <div className="flex items-baseline gap-1">
-        <span className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight">{value}</span>
-        {suffix && <span className="text-lg text-white/60 font-medium">{suffix}</span>}
-      </div>
-
-      {/* Label */}
-      <p className="text-sm text-white/50 mt-1 font-medium">{label}</p>
-
-      {/* Hover Arrow */}
-      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <ChevronRight className="w-4 h-4 text-white/40" />
-      </div>
-    </motion.button>
-  );
-};
-
-/**
- * Quick Action Button - Pour "Ajouter un film"
- */
-const QuickActionButton = ({
-  icon: Icon,
-  label,
-  sublabel,
-  onClick,
-  variant = "default",
-  delay = 0,
-}: {
-  icon: React.ElementType;
-  label: string;
-  sublabel?: string;
-  onClick?: () => void;
-  variant?: "default" | "primary";
-  delay?: number;
-}) => {
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4 }}
-      whileHover={{ scale: 1.02, y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className={cn(
-        "relative p-4 rounded-2xl text-left transition-all duration-300",
-        "flex items-center gap-4",
-        "border group cursor-pointer",
-        variant === "primary"
-          ? "bg-gradient-to-br from-amber-500/20 to-amber-600/10 border-amber-500/30 hover:border-amber-500/50 shadow-lg shadow-amber-500/10"
-          : "bg-white/5 backdrop-blur-sm border-white/10 hover:border-white/20",
-      )}
-    >
-      {/* Icon */}
-      <div
-        className={cn(
-          "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0",
-          "group-hover:scale-110 transition-transform duration-300",
-          variant === "primary" ? "bg-amber-500/20" : "bg-white/10",
-        )}
-      >
-        <Icon className={cn("w-6 h-6", variant === "primary" ? "text-amber-500" : "text-white/70")} />
-      </div>
-
-      {/* Text */}
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-white truncate">{label}</p>
-        {sublabel && <p className="text-sm text-white/50 truncate">{sublabel}</p>}
-      </div>
-
-      {/* Arrow */}
-      <ChevronRight
-        className={cn(
-          "w-5 h-5 flex-shrink-0 transition-all duration-300",
-          "group-hover:translate-x-1",
-          variant === "primary" ? "text-amber-500/70" : "text-white/30",
-        )}
-      />
-    </motion.button>
-  );
-};
-
 // ============================================
-// Main Component
+// Main
 // ============================================
 
 export default function Index() {
@@ -294,15 +89,14 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   const [myCollection, setMyCollection] = useState<PhysicalMovie[]>([]);
   const [collectionDetails, setCollectionDetails] = useState<Record<number, MovieDetails>>({});
-  const [userStats, setUserStats] = useState<UserStats>({
-    collectionCount: 0,
-    estimatedValue: 0,
-    badgeCount: 0,
+
+  const [stats, setStats] = useState({
+    collection: 0,
+    value: 0,
+    badges: 0,
     level: 1,
-    totalXp: 0,
   });
 
-  // Load data
   useEffect(() => {
     loadData();
   }, [user]);
@@ -316,46 +110,35 @@ export default function Index() {
       setNowPlaying(nowPlayingMovies);
 
       if (user) {
-        // Load collection
         const collection = await getPhysicalMovies(user.id);
         setMyCollection(collection.slice(0, 12));
 
-        // Calculate estimated value (simple estimation)
         const estimatedValue = collection.reduce((acc, movie) => {
           const baseValue = movie.format === "4k" ? 25 : movie.format === "bluray" ? 15 : 8;
           return acc + baseValue;
         }, 0);
 
-        // Load badge count
         const { count: badgeCount } = await supabase
           .from("user_badges")
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.id);
 
-        // Get XP from profile
         const totalXp = profile?.total_xp || 0;
-        const level = getLevelFromXp(totalXp);
 
-        setUserStats({
-          collectionCount: collection.length,
-          estimatedValue,
-          badgeCount: badgeCount || 0,
-          level,
-          totalXp,
+        setStats({
+          collection: collection.length,
+          value: estimatedValue,
+          badges: badgeCount || 0,
+          level: getLevelFromXp(totalXp),
         });
 
-        // Load details for collection
         const detailsMap: Record<number, MovieDetails> = {};
         await Promise.all(
           collection.slice(0, 12).map(async (pm) => {
             try {
               const details = await getMovieDetails(pm.tmdb_id);
-              if (details) {
-                detailsMap[pm.tmdb_id] = details;
-              }
-            } catch (e) {
-              console.error(`Failed to load details for ${pm.tmdb_id}`);
-            }
+              if (details) detailsMap[pm.tmdb_id] = details;
+            } catch (e) {}
           }),
         );
         setCollectionDetails(detailsMap);
@@ -368,7 +151,7 @@ export default function Index() {
   };
 
   // ============================================
-  // Guest View (non connecté)
+  // Guest View
   // ============================================
   if (!user && !authLoading) {
     return (
@@ -376,15 +159,13 @@ export default function Index() {
         <MinimalHeader />
         <LandingHero />
 
-        {/* Popular Movies */}
-        <section className="px-4 md:px-12 py-12 md:py-16">
-          <SectionHeader title="FILMS POPULAIRES" onSeeAll={() => navigate("/movies")} />
+        <section className="px-4 md:px-12 py-12">
+          <SectionHeader title="Populaires" onSeeAll={() => navigate("/movies")} />
           <MovieGrid movies={popular.slice(0, 12)} loading={loading} />
         </section>
 
-        {/* Now Playing Section */}
-        <section className="px-4 md:px-12 py-12 md:py-16">
-          <SectionHeader title="À L'AFFICHE" onSeeAll={() => navigate("/movies/now-playing")} />
+        <section className="px-4 md:px-12 py-12">
+          <SectionHeader title="À l'affiche" onSeeAll={() => navigate("/movies/now-playing")} />
           <MovieGrid movies={nowPlaying.slice(0, 6)} loading={loading} />
         </section>
 
@@ -400,123 +181,109 @@ export default function Index() {
     <div className="min-h-screen bg-background pb-24 md:pb-32">
       <MinimalHeader />
 
-      <main className="pt-20 md:pt-28">
-        {/* Welcome Header + Quick Stats */}
-        <section className="px-4 md:px-12 py-6 md:py-8">
-          {/* Welcome Message */}
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs font-medium text-white/40 uppercase tracking-wider">En ligne</span>
-            </div>
-            <h1 className="font-display text-2xl md:text-3xl font-bold text-white">
-              Bonjour{profile?.username ? `, ${profile.username}` : ""} 👋
+      <main className="pt-20 md:pt-24">
+        {/* Header Section */}
+        <section className="px-4 md:px-12 pt-4 pb-8 md:pt-6 md:pb-12">
+          {/* Greeting */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8 md:mb-10">
+            <p className="text-white/40 text-xs uppercase tracking-[0.15em] mb-1">Bienvenue</p>
+            <h1 className="font-display text-2xl md:text-3xl text-white font-medium">
+              {profile?.username || "Collectionneur"}
             </h1>
-            <p className="text-white/50 mt-1">Continuez à enrichir votre collection</p>
           </motion.div>
 
-          {/* Stats Grid - 4 columns */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
-            <QuickStatsCard
-              icon={Library}
-              value={userStats.collectionCount}
-              label="Collection"
-              onClick={() => navigate("/collection")}
-              accentColor="amber"
-              delay={0.1}
-            />
-            <QuickStatsCard
-              icon={TrendingUp}
-              value={`~${userStats.estimatedValue}`}
-              suffix="€"
-              label="Valeur"
-              onClick={() => navigate("/collection?tab=valuation")}
-              accentColor="green"
-              delay={0.15}
-            />
-            <QuickStatsCard
-              icon={Trophy}
-              value={userStats.badgeCount}
-              label="Badges"
-              onClick={() => navigate("/badges")}
-              accentColor="purple"
-              delay={0.2}
-            />
-            <QuickStatsCard
-              icon={Zap}
-              value={userStats.level}
-              label="Niveau"
-              onClick={() => navigate("/badges")}
-              accentColor="blue"
-              delay={0.25}
-            />
-          </div>
-
-          {/* Quick Actions - 3 columns */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-            <QuickActionButton
-              icon={Plus}
-              label="Ajouter un film"
-              sublabel="Scanner ou rechercher"
-              onClick={() => navigate("/search")}
-              variant="primary"
-              delay={0.3}
-            />
-            <QuickActionButton
-              icon={Disc}
-              label="Ma collection"
-              sublabel={`${userStats.collectionCount} films`}
-              onClick={() => navigate("/collection")}
-              delay={0.35}
-            />
-            <QuickActionButton
-              icon={Trophy}
-              label="Mes badges"
-              sublabel="Voir mes succès"
-              onClick={() => navigate("/badges")}
-              delay={0.4}
-            />
-          </div>
-
-          {/* Community Link */}
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
+          {/* Stats Row - Chiffres XXL */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            onClick={() => navigate("/feed")}
-            className={cn(
-              "w-full mt-3 p-4 rounded-2xl",
-              "bg-gradient-to-r from-purple-500/10 via-purple-500/5 to-transparent",
-              "border border-purple-500/20 hover:border-purple-500/30",
-              "flex items-center justify-between",
-              "transition-all duration-300 group",
-            )}
+            transition={{ delay: 0.1 }}
+            className="grid grid-cols-4 gap-4 md:gap-8 mb-8 md:mb-10"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                <Users className="w-5 h-5 text-purple-400" />
-              </div>
-              <div className="text-left">
-                <p className="font-semibold text-white">Communauté</p>
-                <p className="text-sm text-white/50">Explorer les profils</p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-purple-400/50 group-hover:translate-x-1 transition-transform" />
-          </motion.button>
+            {[
+              { value: stats.collection, label: "Collection", href: "/collection" },
+              { value: `~${stats.value}€`, label: "Valeur", href: "/collection?tab=valuation" },
+              { value: stats.badges, label: "Badges", href: "/badges" },
+              { value: stats.level, label: "Niveau", href: "/badges" },
+            ].map((stat, i) => (
+              <button key={stat.label} onClick={() => navigate(stat.href)} className="text-left group">
+                <div className="font-display text-3xl md:text-5xl lg:text-6xl font-bold text-white group-hover:text-amber-500 transition-colors">
+                  {stat.value}
+                </div>
+                <div className="text-[10px] md:text-xs uppercase tracking-[0.1em] text-white/30 mt-1">{stat.label}</div>
+              </button>
+            ))}
+          </motion.div>
+
+          {/* Quick Actions */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex flex-wrap gap-2"
+          >
+            <button
+              onClick={() => navigate("/search")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 rounded-full",
+                "bg-white text-black text-sm font-medium",
+                "hover:bg-white/90 transition-colors",
+              )}
+            >
+              <Search className="w-4 h-4" />
+              Ajouter un film
+            </button>
+
+            <button
+              onClick={() => navigate("/collection")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 rounded-full",
+                "border border-white/20 text-white/70 text-sm",
+                "hover:border-white/40 hover:text-white transition-colors",
+              )}
+            >
+              Ma collection
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={() => navigate("/badges")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 rounded-full",
+                "border border-white/20 text-white/70 text-sm",
+                "hover:border-white/40 hover:text-white transition-colors",
+              )}
+            >
+              Mes badges
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={() => navigate("/feed")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 rounded-full",
+                "border border-white/20 text-white/70 text-sm",
+                "hover:border-white/40 hover:text-white transition-colors",
+              )}
+            >
+              <Users className="w-3.5 h-3.5" />
+              Communauté
+            </button>
+          </motion.div>
         </section>
+
+        {/* Divider */}
+        <div className="border-t border-white/5" />
 
         {/* Collection Section */}
         {myCollection.length > 0 && (
-          <section className="px-4 md:px-12 py-8 md:py-12">
+          <section className="px-4 md:px-12 py-10 md:py-14">
             <SectionHeader
-              title="VOTRE COLLECTION"
-              subtitle={`${myCollection.length} films`}
+              title="Votre collection"
+              subtitle={`${stats.collection} films`}
               onSeeAll={() => navigate("/collection")}
             />
 
-            <div className={cn("grid gap-3 md:gap-4", "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6")}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {myCollection.map((pm, index) => {
                 const details = collectionDetails[pm.tmdb_id];
                 if (!details) return null;
@@ -535,51 +302,44 @@ export default function Index() {
           </section>
         )}
 
-        {/* Empty collection CTA */}
+        {/* Empty State */}
         {myCollection.length === 0 && (
-          <section className="px-4 md:px-12 py-8 md:py-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={cn(
-                "border border-white/10 rounded-2xl",
-                "p-8 md:p-12 text-center",
-                "bg-gradient-to-br from-amber-500/5 to-transparent",
-              )}
-            >
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-                <Library className="w-8 h-8 text-amber-500" />
-              </div>
-              <h2 className="font-display text-xl md:text-2xl font-bold text-white mb-2">Commencez votre collection</h2>
-              <p className="text-white/50 mb-6 max-w-md mx-auto">
-                Ajoutez votre premier DVD, Blu-ray ou 4K pour commencer à suivre votre collection physique.
+          <section className="px-4 md:px-12 py-16 md:py-20">
+            <div className="max-w-md mx-auto text-center">
+              <h2 className="font-display text-xl text-white mb-3">Commencez votre collection</h2>
+              <p className="text-white/40 text-sm mb-6">
+                Ajoutez votre premier film pour commencer à suivre votre collection.
               </p>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={() => navigate("/search")}
                 className={cn(
-                  "inline-flex items-center gap-2 px-6 py-3 rounded-full",
-                  "bg-amber-500 hover:bg-amber-600 text-black font-semibold",
-                  "transition-colors duration-300",
+                  "inline-flex items-center gap-2 px-5 py-2.5 rounded-full",
+                  "bg-white text-black text-sm font-medium",
+                  "hover:bg-white/90 transition-colors",
                 )}
               >
-                <Plus className="w-5 h-5" />
-                Ajouter un film
-              </motion.button>
-            </motion.div>
+                <Search className="w-4 h-4" />
+                Rechercher un film
+              </button>
+            </div>
           </section>
         )}
 
+        {/* Divider */}
+        <div className="border-t border-white/5" />
+
         {/* Popular Movies */}
-        <section className="px-4 md:px-12 py-8 md:py-12">
-          <SectionHeader title="FILMS POPULAIRES" onSeeAll={() => navigate("/movies")} />
+        <section className="px-4 md:px-12 py-10 md:py-14">
+          <SectionHeader title="Populaires" onSeeAll={() => navigate("/movies")} />
           <MovieGrid movies={popular.slice(0, 12)} loading={loading} />
         </section>
 
+        {/* Divider */}
+        <div className="border-t border-white/5" />
+
         {/* Now Playing */}
-        <section className="px-4 md:px-12 py-8 md:py-12">
-          <SectionHeader title="À L'AFFICHE" onSeeAll={() => navigate("/movies/now-playing")} />
+        <section className="px-4 md:px-12 py-10 md:py-14">
+          <SectionHeader title="À l'affiche" onSeeAll={() => navigate("/movies/now-playing")} />
           <MovieGrid movies={nowPlaying.slice(0, 6)} loading={loading} />
         </section>
       </main>
