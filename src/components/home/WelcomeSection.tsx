@@ -1,367 +1,401 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, Plus, Lock, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { getImageUrl, MovieDetails } from "@/services/tmdb";
-import { PhysicalMovie } from "@/services/physicalMovies";
-import { motion } from "framer-motion";
+/**
+ * CineVault — Welcome Section avec Onboarding Guidé
+ *
+ * Phase 3: Optimisation Zero State
+ * - Étapes guidées pour les nouveaux utilisateurs
+ * - Incitation au premier scan
+ * - Progress tracker visuel
+ */
 
-interface BentoCardProps {
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import {
+  Scan,
+  ListPlus,
+  Users,
+  Check,
+  ChevronRight,
+  Sparkles,
+  Film,
+  Star,
+  ArrowRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+
+// ============================================
+// Types
+// ============================================
+
+interface OnboardingStep {
+  id: string;
   title: string;
-  cta: string;
-  onClick: () => void;
-  variant: "collection" | "discover" | "badges" | "lists";
-  children?: React.ReactNode;
-  className?: string;
-  delay?: number;
+  description: string;
+  icon: React.ElementType;
+  action: string;
+  actionPath?: string;
+  isCompleted: boolean;
+  xpReward: number;
 }
 
-const BentoCard: React.FC<BentoCardProps> = ({
-  title,
-  cta,
-  onClick,
-  variant,
-  children,
-  className,
-  delay = 0,
+// ============================================
+// Onboarding Progress Component
+// ============================================
+
+interface OnboardingProgressProps {
+  steps: OnboardingStep[];
+  currentStep: number;
+}
+
+const OnboardingProgress: React.FC<OnboardingProgressProps> = ({
+  steps,
+  currentStep,
 }) => {
-  const variants = {
-    collection: {
-      accent: "amber",
-      borderColor: "border-amber-500/20",
-      hoverBorder: "hover:border-amber-500/50",
-      ctaBg: "bg-amber-500 text-black",
-      glowColor: "amber",
-    },
-    discover: {
-      accent: "blue",
-      borderColor: "border-blue-500/20",
-      hoverBorder: "hover:border-blue-500/50",
-      ctaBg: "bg-blue-500/20 text-blue-400 border border-blue-500/30",
-      glowColor: "blue",
-    },
-    badges: {
-      accent: "purple",
-      borderColor: "border-purple-500/20",
-      hoverBorder: "hover:border-purple-500/50",
-      ctaBg: "bg-purple-500/20 text-purple-400 border border-purple-500/30",
-      glowColor: "purple",
-    },
-    lists: {
-      accent: "emerald",
-      borderColor: "border-emerald-500/20",
-      hoverBorder: "hover:border-emerald-500/50",
-      ctaBg: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
-      glowColor: "emerald",
-    },
-  };
-
-  const style = variants[variant];
+  const completedCount = steps.filter((s) => s.isCompleted).length;
+  const progress = (completedCount / steps.length) * 100;
 
   return (
-    <motion.button
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: delay * 0.1, ease: "easeOut" }}
-      whileHover={{ scale: 1.02, y: -4 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className={cn(
-        "group relative overflow-hidden rounded-2xl transition-all duration-500",
-        "border bg-card/30 backdrop-blur-md",
-        style.borderColor,
-        style.hoverBorder,
-        "text-left",
-        className
-      )}
-    >
-      {/* Background Content */}
-      <div className="absolute inset-0 z-0">
-        {children}
-      </div>
-
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/95 via-black/50 to-transparent" />
-
-      {/* Animated glow on hover */}
-      <div className={cn(
-        "absolute -inset-1 z-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl",
-        style.glowColor === "amber" && "bg-amber-500/20",
-        style.glowColor === "blue" && "bg-blue-500/20",
-        style.glowColor === "purple" && "bg-purple-500/20",
-        style.glowColor === "emerald" && "bg-emerald-500/20",
-      )} />
-
-      {/* Content */}
-      <div className="relative z-30 h-full flex flex-col justify-end p-4">
-        <h3 className="font-display font-bold text-lg mb-2 text-foreground">
-          {title}
-        </h3>
-        <div className={cn(
-          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 w-fit",
-          style.ctaBg
-        )}>
-          <span>{cta}</span>
-          <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-        </div>
-      </div>
-    </motion.button>
-  );
-};
-
-// Poster Stack - Used for all cards with movie posters
-const PosterStack: React.FC<{ 
-  posters: string[];
-  emptyIcon?: React.ReactNode;
-  emptyText?: string;
-}> = ({ posters, emptyIcon, emptyText }) => {
-  const displayPosters = posters.slice(0, 5);
-  
-  return (
-    <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-      {displayPosters.length > 0 ? (
-        <div className="relative w-full h-full flex items-center justify-center">
-          {displayPosters.map((poster, i) => {
-            const rotation = (i - Math.floor(displayPosters.length / 2)) * 8;
-            const translateX = (i - Math.floor(displayPosters.length / 2)) * 18;
-            const scale = 1 - (Math.abs(i - Math.floor(displayPosters.length / 2)) * 0.05);
-            
-            return (
-              <motion.div
-                key={i}
-                initial={{ 
-                  rotate: rotation * 2, 
-                  x: translateX * 2, 
-                  scale: 0.5,
-                  opacity: 0 
-                }}
-                animate={{ 
-                  rotate: rotation, 
-                  x: translateX, 
-                  scale: scale,
-                  opacity: 1 
-                }}
-                whileHover={{ 
-                  y: -5,
-                  transition: { duration: 0.2 }
-                }}
-                transition={{ 
-                  duration: 0.6, 
-                  delay: i * 0.08,
-                  type: "spring",
-                  stiffness: 100
-                }}
-                className="absolute w-16 h-24 md:w-20 md:h-28 rounded-lg shadow-2xl overflow-hidden border-2 border-white/10"
-                style={{ zIndex: displayPosters.length - Math.abs(i - Math.floor(displayPosters.length / 2)) }}
-              >
-                <img
-                  src={getImageUrl(poster, "w185")}
-                  alt=""
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-              </motion.div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center text-muted-foreground/50">
-          {emptyIcon}
-          <p className="text-xs mt-2">{emptyText}</p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Badges preview with floating animation
-const BadgesPreview: React.FC<{ badges: { icon: string; rarity: string; unlocked: boolean }[] }> = ({ badges }) => {
-  const rarityColors: Record<string, string> = {
-    common: "from-zinc-400 to-zinc-600",
-    rare: "from-blue-400 to-blue-600",
-    epic: "from-purple-400 to-purple-600",
-    legendary: "from-amber-400 to-orange-500",
-  };
-
-  const displayBadges = badges.slice(0, 4);
-
-  return (
-    <div className="absolute inset-0 flex items-center justify-center p-4">
-      <div className="flex gap-2">
-        {displayBadges.map((badge, i) => (
+    <div className="space-y-3">
+      {/* Progress bar */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
           <motion.div
-            key={i}
-            initial={{ scale: 0, y: 20 }}
-            animate={{ 
-              scale: 1, 
-              y: [0, -5, 0],
-            }}
-            transition={{ 
-              scale: { duration: 0.4, delay: i * 0.1 },
-              y: { 
-                duration: 2, 
-                repeat: Infinity, 
-                ease: "easeInOut",
-                delay: i * 0.3 
-              }
-            }}
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
+          />
+        </div>
+        <span className="text-sm text-white/60 font-medium">
+          {completedCount}/{steps.length}
+        </span>
+      </div>
+
+      {/* Step indicators */}
+      <div className="flex justify-between">
+        {steps.map((step, index) => (
+          <div
+            key={step.id}
             className={cn(
-              "relative w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shadow-lg",
-              badge.unlocked 
-                ? `bg-gradient-to-br ${rarityColors[badge.rarity] || rarityColors.common}` 
-                : "bg-muted/50 border border-border/50"
+              "flex items-center gap-1.5",
+              step.isCompleted
+                ? "text-amber-500"
+                : index === currentStep
+                  ? "text-white"
+                  : "text-white/30"
             )}
           >
-            {badge.unlocked ? (
-              <>
-                <span className="text-lg md:text-xl filter drop-shadow-lg">{badge.icon}</span>
-                <motion.div 
-                  className="absolute inset-0 rounded-xl bg-white/20"
-                  animate={{ opacity: [0.2, 0.5, 0.2] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-              </>
-            ) : (
-              <Lock className="w-4 h-4 text-muted-foreground/40" />
-            )}
-          </motion.div>
+            <div
+              className={cn(
+                "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                step.isCompleted
+                  ? "bg-amber-500 text-black"
+                  : index === currentStep
+                    ? "bg-white/20 text-white"
+                    : "bg-white/10 text-white/40"
+              )}
+            >
+              {step.isCompleted ? (
+                <Check className="w-3.5 h-3.5" />
+              ) : (
+                index + 1
+              )}
+            </div>
+          </div>
         ))}
       </div>
     </div>
   );
 };
 
-export interface WelcomeSectionProps {
-  username?: string;
-  className?: string;
-  collection?: PhysicalMovie[];
-  movieDetailsMap?: Record<number, MovieDetails>;
-  trendingMovies?: { poster_path: string }[];
-  listPosters?: string[];
-  badges?: { icon: string; rarity: string; unlocked: boolean }[];
+// ============================================
+// Onboarding Step Card
+// ============================================
+
+interface StepCardProps {
+  step: OnboardingStep;
+  isActive: boolean;
+  onAction: () => void;
 }
 
-export const WelcomeSection: React.FC<WelcomeSectionProps> = ({ 
-  username, 
-  className,
-  collection = [],
-  movieDetailsMap = {},
-  trendingMovies = [],
-  listPosters = [],
-  badges = []
-}) => {
-  const navigate = useNavigate();
+const StepCard: React.FC<StepCardProps> = ({ step, isActive, onAction }) => {
+  const Icon = step.icon;
 
-  // Get collection posters
-  const collectionPosters = collection
-    .map(movie => movieDetailsMap[movie.tmdb_id]?.poster_path)
-    .filter(Boolean) as string[];
-
-  // Get trending posters
-  const trendingPosters = trendingMovies
-    .map(m => m.poster_path)
-    .filter(Boolean);
-
-  // Default badges if none provided
-  const displayBadges = badges.length > 0 ? badges : [
-    { icon: "🎬", rarity: "common", unlocked: true },
-    { icon: "⭐", rarity: "rare", unlocked: true },
-    { icon: "🏆", rarity: "epic", unlocked: false },
-    { icon: "💎", rarity: "legendary", unlocked: false },
-  ];
+  if (step.isCompleted) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={cn(
+          "flex items-center gap-4 p-4 rounded-xl",
+          "bg-amber-500/10 border border-amber-500/30"
+        )}
+      >
+        <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+          <Check className="w-6 h-6 text-amber-500" />
+        </div>
+        <div className="flex-1">
+          <p className="font-medium text-amber-500">{step.title}</p>
+          <p className="text-sm text-amber-500/70">Complété</p>
+        </div>
+        <div className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-500 text-sm font-bold">
+          +{step.xpReward} XP
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
-    <section className={cn("relative pt-4 md:pt-6", className)}>
-      {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-5"
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={isActive ? { scale: 1.02 } : {}}
+      className={cn(
+        "flex items-center gap-4 p-4 rounded-xl transition-all",
+        isActive
+          ? "bg-white/10 border border-white/20 cursor-pointer"
+          : "bg-white/5 border border-white/10 opacity-60"
+      )}
+      onClick={isActive ? onAction : undefined}
+    >
+      <div
+        className={cn(
+          "w-12 h-12 rounded-xl flex items-center justify-center",
+          isActive ? "bg-white/20" : "bg-white/10"
+        )}
       >
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-xs font-medium text-amber-500">En ligne</span>
-          <Sparkles className="w-3 h-3 text-amber-500" />
-        </div>
-        <h1 className="font-display text-xl md:text-2xl font-bold">
-          {username ? `Salut ${username} !` : "Bienvenue"}
-          <motion.span 
-            animate={{ rotate: [0, 14, -8, 14, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 4 }}
-            className="inline-block ml-2"
-          >
-            👋
-          </motion.span>
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Que souhaitez-vous faire aujourd'hui ?
-        </p>
-      </motion.div>
-
-      {/* Bento Grid - Asymmetric layout */}
-      <div className="grid grid-cols-12 grid-rows-3 gap-2 h-[180px] md:h-[200px]">
-        {/* Ma Collection - 50% (6 cols, full height) */}
-        <BentoCard
-          title="Ma Collection"
-          cta={collection.length > 0 ? `${collection.length} films` : "Ajouter"}
-          onClick={() => navigate("/collection")}
-          variant="collection"
-          className="col-span-6 row-span-3"
-          delay={0}
-        >
-          <PosterStack 
-            posters={collectionPosters}
-            emptyIcon={<Plus className="w-6 h-6" />}
-            emptyText="Ajoutez vos films"
-          />
-        </BentoCard>
-
-        {/* Badges - 10% small */}
-        <BentoCard
-          title="Badges"
-          cta="Voir"
-          onClick={() => navigate("/badges")}
-          variant="badges"
-          className="col-span-3 row-span-1"
-          delay={1}
-        >
-          <BadgesPreview badges={displayBadges} />
-        </BentoCard>
-
-        {/* Découvrir - 10% small */}
-        <BentoCard
-          title="Découvrir"
-          cta="Go"
-          onClick={() => navigate("/search")}
-          variant="discover"
-          className="col-span-3 row-span-1"
-          delay={2}
-        >
-          <PosterStack 
-            posters={trendingPosters.slice(0, 3)}
-            emptyIcon={<Sparkles className="w-4 h-4" />}
-            emptyText=""
-          />
-        </BentoCard>
-
-        {/* Mes Listes - 30% (6 cols, 2 rows) */}
-        <BentoCard
-          title="Mes Listes"
-          cta="Gérer"
-          onClick={() => navigate("/lists")}
-          variant="lists"
-          className="col-span-6 row-span-2"
-          delay={3}
-        >
-          <PosterStack 
-            posters={listPosters}
-            emptyIcon={<Plus className="w-5 h-5" />}
-            emptyText="Créez vos listes"
-          />
-        </BentoCard>
+        <Icon className={cn("w-6 h-6", isActive ? "text-white" : "text-white/50")} />
       </div>
-    </section>
+      <div className="flex-1">
+        <p className={cn("font-medium", isActive ? "text-white" : "text-white/60")}>
+          {step.title}
+        </p>
+        <p className={cn("text-sm", isActive ? "text-white/60" : "text-white/40")}>
+          {step.description}
+        </p>
+      </div>
+      {isActive && (
+        <Button
+          size="sm"
+          className="bg-white text-black hover:bg-white/90 rounded-full gap-2"
+        >
+          {step.action}
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      )}
+    </motion.div>
+  );
+};
+
+// ============================================
+// Welcome Section Component
+// ============================================
+
+interface WelcomeSectionProps {
+  className?: string;
+  onScanClick?: () => void;
+}
+
+export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
+  className,
+  onScanClick,
+}) => {
+  const navigate = useNavigate();
+  const { user, profile } = useAuth();
+  const [steps, setSteps] = useState<OnboardingStep[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Check onboarding progress
+  useEffect(() => {
+    if (!user) return;
+
+    const checkProgress = async () => {
+      setLoading(true);
+      try {
+        // Check collection
+        const { count: collectionCount } = await supabase
+          .from("physical_movies")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id);
+
+        // Check watchlist
+        const { count: watchlistCount } = await supabase
+          .from("user_movies")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("status", "watchlist");
+
+        // Check follows
+        const { count: followsCount } = await supabase
+          .from("follows")
+          .select("*", { count: "exact", head: true })
+          .eq("follower_id", user.id);
+
+        setSteps([
+          {
+            id: "scan",
+            title: "Scanne ton premier film",
+            description: "Utilise la caméra pour scanner un DVD ou Blu-ray",
+            icon: Scan,
+            action: "Scanner",
+            isCompleted: (collectionCount || 0) > 0,
+            xpReward: 50,
+          },
+          {
+            id: "watchlist",
+            title: "Crée ta watchlist",
+            description: "Ajoute des films que tu veux voir",
+            icon: ListPlus,
+            action: "Ajouter",
+            actionPath: "/search",
+            isCompleted: (watchlistCount || 0) > 0,
+            xpReward: 25,
+          },
+          {
+            id: "follow",
+            title: "Suis des collectionneurs",
+            description: "Découvre les collections d'autres passionnés",
+            icon: Users,
+            action: "Explorer",
+            actionPath: "/feed",
+            isCompleted: (followsCount || 0) > 0,
+            xpReward: 25,
+          },
+        ]);
+      } catch (error) {
+        console.error("Error checking onboarding progress:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkProgress();
+  }, [user]);
+
+  // Calculate current step
+  const currentStepIndex = steps.findIndex((s) => !s.isCompleted);
+  const allCompleted = steps.every((s) => s.isCompleted);
+
+  // Handle step action
+  const handleStepAction = (step: OnboardingStep) => {
+    if (step.id === "scan" && onScanClick) {
+      onScanClick();
+    } else if (step.actionPath) {
+      navigate(step.actionPath);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className={cn("animate-pulse space-y-4", className)}>
+        <div className="h-8 bg-white/10 rounded w-1/2" />
+        <div className="h-24 bg-white/5 rounded-xl" />
+      </div>
+    );
+  }
+
+  // All steps completed - show success state
+  if (allCompleted) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={cn(
+          "relative overflow-hidden rounded-2xl p-8",
+          "bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-transparent",
+          "border border-amber-500/30",
+          className
+        )}
+      >
+        {/* Background sparkles */}
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(5)].map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{
+                opacity: [0, 1, 0],
+                scale: [0.5, 1, 0.5],
+                x: Math.random() * 100,
+                y: Math.random() * 100,
+              }}
+              transition={{
+                duration: 2,
+                delay: i * 0.3,
+                repeat: Infinity,
+                repeatDelay: 3,
+              }}
+              className="absolute"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+              }}
+            >
+              <Sparkles className="w-4 h-4 text-amber-500/50" />
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="relative flex items-center gap-6">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+            <Star className="w-8 h-8 text-white fill-white" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-white mb-1">
+              Bienvenue dans le Vault ! 🎉
+            </h3>
+            <p className="text-white/60">
+              Tu as terminé l'initiation. Continue à explorer et agrandir ta collection.
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate("/collection")}
+            className="bg-amber-500 hover:bg-amber-600 text-white rounded-full gap-2"
+          >
+            Ma Collection
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <div className={cn("space-y-6", className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">
+            Bienvenue, {profile?.username || "Collectionneur"} !
+          </h2>
+          <p className="text-white/50 text-sm">
+            Complete ces étapes pour démarrer ton aventure
+          </p>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+          <Sparkles className="w-4 h-4 text-amber-500" />
+          <span className="text-sm font-medium text-amber-500">+100 XP</span>
+        </div>
+      </div>
+
+      {/* Progress */}
+      <OnboardingProgress steps={steps} currentStep={currentStepIndex} />
+
+      {/* Steps */}
+      <div className="space-y-3">
+        {steps.map((step, index) => (
+          <StepCard
+            key={step.id}
+            step={step}
+            isActive={index === currentStepIndex}
+            onAction={() => handleStepAction(step)}
+          />
+        ))}
+      </div>
+    </div>
   );
 };
 
