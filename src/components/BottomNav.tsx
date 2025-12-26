@@ -1,15 +1,14 @@
 /**
- * CineVault - BottomNav avec Streak & Animations
- * 
- * AMÉLIORATIONS:
+ * CineVault - BottomNav avec Feed/Activité intégré
+ *
+ * Phase 1: Navigation restructurée
+ * - Accueil | Recherche | [FAB] | Feed | Collection
  * - Streak flame animée sur l'icône Collection
- * - Micro-animations au tap (scale + haptic feedback simulation)
- * - Indicateur de notification amélioré
- * - Transition de page fluide
+ * - Micro-animations au tap
  */
 
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, Library, Store, ListVideo, Flame } from "lucide-react";
+import { Home, Search, Library, Activity, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGamificationNotifications } from "@/hooks/useGamificationNotifications";
 import { useEffect, useState } from "react";
@@ -18,9 +17,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 /**
- * BottomNav - Navigation mobile améliorée
+ * BottomNav - Navigation mobile restructurée
  *
- * Structure : Accueil | Recherche | Collection (avec streak) | Marketplace | Listes
+ * Nouvelle structure : Accueil | Recherche | [espace FAB] | Feed | Collection
  */
 
 export const BottomNav = () => {
@@ -57,6 +56,7 @@ export const BottomNav = () => {
     }
   }, [pathname, markBadgesAsSeen, markRewardsAsSeen]);
 
+  // Nouvelle structure de navigation : 4 items + espace central pour FAB
   const navItems = [
     {
       icon: Home,
@@ -70,24 +70,19 @@ export const BottomNav = () => {
       path: "/search",
       showBadge: false,
     },
+    // Espace central pour le FAB (géré dans Index.tsx)
+    {
+      icon: Activity,
+      label: "Feed",
+      path: "/feed",
+      showBadge: false,
+    },
     {
       icon: Library,
       label: "Collection",
       path: "/collection",
       showBadge: false,
       showStreak: true,
-    },
-    {
-      icon: Store,
-      label: "Marché",
-      path: "/marketplace",
-      showBadge: false,
-    },
-    {
-      icon: ListVideo,
-      label: "Listes",
-      path: "/lists",
-      showBadge: false,
     },
   ];
 
@@ -106,124 +101,96 @@ export const BottomNav = () => {
       <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-t border-white/10" />
 
       <div className="relative flex justify-around items-center h-16 px-2">
-        {navItems.map((item) => {
-          const isActive = item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);
-          const isTapped = tappedItem === item.path;
+        {navItems.map((item, index) => {
+          const isActive =
+            item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);
+
+          // Ajouter un espace au milieu pour le FAB
+          const isAfterCenter = index >= 2;
 
           return (
             <Link
-              key={item.label}
+              key={item.path}
               to={item.path}
               onClick={() => handleTap(item.path)}
               className={cn(
-                "relative flex flex-col items-center justify-center w-full h-full gap-1",
-                "transition-all duration-200",
-                isActive ? "text-amber-500" : "text-muted-foreground hover:text-foreground",
+                "relative flex flex-col items-center justify-center",
+                "w-16 h-14 rounded-xl transition-all duration-200",
+                isActive ? "text-white" : "text-white/40",
+                tappedItem === item.path && "scale-90",
+                // Ajouter un margin pour l'espace FAB central
+                index === 1 && "mr-8",
+                index === 2 && "ml-8"
               )}
             >
+              {/* Icon container with streak indicator */}
               <motion.div
-                animate={{
-                  scale: isTapped ? 0.85 : 1,
-                }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 500, 
-                  damping: 25 
-                }}
+                animate={{ scale: tappedItem === item.path ? 0.85 : 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 className="relative"
               >
-                {/* Icon with optional streak flame */}
-                <motion.div
-                  animate={{
-                    y: isActive ? -2 : 0,
-                  }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                >
-                  <item.icon
-                    className={cn(
-                      "w-5 h-5 transition-all duration-300",
-                      isActive && "fill-current"
-                    )}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
-                </motion.div>
-
-                {/* Streak Flame Indicator */}
-                <AnimatePresence>
-                  {item.showStreak && streak > 0 && (
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      className="absolute -top-1.5 -right-2"
-                    >
-                      <div className="relative">
-                        <Flame 
-                          className="w-3.5 h-3.5 text-orange-500 fill-orange-500" 
-                        />
-                        {/* Glow effect */}
-                        <div className="absolute inset-0 blur-sm">
-                          <Flame 
-                            className="w-3.5 h-3.5 text-orange-500 fill-orange-500 opacity-60" 
-                          />
-                        </div>
-                        {/* Streak number */}
-                        {streak >= 3 && (
-                          <span className="absolute -bottom-2 -right-1 text-[8px] font-bold text-orange-500 bg-background/80 rounded-full px-1">
-                            {streak}
-                          </span>
-                        )}
-                      </div>
-                    </motion.div>
+                <item.icon
+                  className={cn(
+                    "w-5 h-5 transition-all duration-200",
+                    isActive && "fill-current"
                   )}
-                </AnimatePresence>
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
 
-                {/* Notification badge */}
-                {item.showBadge && (
-                  <motion.span 
+                {/* Streak flame indicator */}
+                {item.showStreak && streak > 0 && (
+                  <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+                    className="absolute -top-1.5 -right-1.5"
                   >
-                    <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75" />
-                  </motion.span>
+                    <div className="relative">
+                      <Flame
+                        className={cn(
+                          "w-3.5 h-3.5",
+                          streak >= 7
+                            ? "text-orange-500"
+                            : streak >= 3
+                              ? "text-amber-500"
+                              : "text-yellow-500"
+                        )}
+                        fill="currentColor"
+                      />
+                      {/* Pulsing glow for high streaks */}
+                      {streak >= 7 && (
+                        <motion.div
+                          animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.2, 0.5] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                          className="absolute inset-0 bg-orange-500 rounded-full blur-sm"
+                        />
+                      )}
+                    </div>
+                    {/* Streak count badge */}
+                    <span className="absolute -bottom-0.5 -right-0.5 text-[8px] font-bold text-white bg-amber-600 rounded-full w-3 h-3 flex items-center justify-center">
+                      {streak > 9 ? "+" : streak}
+                    </span>
+                  </motion.div>
                 )}
               </motion.div>
 
               {/* Label */}
-              <motion.span
-                animate={{
-                  opacity: isActive ? 1 : 0.7,
-                  fontWeight: isActive ? 600 : 500,
-                }}
-                className="text-[10px] transition-all duration-200"
+              <span
+                className={cn(
+                  "text-[10px] mt-1 font-medium transition-all duration-200",
+                  isActive ? "opacity-100" : "opacity-60"
+                )}
               >
                 {item.label}
-              </motion.span>
+              </span>
 
-              {/* Active Indicator (top bar) */}
+              {/* Active indicator dot */}
               <AnimatePresence>
                 {isActive && (
-                  <motion.span 
-                    layoutId="activeTab"
-                    initial={{ opacity: 0, scaleX: 0 }}
-                    animate={{ opacity: 1, scaleX: 1 }}
-                    exit={{ opacity: 0, scaleX: 0 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="absolute top-0 w-8 h-0.5 bg-amber-500 rounded-b-full shadow-[0_0_8px_rgba(245,158,11,0.6)]" 
-                  />
-                )}
-              </AnimatePresence>
-
-              {/* Tap ripple effect */}
-              <AnimatePresence>
-                {isTapped && (
-                  <motion.span
-                    initial={{ scale: 0, opacity: 0.5 }}
-                    animate={{ scale: 2, opacity: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="absolute inset-0 rounded-full bg-amber-500/20"
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-white"
                   />
                 )}
               </AnimatePresence>

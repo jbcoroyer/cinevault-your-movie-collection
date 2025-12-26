@@ -1,26 +1,24 @@
 /**
- * CineVault - Header Desktop AMÉLIORÉ
- * 
- * AMÉLIORATIONS:
- * - XP badge visible dans la navigation
+ * CineVault - Header Desktop avec Feed intégré
+ *
+ * Phase 1: Navigation restructurée
+ * - Feed/Activité ajouté dans la navigation
+ * - XP badge visible
  * - Micro-animations au hover
- * - Notification badge amélioré avec pulse
- * - Active indicator animé
  */
 
 import { useNavigate, NavLink, useLocation, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Home, 
-  Search, 
-  Library, 
-  Trophy, 
-  ListVideo, 
-  LogIn, 
-  Store,
+import {
+  Home,
+  Search,
+  Library,
+  Trophy,
+  ListVideo,
+  LogIn,
+  Activity,
   Zap,
   Flame,
-  Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProfileMenu } from "./ProfileMenu";
@@ -35,7 +33,13 @@ import { getLevelFromXp, getXpProgress } from "@/data/videoClubData";
 /**
  * XP Badge for Desktop Header
  */
-const DesktopXPBadge = ({ totalXp, streak }: { totalXp: number; streak: number }) => {
+const DesktopXPBadge = ({
+  totalXp,
+  streak,
+}: {
+  totalXp: number;
+  streak: number;
+}) => {
   const level = getLevelFromXp(totalXp);
   const { percentage } = getXpProgress(totalXp);
 
@@ -52,55 +56,53 @@ const DesktopXPBadge = ({ totalXp, streak }: { totalXp: number; streak: number }
     >
       {/* Level with progress ring */}
       <div className="relative">
-        <div className={cn(
-          "w-7 h-7 rounded-full flex items-center justify-center",
-          "bg-gradient-to-br from-amber-500 to-orange-600",
-          "text-white text-xs font-bold"
-        )}>
+        <div
+          className={cn(
+            "w-7 h-7 rounded-full flex items-center justify-center",
+            "bg-gradient-to-br from-amber-500 to-orange-600",
+            "text-white text-xs font-bold"
+          )}
+        >
           {level}
         </div>
-        <svg 
+        <svg
           className="absolute -inset-0.5 w-8 h-8 -rotate-90"
-          viewBox="0 0 32 32"
+          viewBox="0 0 36 36"
         >
           <circle
-            cx="16"
-            cy="16"
-            r="14"
+            cx="18"
+            cy="18"
+            r="16"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
             className="text-amber-500/20"
           />
           <circle
-            cx="16"
-            cy="16"
-            r="14"
+            cx="18"
+            cy="18"
+            r="16"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
-            strokeDasharray={`${percentage * 0.88} 88`}
-            strokeLinecap="round"
-            className="text-amber-500 transition-all duration-500"
+            strokeDasharray={`${percentage} 100`}
+            className="text-amber-500"
           />
         </svg>
       </div>
 
-      {/* XP Count */}
-      <div className="flex items-center gap-1">
-        <Zap className="w-3.5 h-3.5 text-amber-500" />
-        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
-          {totalXp.toLocaleString()}
+      {/* XP text */}
+      <div className="flex flex-col">
+        <span className="text-xs font-semibold text-amber-500">
+          {totalXp.toLocaleString()} XP
         </span>
+        {streak > 0 && (
+          <span className="text-[10px] text-amber-500/70 flex items-center gap-1">
+            <Flame className="w-3 h-3" />
+            {streak}j
+          </span>
+        )}
       </div>
-
-      {/* Streak */}
-      {streak > 0 && (
-        <div className="flex items-center gap-0.5 pl-2 border-l border-amber-500/30">
-          <Flame className="w-3.5 h-3.5 text-orange-500" />
-          <span className="text-xs font-bold text-orange-500">{streak}</span>
-        </div>
-      )}
     </motion.div>
   );
 };
@@ -112,40 +114,19 @@ export const Header = () => {
   const [collectionCount, setCollectionCount] = useState(0);
   const [totalXp, setTotalXp] = useState(0);
   const [streak, setStreak] = useState(0);
-  const { totalNotifications, markBadgesAsSeen, markRewardsAsSeen } = useGamificationNotifications();
+  const { hasUnseenBadges } = useGamificationNotifications();
 
-  // Mark as seen when visiting badges page
+  // Fetch user stats
   useEffect(() => {
-    if (location.pathname === "/badges") {
-      markBadgesAsSeen();
-      markRewardsAsSeen();
-    }
-  }, [location.pathname, markBadgesAsSeen, markRewardsAsSeen]);
+    if (!user) return;
 
-  const navItems = [
-    { to: "/", icon: Home, label: "Accueil", exact: true },
-    { to: "/search", icon: Search, label: "Recherche" },
-    { to: "/collection", icon: Library, label: "Collection", isMain: true },
-    { to: "/marketplace", icon: Store, label: "Marché" },
-    { to: "/lists", icon: ListVideo, label: "Listes" },
-    { to: "/badges", icon: Trophy, label: "Badges", hasBadge: totalNotifications > 0 },
-  ];
-
-  // Fetch collection count and XP
-  useEffect(() => {
-    if (!user) {
-      setCollectionCount(0);
-      setTotalXp(0);
-      setStreak(0);
-      return;
-    }
-
-    const fetchData = async () => {
+    const fetchStats = async () => {
       // Collection count
       const { count } = await supabase
         .from("physical_movies")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id);
+
       setCollectionCount(count || 0);
 
       // XP
@@ -154,9 +135,8 @@ export const Header = () => {
         .select("total_xp")
         .eq("id", user.id)
         .single();
-      if (profile?.total_xp) {
-        setTotalXp(profile.total_xp);
-      }
+
+      setTotalXp(profile?.total_xp || 0);
 
       // Streak
       const { data: streakData } = await supabase
@@ -164,36 +144,32 @@ export const Header = () => {
         .select("current_streak")
         .eq("user_id", user.id)
         .single();
-      if (streakData?.current_streak) {
-        setStreak(streakData.current_streak);
-      }
+
+      setStreak(streakData?.current_streak || 0);
     };
 
-    fetchData();
-
-    // Subscribe to changes
-    const channel = supabase
-      .channel("header-data")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "physical_movies" },
-        fetchData
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
-        (payload) => {
-          if (payload.new.total_xp) {
-            setTotalXp(payload.new.total_xp);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    fetchStats();
   }, [user]);
+
+  // Navigation items - Feed ajouté
+  const navItems = [
+    { to: "/", icon: Home, label: "Accueil", exact: true },
+    { to: "/search", icon: Search, label: "Recherche" },
+    {
+      to: "/collection",
+      icon: Library,
+      label: "Collection",
+      isMain: true,
+    },
+    { to: "/feed", icon: Activity, label: "Feed" },
+    { to: "/lists", icon: ListVideo, label: "Listes" },
+    {
+      to: "/badges",
+      icon: Trophy,
+      label: "Badges",
+      hasBadge: hasUnseenBadges,
+    },
+  ];
 
   const isActive = (to: string, exact?: boolean) =>
     exact ? location.pathname === to : location.pathname.startsWith(to);
@@ -202,10 +178,10 @@ export const Header = () => {
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50 hidden md:block">
       <div className="container mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
-        <motion.button 
+        <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => navigate("/")} 
+          onClick={() => navigate("/")}
           className="flex items-center gap-2"
         >
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
@@ -223,11 +199,7 @@ export const Header = () => {
 
             if (isMain) {
               return (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className="relative mx-2"
-                >
+                <NavLink key={to} to={to} className="relative mx-2">
                   <motion.div
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -235,15 +207,17 @@ export const Header = () => {
                       "flex items-center gap-2 px-4 py-1.5 rounded-full",
                       "text-sm font-medium transition-all duration-300",
                       "bg-amber-500/10 border border-amber-500/30",
-                      active 
-                        ? "bg-amber-500/20 border-amber-500/50 shadow-lg shadow-amber-500/10" 
+                      active
+                        ? "bg-amber-500/20 border-amber-500/50 shadow-lg shadow-amber-500/10"
                         : "hover:bg-amber-500/15"
                     )}
                   >
                     <Icon className="w-4 h-4 text-amber-500" />
-                    <span className="text-amber-600 dark:text-amber-400">{label}</span>
+                    <span className="text-amber-600 dark:text-amber-400">
+                      {label}
+                    </span>
                     {collectionCount > 0 && (
-                      <motion.span 
+                      <motion.span
                         key={collectionCount}
                         initial={{ scale: 0.8 }}
                         animate={{ scale: 1 }}
@@ -261,15 +235,16 @@ export const Header = () => {
               <NavLink
                 key={to}
                 to={to}
-                className="relative"
+                className="relative px-4 py-3 group"
               >
                 <motion.div
                   whileHover={{ y: -1 }}
                   whileTap={{ scale: 0.98 }}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-2",
-                    "text-sm font-medium transition-colors duration-200",
-                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                    "flex items-center gap-2 text-sm font-medium transition-colors",
+                    active
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <div className="relative">
@@ -277,7 +252,7 @@ export const Header = () => {
                     {/* Notification badge */}
                     <AnimatePresence>
                       {hasBadge && (
-                        <motion.span 
+                        <motion.span
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           exit={{ scale: 0 }}
@@ -294,13 +269,17 @@ export const Header = () => {
                 {/* Active indicator */}
                 <AnimatePresence>
                   {active && (
-                    <motion.span 
+                    <motion.span
                       layoutId="activeIndicator"
                       initial={{ opacity: 0, scaleX: 0 }}
                       animate={{ opacity: 1, scaleX: 1 }}
                       exit={{ opacity: 0, scaleX: 0 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                      className="absolute bottom-0 left-4 right-4 h-0.5 bg-amber-500 rounded-full" 
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 30,
+                      }}
+                      className="absolute bottom-0 left-4 right-4 h-0.5 bg-amber-500 rounded-full"
                     />
                   )}
                 </AnimatePresence>
