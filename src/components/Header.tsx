@@ -152,13 +152,14 @@ export const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50 hidden md:block">
-      <div className="container mx-auto px-4 h-14 grid grid-cols-[1fr_auto_1fr] items-center">
+      {/* Modification : Flex + Justify Center + Gap pour tout centrer au milieu */}
+      <div className="container mx-auto px-4 h-14 flex items-center justify-center gap-8">
         {/* Logo */}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate("/")}
-          className="flex items-center gap-2 justify-self-start"
+          className="flex items-center gap-2"
         >
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
             <Library className="w-4 h-4 text-white" />
@@ -169,7 +170,7 @@ export const Header = () => {
         </motion.button>
 
         {/* Navigation */}
-        <nav className="flex items-center justify-self-center">
+        <nav className="flex items-center">
           {navItems.map(({ to, icon: Icon, label, exact, isMain, hasBadge }) => {
             const active = isActive(to, exact);
 
@@ -257,7 +258,7 @@ export const Header = () => {
         </nav>
 
         {/* Right section */}
-        <div className="flex items-center gap-3 justify-self-end">
+        <div className="flex items-center gap-3">
           {!loading && user && (
             <>
               {/* Add Button */}
