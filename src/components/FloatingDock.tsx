@@ -11,7 +11,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, Library, Store, Plus, Flame } from "lucide-react";
+import { Home, Search, Library, ListVideo, Plus, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +31,7 @@ const navItems: NavItem[] = [
   { icon: Search, label: "Search", path: "/search" },
   { icon: Plus, label: "Ajouter", isAction: true },
   { icon: Library, label: "Collection", path: "/collection", showStreak: true },
-  { icon: Store, label: "Market", path: "/marketplace" },
+  { icon: ListVideo, label: "Lists", path: "/lists" },
 ];
 
 export const FloatingDock = () => {
