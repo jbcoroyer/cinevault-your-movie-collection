@@ -3,6 +3,7 @@
  *
  * Page de détail pour acteurs/réalisateurs
  * Design cohérent avec le reste de l'application
+ * Avec bouton de suivi
  */
 
 import { useState, useEffect } from "react";
@@ -12,6 +13,7 @@ import { getPersonDetails, getImageUrl, PersonDetails } from "@/services/tmdb";
 import { MinimalMovieCard, MinimalMovieCardSkeleton } from "@/components/MinimalMovieCard";
 import { MinimalHeader } from "@/components/MinimalHeader";
 import { FloatingDock } from "@/components/FloatingDock";
+import { FollowButton } from "@/components/FollowButton";
 import { ArrowLeft, Calendar, MapPin, Film, Clapperboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -107,6 +109,10 @@ export default function PersonDetail() {
   const displayedBio =
     shouldTruncateBio && !expandedBio ? person.biography.substring(0, bioLimit) + "..." : person.biography;
 
+  // Déterminer le rôle principal
+  const isDirector = person.known_for_department === "Directing";
+  const entityRole = isDirector ? "director" : "actor";
+
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
       <MinimalHeader />
@@ -134,46 +140,86 @@ export default function PersonDetail() {
             <div className="flex gap-4 md:flex-col md:w-64 lg:w-72">
               <div className="flex-shrink-0 w-32 md:w-full">
                 {profileUrl ? (
-                  <img src={profileUrl} alt={person.name} className="w-full rounded-xl shadow-2xl" />
+                  <img
+                    src={profileUrl}
+                    alt={person.name}
+                    className="w-full aspect-[2/3] object-cover rounded-xl shadow-lg"
+                  />
                 ) : (
-                  <div className="w-full aspect-[2/3] bg-white/5 rounded-xl flex items-center justify-center">
-                    <span className="text-white/30 text-2xl font-bold">{person.name.slice(0, 2).toUpperCase()}</span>
+                  <div className="w-full aspect-[2/3] bg-white/10 rounded-xl flex items-center justify-center">
+                    <span className="text-4xl text-white/30">{person.name.slice(0, 2).toUpperCase()}</span>
                   </div>
                 )}
               </div>
 
-              {/* Mobile: Info next to photo */}
+              {/* Mobile info */}
               <div className="flex-1 md:hidden">
                 <h1 className="font-display text-display-xs text-white mb-2">{person.name.toUpperCase()}</h1>
-                {person.known_for_department && (
-                  <p className="text-amber-500 text-sm mb-3">{person.known_for_department}</p>
-                )}
-                <PersonMeta person={person} />
+                <p className="text-sm text-white/50 mb-3">{person.known_for_department}</p>
+                
+                {/* Follow Button - Mobile */}
+                <FollowButton
+                  entityType="person"
+                  entityId={person.id}
+                  entityName={person.name}
+                  entityImagePath={person.profile_path}
+                  entityRole={entityRole}
+                  showFollowersCount
+                />
               </div>
             </div>
 
-            {/* Desktop: Main content */}
+            {/* Info */}
             <div className="flex-1">
-              {/* Desktop: Name & Info */}
-              <div className="hidden md:block mb-6">
-                <h1 className="font-display text-display-sm lg:text-display-md text-white mb-2">
-                  {person.name.toUpperCase()}
-                </h1>
-                {person.known_for_department && (
-                  <p className="text-amber-500 text-lg mb-4">{person.known_for_department}</p>
+              {/* Desktop header */}
+              <div className="hidden md:flex md:items-start md:justify-between md:gap-4 mb-4">
+                <div>
+                  <h1 className="font-display text-display-sm lg:text-display-md text-white mb-2">
+                    {person.name.toUpperCase()}
+                  </h1>
+                  <p className="text-white/50">{person.known_for_department}</p>
+                </div>
+                
+                {/* Follow Button - Desktop */}
+                <FollowButton
+                  entityType="person"
+                  entityId={person.id}
+                  entityName={person.name}
+                  entityImagePath={person.profile_path}
+                  entityRole={entityRole}
+                  showFollowersCount
+                />
+              </div>
+
+              {/* Meta info */}
+              <div className="flex flex-wrap gap-4 mb-6 text-sm text-white/50">
+                {person.birthday && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" />
+                    {new Date(person.birthday).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                    {person.deathday && ` - ${new Date(person.deathday).toLocaleDateString("fr-FR")}`}
+                  </span>
                 )}
-                <PersonMeta person={person} />
+                {person.place_of_birth && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {person.place_of_birth}
+                  </span>
+                )}
               </div>
 
               {/* Biography */}
               {person.biography && (
-                <div className="mt-6 md:mt-0">
-                  <h2 className="text-xs text-white/40 uppercase tracking-wider mb-3">Biographie</h2>
-                  <p className="text-white/70 text-sm md:text-base leading-relaxed">{displayedBio}</p>
+                <div className="text-white/70 leading-relaxed">
+                  <p>{displayedBio}</p>
                   {shouldTruncateBio && (
                     <button
                       onClick={() => setExpandedBio(!expandedBio)}
-                      className="text-amber-500 text-sm mt-2 hover:text-amber-400 transition-colors"
+                      className="mt-2 text-amber-400 hover:text-amber-300 text-sm font-medium"
                     >
                       {expandedBio ? "Voir moins" : "Voir plus"}
                     </button>
@@ -271,44 +317,6 @@ export default function PersonDetail() {
       </main>
 
       <FloatingDock />
-    </div>
-  );
-}
-
-// ============================================
-// Person Meta Component
-// ============================================
-function PersonMeta({ person }: { person: PersonDetails }) {
-  return (
-    <div className="space-y-2 text-sm text-white/50">
-      {person.birthday && (
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4" />
-          <span>
-            {new Date(person.birthday).toLocaleDateString("fr-FR", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-            {person.deathday && (
-              <span className="text-white/30">
-                {" — "}
-                {new Date(person.deathday).toLocaleDateString("fr-FR", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </span>
-            )}
-          </span>
-        </div>
-      )}
-      {person.place_of_birth && (
-        <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4" />
-          <span className="line-clamp-2">{person.place_of_birth}</span>
-        </div>
-      )}
     </div>
   );
 }
