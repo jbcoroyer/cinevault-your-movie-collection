@@ -1,262 +1,105 @@
 /**
- * CineVault — Index Page
+ * CineVault - Index Page Refonte
  *
- * Two distinct experiences:
- * 1. Guest: Landing page with value props, demo shelf, stats, features, CTA
- * 2. Authenticated: Personalized dashboard with collection, activity, recommendations
+ * MODIFICATIONS:
+ * - Header avec stats en typographie XXL premium
+ * - Chiffres qui ressortent visuellement
+ * - "Ajouter un film" redirige vers /search
+ * - Design homogène et premium
+ * - Glassmorphism cohérent
  */
 
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useAuth } from "@/contexts/AuthContext";
 import { MinimalHeader } from "@/components/MinimalHeader";
 import { FloatingDock } from "@/components/FloatingDock";
-import { LandingHero } from "@/components/LandingHero";
 import { MinimalMovieCard, MinimalMovieCardSkeleton } from "@/components/MinimalMovieCard";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import {
-  Movie,
-  MovieDetails,
-  getPopularMovies,
-  getNowPlayingMovies,
-  getMovieDetails,
-  getImageUrl,
-} from "@/services/tmdb";
+import { useAuth } from "@/contexts/AuthContext";
+import { getPopularMovies, getNowPlayingMovies, Movie, getMovieDetails, MovieDetails } from "@/services/tmdb";
 import { getPhysicalMovies, PhysicalMovie } from "@/services/physicalMovies";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  ArrowRight,
-  Library,
-  TrendingUp,
-  Sparkles,
-  Trophy,
-  Plus,
-  Film,
-  Clock,
-  Heart,
-  Users,
-  ChevronRight,
-  Zap,
-  Star,
-  Calendar,
-  Play,
-} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Plus, Search, Library, Trophy, TrendingUp, Sparkles, Users, ChevronRight, Disc, Zap } from "lucide-react";
+import { LandingHero } from "@/components/LandingHero";
 
 // ============================================
-// SECTION HEADER COMPONENT
+// Types
 // ============================================
-interface SectionHeaderProps {
-  title: string;
-  subtitle?: string;
-  icon?: React.ElementType;
-  onSeeAll?: () => void;
-  seeAllText?: string;
+
+interface UserStats {
+  collectionCount: number;
+  estimatedValue: number;
+  badgeCount: number;
+  level: number;
+  totalXp: number;
 }
 
-const SectionHeader: React.FC<SectionHeaderProps> = ({
-  title,
-  subtitle,
-  icon: Icon,
-  onSeeAll,
-  seeAllText = "Voir tout",
-}) => (
-  <div className="flex items-center justify-between mb-6">
-    <div className="flex items-center gap-3">
-      {Icon && (
-        <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-          <Icon className="w-5 h-5 text-amber-500" />
-        </div>
-      )}
-      <div>
-        <h2 className="font-display text-lg md:text-xl font-semibold text-white">{title}</h2>
-        {subtitle && <p className="text-sm text-white/40">{subtitle}</p>}
-      </div>
+// ============================================
+// Utility Functions
+// ============================================
+
+const getLevelFromXp = (xp: number): number => {
+  if (xp < 100) return 1;
+  if (xp < 250) return 2;
+  if (xp < 500) return 3;
+  if (xp < 1000) return 4;
+  if (xp < 2000) return 5;
+  if (xp < 3500) return 6;
+  if (xp < 5500) return 7;
+  if (xp < 8000) return 8;
+  if (xp < 11000) return 9;
+  if (xp < 15000) return 10;
+  return Math.floor(10 + (xp - 15000) / 5000);
+};
+
+// ============================================
+// Sub Components
+// ============================================
+
+/**
+ * Section Header Component
+ */
+const SectionHeader = ({ title, subtitle, onSeeAll }: { title: string; subtitle?: string; onSeeAll?: () => void }) => (
+  <div className="flex items-center justify-between mb-4 md:mb-6">
+    <div>
+      <h2 className="font-display text-lg md:text-xl font-bold text-white tracking-wide">{title}</h2>
+      {subtitle && <p className="text-sm text-white/40 mt-0.5">{subtitle}</p>}
     </div>
     {onSeeAll && (
-      <Button variant="ghost" size="sm" onClick={onSeeAll} className="text-white/50 hover:text-white hover:bg-white/10">
-        {seeAllText}
-        <ChevronRight className="w-4 h-4 ml-1" />
-      </Button>
+      <button
+        onClick={onSeeAll}
+        className="flex items-center gap-1 text-sm text-white/50 hover:text-white transition-colors"
+      >
+        Voir tout
+        <ChevronRight className="w-4 h-4" />
+      </button>
     )}
   </div>
 );
 
-// ============================================
-// QUICK ACTION CARD
-// ============================================
-interface QuickActionProps {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  onClick: () => void;
-  gradient: string;
-}
-
-const QuickActionCard: React.FC<QuickActionProps> = ({ icon: Icon, title, description, onClick, gradient }) => (
-  <motion.button
-    whileHover={{ scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
-    onClick={onClick}
-    className={cn(
-      "relative p-5 rounded-2xl text-left w-full overflow-hidden",
-      "bg-white/5 border border-white/10",
-      "hover:border-white/20 transition-all duration-300",
-    )}
-  >
-    <div className={cn("absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-500", gradient)} />
-    <div className="relative z-10">
-      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3">
-        <Icon className="w-5 h-5 text-white" />
-      </div>
-      <h3 className="font-medium text-white mb-1">{title}</h3>
-      <p className="text-sm text-white/50">{description}</p>
-    </div>
-  </motion.button>
-);
-
-// ============================================
-// COLLECTION PREVIEW CARD (for authenticated users)
-// ============================================
-interface CollectionCardProps {
-  movie: PhysicalMovie;
-  details: MovieDetails | null;
-  index: number;
-}
-
-const CollectionCard: React.FC<CollectionCardProps> = ({ movie, details, index }) => {
-  const navigate = useNavigate();
-
-  if (!details) return null;
-
-  const formatColors: Record<string, string> = {
-    dvd: "bg-gray-500",
-    bluray: "bg-blue-500",
-    "4k": "bg-amber-500",
-    steelbook: "bg-gradient-to-r from-slate-400 to-slate-600",
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      onClick={() => navigate(`/movie/${details.id}`)}
-      className="cursor-pointer group"
-    >
-      <div className="relative aspect-[2/3] rounded-xl overflow-hidden mb-2">
-        {details.poster_path ? (
-          <img
-            src={getImageUrl(details.poster_path, "w342")}
-            alt={details.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="w-full h-full bg-white/10 flex items-center justify-center">
-            <Film className="w-8 h-8 text-white/30" />
-          </div>
-        )}
-
-        {/* Format badge */}
-        <div
-          className={cn(
-            "absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-medium text-white",
-            formatColors[movie.format] || "bg-white/20",
-          )}
-        >
-          {movie.format.toUpperCase()}
-        </div>
-
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      </div>
-
-      <h3 className="text-sm font-medium text-white truncate">{details.title}</h3>
-      <p className="text-xs text-white/40">{details.release_date?.substring(0, 4)}</p>
-    </motion.div>
-  );
-};
-
-// ============================================
-// ACTIVITY ITEM
-// ============================================
-interface ActivityItemProps {
-  activity: {
-    id: string;
-    type: string;
-    created_at: string;
-    metadata: any;
-    user?: {
-      username: string;
-      avatar_url: string | null;
-    };
-  };
-}
-
-const ActivityItem: React.FC<ActivityItemProps> = ({ activity }) => {
-  const getActivityIcon = () => {
-    switch (activity.type) {
-      case "collection_add":
-        return <Plus className="w-4 h-4" />;
-      case "badge_earned":
-        return <Trophy className="w-4 h-4" />;
-      case "review_add":
-        return <Star className="w-4 h-4" />;
-      case "follow":
-        return <Users className="w-4 h-4" />;
-      default:
-        return <Sparkles className="w-4 h-4" />;
-    }
-  };
-
-  const getActivityText = () => {
-    const meta = activity.metadata || {};
-    switch (activity.type) {
-      case "collection_add":
-        return `a ajouté ${meta.movie_title || "un film"} à sa collection`;
-      case "badge_earned":
-        return `a débloqué le badge ${meta.badge_name || ""}`;
-      case "review_add":
-        return `a noté ${meta.movie_title || "un film"}`;
-      case "follow":
-        return `suit maintenant ${meta.target_username || "quelqu'un"}`;
-      default:
-        return "a effectué une action";
-    }
-  };
-
-  const timeAgo = (date: string) => {
-    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
-    if (seconds < 60) return "à l'instant";
-    if (seconds < 3600) return `il y a ${Math.floor(seconds / 60)}min`;
-    if (seconds < 86400) return `il y a ${Math.floor(seconds / 3600)}h`;
-    return `il y a ${Math.floor(seconds / 86400)}j`;
-  };
-
-  return (
-    <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-      <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0 text-amber-500">
-        {getActivityIcon()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-white">
-          <span className="font-medium">{activity.user?.username || "Quelqu'un"}</span>{" "}
-          <span className="text-white/60">{getActivityText()}</span>
-        </p>
-        <p className="text-xs text-white/40 mt-0.5">{timeAgo(activity.created_at)}</p>
-      </div>
-    </div>
-  );
-};
-
-// ============================================
-// MOVIE GRID COMPONENT
-// ============================================
-const MovieGrid = ({ movies, loading }: { movies: Movie[]; loading: boolean }) => {
+/**
+ * Movie Grid Component
+ */
+const MovieGrid = ({
+  movies,
+  loading,
+  columns = "default",
+}: {
+  movies: Movie[];
+  loading: boolean;
+  columns?: "default" | "compact";
+}) => {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
+      <div
+        className={cn(
+          "grid gap-3 md:gap-4",
+          columns === "compact"
+            ? "grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
+            : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
+        )}
+      >
         {Array.from({ length: 12 }).map((_, i) => (
           <MinimalMovieCardSkeleton key={i} />
         ))}
@@ -265,7 +108,14 @@ const MovieGrid = ({ movies, loading }: { movies: Movie[]; loading: boolean }) =
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
+    <div
+      className={cn(
+        "grid gap-3 md:gap-4",
+        columns === "compact"
+          ? "grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
+          : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
+      )}
+    >
       {movies.map((movie, index) => (
         <MinimalMovieCard key={movie.id} movie={movie} index={index} />
       ))}
@@ -273,27 +123,186 @@ const MovieGrid = ({ movies, loading }: { movies: Movie[]; loading: boolean }) =
   );
 };
 
+/**
+ * Quick Stats Card - Design Premium avec typographie XXL
+ */
+const QuickStatsCard = ({
+  icon: Icon,
+  value,
+  label,
+  suffix,
+  onClick,
+  accentColor = "amber",
+  delay = 0,
+}: {
+  icon: React.ElementType;
+  value: number | string;
+  label: string;
+  suffix?: string;
+  onClick?: () => void;
+  accentColor?: "amber" | "green" | "purple" | "blue";
+  delay?: number;
+}) => {
+  const colors = {
+    amber: {
+      bg: "bg-amber-500/10",
+      border: "border-amber-500/20",
+      icon: "text-amber-500",
+      glow: "shadow-amber-500/10",
+    },
+    green: {
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/20",
+      icon: "text-emerald-500",
+      glow: "shadow-emerald-500/10",
+    },
+    purple: {
+      bg: "bg-purple-500/10",
+      border: "border-purple-500/20",
+      icon: "text-purple-500",
+      glow: "shadow-purple-500/10",
+    },
+    blue: {
+      bg: "bg-blue-500/10",
+      border: "border-blue-500/20",
+      icon: "text-blue-500",
+      glow: "shadow-blue-500/10",
+    },
+  };
+
+  const colorSet = colors[accentColor];
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.4 }}
+      whileHover={{ scale: 1.02, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className={cn(
+        "relative p-4 rounded-2xl text-left transition-all duration-300",
+        "bg-white/5 backdrop-blur-sm",
+        "border border-white/10 hover:border-white/20",
+        "shadow-lg hover:shadow-xl",
+        colorSet.glow,
+        "group cursor-pointer",
+      )}
+    >
+      {/* Icon */}
+      <div
+        className={cn(
+          "w-10 h-10 rounded-xl flex items-center justify-center mb-3",
+          colorSet.bg,
+          "group-hover:scale-110 transition-transform duration-300",
+        )}
+      >
+        <Icon className={cn("w-5 h-5", colorSet.icon)} />
+      </div>
+
+      {/* Value - Typographie XXL */}
+      <div className="flex items-baseline gap-1">
+        <span className="font-display text-3xl md:text-4xl font-bold text-white tracking-tight">{value}</span>
+        {suffix && <span className="text-lg text-white/60 font-medium">{suffix}</span>}
+      </div>
+
+      {/* Label */}
+      <p className="text-sm text-white/50 mt-1 font-medium">{label}</p>
+
+      {/* Hover Arrow */}
+      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+        <ChevronRight className="w-4 h-4 text-white/40" />
+      </div>
+    </motion.button>
+  );
+};
+
+/**
+ * Quick Action Button - Pour "Ajouter un film"
+ */
+const QuickActionButton = ({
+  icon: Icon,
+  label,
+  sublabel,
+  onClick,
+  variant = "default",
+  delay = 0,
+}: {
+  icon: React.ElementType;
+  label: string;
+  sublabel?: string;
+  onClick?: () => void;
+  variant?: "default" | "primary";
+  delay?: number;
+}) => {
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.4 }}
+      whileHover={{ scale: 1.02, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className={cn(
+        "relative p-4 rounded-2xl text-left transition-all duration-300",
+        "flex items-center gap-4",
+        "border group cursor-pointer",
+        variant === "primary"
+          ? "bg-gradient-to-br from-amber-500/20 to-amber-600/10 border-amber-500/30 hover:border-amber-500/50 shadow-lg shadow-amber-500/10"
+          : "bg-white/5 backdrop-blur-sm border-white/10 hover:border-white/20",
+      )}
+    >
+      {/* Icon */}
+      <div
+        className={cn(
+          "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0",
+          "group-hover:scale-110 transition-transform duration-300",
+          variant === "primary" ? "bg-amber-500/20" : "bg-white/10",
+        )}
+      >
+        <Icon className={cn("w-6 h-6", variant === "primary" ? "text-amber-500" : "text-white/70")} />
+      </div>
+
+      {/* Text */}
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-white truncate">{label}</p>
+        {sublabel && <p className="text-sm text-white/50 truncate">{sublabel}</p>}
+      </div>
+
+      {/* Arrow */}
+      <ChevronRight
+        className={cn(
+          "w-5 h-5 flex-shrink-0 transition-all duration-300",
+          "group-hover:translate-x-1",
+          variant === "primary" ? "text-amber-500/70" : "text-white/30",
+        )}
+      />
+    </motion.button>
+  );
+};
+
 // ============================================
-// MAIN INDEX COMPONENT
+// Main Component
 // ============================================
+
 export default function Index() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
 
   const [popular, setPopular] = useState<Movie[]>([]);
   const [nowPlaying, setNowPlaying] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [myCollection, setMyCollection] = useState<PhysicalMovie[]>([]);
   const [collectionDetails, setCollectionDetails] = useState<Record<number, MovieDetails>>({});
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
-  const [userStats, setUserStats] = useState({
+  const [userStats, setUserStats] = useState<UserStats>({
     collectionCount: 0,
-    totalValue: 0,
-    badgesCount: 0,
+    estimatedValue: 0,
+    badgeCount: 0,
     level: 1,
-    xp: 0,
+    totalXp: 0,
   });
 
+  // Load data
   useEffect(() => {
     loadData();
   }, [user]);
@@ -307,14 +316,38 @@ export default function Index() {
       setNowPlaying(nowPlayingMovies);
 
       if (user) {
-        // Load user's collection
+        // Load collection
         const collection = await getPhysicalMovies(user.id);
-        setMyCollection(collection.slice(0, 8));
+        setMyCollection(collection.slice(0, 12));
 
-        // Load movie details for collection
+        // Calculate estimated value (simple estimation)
+        const estimatedValue = collection.reduce((acc, movie) => {
+          const baseValue = movie.format === "4k" ? 25 : movie.format === "bluray" ? 15 : 8;
+          return acc + baseValue;
+        }, 0);
+
+        // Load badge count
+        const { count: badgeCount } = await supabase
+          .from("user_badges")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id);
+
+        // Get XP from profile
+        const totalXp = profile?.total_xp || 0;
+        const level = getLevelFromXp(totalXp);
+
+        setUserStats({
+          collectionCount: collection.length,
+          estimatedValue,
+          badgeCount: badgeCount || 0,
+          level,
+          totalXp,
+        });
+
+        // Load details for collection
         const detailsMap: Record<number, MovieDetails> = {};
         await Promise.all(
-          collection.slice(0, 8).map(async (pm) => {
+          collection.slice(0, 12).map(async (pm) => {
             try {
               const details = await getMovieDetails(pm.tmdb_id);
               if (details) {
@@ -326,57 +359,6 @@ export default function Index() {
           }),
         );
         setCollectionDetails(detailsMap);
-
-        // Load user stats
-        const [{ count: collectionCount }, { count: badgesCount }, { data: profileData }] = await Promise.all([
-          supabase.from("physical_movies").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-          supabase.from("user_badges").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-          supabase.from("profiles").select("total_xp").eq("id", user.id).single(),
-        ]);
-
-        const totalXp = profileData?.total_xp || 0;
-        const calculatedLevel = Math.floor(totalXp / 1000) + 1;
-        
-        setUserStats({
-          collectionCount: collectionCount || 0,
-          totalValue: (collectionCount || 0) * 15, // Estimation
-          badgesCount: badgesCount || 0,
-          level: calculatedLevel,
-          xp: totalXp,
-        });
-
-        // Load recent activity from followed users
-        const { data: follows } = await supabase.from("follows").select("following_id").eq("follower_id", user.id);
-
-        if (follows && follows.length > 0) {
-          const followingIds = follows.map((f) => f.following_id);
-          const { data: activities } = await supabase
-            .from("activities")
-            .select(
-              `
-              id,
-              type,
-              created_at,
-              metadata,
-              profiles!activities_user_id_fkey (
-                username,
-                avatar_url
-              )
-            `,
-            )
-            .in("user_id", followingIds)
-            .order("created_at", { ascending: false })
-            .limit(5);
-
-          if (activities) {
-            setRecentActivity(
-              activities.map((a) => ({
-                ...a,
-                user: a.profiles,
-              })),
-            );
-          }
-        }
       }
     } catch (error) {
       console.error("Failed to load movies:", error);
@@ -386,230 +368,219 @@ export default function Index() {
   };
 
   // ============================================
-  // GUEST VIEW - Landing Page
+  // Guest View (non connecté)
   // ============================================
   if (!user && !authLoading) {
     return (
       <div className="min-h-screen bg-background pb-24 md:pb-32">
         <MinimalHeader />
-        <main className="pt-20 md:pt-24">
-          <LandingHero />
-        </main>
+        <LandingHero />
+
+        {/* Popular Movies */}
+        <section className="px-4 md:px-12 py-12 md:py-16">
+          <SectionHeader title="FILMS POPULAIRES" onSeeAll={() => navigate("/movies")} />
+          <MovieGrid movies={popular.slice(0, 12)} loading={loading} />
+        </section>
+
+        {/* Now Playing Section */}
+        <section className="px-4 md:px-12 py-12 md:py-16">
+          <SectionHeader title="À L'AFFICHE" onSeeAll={() => navigate("/movies/now-playing")} />
+          <MovieGrid movies={nowPlaying.slice(0, 6)} loading={loading} />
+        </section>
+
         <FloatingDock />
       </div>
     );
   }
 
-  // Loading state
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   // ============================================
-  // AUTHENTICATED VIEW - Dashboard
+  // Authenticated View
   // ============================================
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-32">
       <MinimalHeader />
 
       <main className="pt-20 md:pt-28">
-        {/* Welcome Section with Quick Stats */}
+        {/* Welcome Header + Quick Stats */}
         <section className="px-4 md:px-12 py-6 md:py-8">
-          <div className="max-w-7xl mx-auto">
-            {/* Greeting */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-              <h1 className="font-display text-2xl md:text-3xl font-bold text-white mb-1">Bonjour ! 👋</h1>
-              <p className="text-white/50">Continuez à enrichir votre collection</p>
-            </motion.div>
+          {/* Welcome Message */}
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-xs font-medium text-white/40 uppercase tracking-wider">En ligne</span>
+            </div>
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-white">
+              Bonjour{profile?.username ? `, ${profile.username}` : ""} 👋
+            </h1>
+            <p className="text-white/50 mt-1">Continuez à enrichir votre collection</p>
+          </motion.div>
 
-            {/* Quick Stats Row */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
-            >
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                    <Library className="w-4 h-4 text-amber-500" />
-                  </div>
-                  <span className="text-sm text-white/50">Collection</span>
-                </div>
-                <p className="font-display text-2xl font-bold text-white">{userStats.collectionCount}</p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                    <TrendingUp className="w-4 h-4 text-emerald-500" />
-                  </div>
-                  <span className="text-sm text-white/50">Valeur</span>
-                </div>
-                <p className="font-display text-2xl font-bold text-white">~{userStats.totalValue}€</p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                    <Trophy className="w-4 h-4 text-purple-500" />
-                  </div>
-                  <span className="text-sm text-white/50">Badges</span>
-                </div>
-                <p className="font-display text-2xl font-bold text-white">{userStats.badgesCount}</p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-blue-500" />
-                  </div>
-                  <span className="text-sm text-white/50">Niveau</span>
-                </div>
-                <p className="font-display text-2xl font-bold text-white">{userStats.level}</p>
-              </div>
-            </motion.div>
-
-            {/* Quick Actions */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-            >
-              <QuickActionCard
-                icon={Plus}
-                title="Ajouter un film"
-                description="Scanner ou rechercher"
-                onClick={() => navigate("/search")}
-                gradient="bg-gradient-to-br from-amber-500/10 to-orange-600/10"
-              />
-              <QuickActionCard
-                icon={Library}
-                title="Ma collection"
-                description={`${userStats.collectionCount} films`}
-                onClick={() => navigate("/collection")}
-                gradient="bg-gradient-to-br from-blue-500/10 to-cyan-600/10"
-              />
-              <QuickActionCard
-                icon={Trophy}
-                title="Mes badges"
-                description="Voir mes succès"
-                onClick={() => navigate("/badges")}
-                gradient="bg-gradient-to-br from-purple-500/10 to-violet-600/10"
-              />
-              <QuickActionCard
-                icon={Users}
-                title="Communauté"
-                description="Explorer les profils"
-                onClick={() => navigate("/search?tab=users")}
-                gradient="bg-gradient-to-br from-emerald-500/10 to-green-600/10"
-              />
-            </motion.div>
+          {/* Stats Grid - 4 columns */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+            <QuickStatsCard
+              icon={Library}
+              value={userStats.collectionCount}
+              label="Collection"
+              onClick={() => navigate("/collection")}
+              accentColor="amber"
+              delay={0.1}
+            />
+            <QuickStatsCard
+              icon={TrendingUp}
+              value={`~${userStats.estimatedValue}`}
+              suffix="€"
+              label="Valeur"
+              onClick={() => navigate("/collection?tab=valuation")}
+              accentColor="green"
+              delay={0.15}
+            />
+            <QuickStatsCard
+              icon={Trophy}
+              value={userStats.badgeCount}
+              label="Badges"
+              onClick={() => navigate("/badges")}
+              accentColor="purple"
+              delay={0.2}
+            />
+            <QuickStatsCard
+              icon={Zap}
+              value={userStats.level}
+              label="Niveau"
+              onClick={() => navigate("/badges")}
+              accentColor="blue"
+              delay={0.25}
+            />
           </div>
+
+          {/* Quick Actions - 3 columns */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+            <QuickActionButton
+              icon={Plus}
+              label="Ajouter un film"
+              sublabel="Scanner ou rechercher"
+              onClick={() => navigate("/search")}
+              variant="primary"
+              delay={0.3}
+            />
+            <QuickActionButton
+              icon={Disc}
+              label="Ma collection"
+              sublabel={`${userStats.collectionCount} films`}
+              onClick={() => navigate("/collection")}
+              delay={0.35}
+            />
+            <QuickActionButton
+              icon={Trophy}
+              label="Mes badges"
+              sublabel="Voir mes succès"
+              onClick={() => navigate("/badges")}
+              delay={0.4}
+            />
+          </div>
+
+          {/* Community Link */}
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            onClick={() => navigate("/feed")}
+            className={cn(
+              "w-full mt-3 p-4 rounded-2xl",
+              "bg-gradient-to-r from-purple-500/10 via-purple-500/5 to-transparent",
+              "border border-purple-500/20 hover:border-purple-500/30",
+              "flex items-center justify-between",
+              "transition-all duration-300 group",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                <Users className="w-5 h-5 text-purple-400" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-white">Communauté</p>
+                <p className="text-sm text-white/50">Explorer les profils</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-purple-400/50 group-hover:translate-x-1 transition-transform" />
+          </motion.button>
         </section>
 
-        {/* My Collection Section */}
+        {/* Collection Section */}
         {myCollection.length > 0 && (
           <section className="px-4 md:px-12 py-8 md:py-12">
-            <div className="max-w-7xl mx-auto">
-              <SectionHeader
-                title="Ma collection"
-                subtitle={`${userStats.collectionCount} films • ~${userStats.totalValue}€`}
-                icon={Library}
-                onSeeAll={() => navigate("/collection")}
-              />
+            <SectionHeader
+              title="VOTRE COLLECTION"
+              subtitle={`${myCollection.length} films`}
+              onSeeAll={() => navigate("/collection")}
+            />
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 md:gap-4">
-                {myCollection.map((pm, index) => (
-                  <CollectionCard
+            <div className={cn("grid gap-3 md:gap-4", "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6")}>
+              {myCollection.map((pm, index) => {
+                const details = collectionDetails[pm.tmdb_id];
+                if (!details) return null;
+
+                return (
+                  <MinimalMovieCard
                     key={pm.id}
-                    movie={pm}
-                    details={collectionDetails[pm.tmdb_id] || null}
+                    movie={details as unknown as Movie}
                     index={index}
+                    showFormat
+                    format={pm.format}
                   />
-                ))}
-              </div>
+                );
+              })}
             </div>
           </section>
         )}
 
-        {/* Empty Collection CTA */}
+        {/* Empty collection CTA */}
         {myCollection.length === 0 && (
           <section className="px-4 md:px-12 py-8 md:py-12">
-            <div className="max-w-7xl mx-auto">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={cn(
+                "border border-white/10 rounded-2xl",
+                "p-8 md:p-12 text-center",
+                "bg-gradient-to-br from-amber-500/5 to-transparent",
+              )}
+            >
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                <Library className="w-8 h-8 text-amber-500" />
+              </div>
+              <h2 className="font-display text-xl md:text-2xl font-bold text-white mb-2">Commencez votre collection</h2>
+              <p className="text-white/50 mb-6 max-w-md mx-auto">
+                Ajoutez votre premier DVD, Blu-ray ou 4K pour commencer à suivre votre collection physique.
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate("/search")}
                 className={cn(
-                  "relative p-8 md:p-12 rounded-3xl text-center overflow-hidden",
-                  "bg-gradient-to-br from-amber-500/10 to-orange-600/10",
-                  "border border-amber-500/20",
+                  "inline-flex items-center gap-2 px-6 py-3 rounded-full",
+                  "bg-amber-500 hover:bg-amber-600 text-black font-semibold",
+                  "transition-colors duration-300",
                 )}
               >
-                <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-amber-500/20 flex items-center justify-center">
-                  <Library className="w-8 h-8 text-amber-500" />
-                </div>
-                <h2 className="font-display text-2xl md:text-3xl font-bold mb-4">Commencez votre collection</h2>
-                <p className="text-white/50 mb-8 max-w-md mx-auto">
-                  Ajoutez votre premier DVD, Blu-ray ou 4K pour démarrer votre aventure de collectionneur.
-                </p>
-                <Button
-                  size="lg"
-                  onClick={() => navigate("/search")}
-                  className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8 rounded-full"
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  Ajouter mon premier film
-                </Button>
-              </motion.div>
-            </div>
+                <Plus className="w-5 h-5" />
+                Ajouter un film
+              </motion.button>
+            </motion.div>
           </section>
         )}
 
-        {/* Activity Feed (if user follows people) */}
-        {recentActivity.length > 0 && (
-          <section className="px-4 md:px-12 py-8 md:py-12">
-            <div className="max-w-7xl mx-auto">
-              <SectionHeader title="Activité récente" subtitle="De vos abonnements" icon={Sparkles} />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl">
-                {recentActivity.map((activity) => (
-                  <ActivityItem key={activity.id} activity={activity} />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Trending Movies */}
+        {/* Popular Movies */}
         <section className="px-4 md:px-12 py-8 md:py-12">
-          <div className="max-w-7xl mx-auto">
-            <SectionHeader
-              title="Tendances"
-              subtitle="Films populaires du moment"
-              icon={TrendingUp}
-              onSeeAll={() => navigate("/movies/popular")}
-            />
-            <MovieGrid movies={popular.slice(0, 12)} loading={loading} />
-          </div>
+          <SectionHeader title="FILMS POPULAIRES" onSeeAll={() => navigate("/movies")} />
+          <MovieGrid movies={popular.slice(0, 12)} loading={loading} />
         </section>
 
         {/* Now Playing */}
         <section className="px-4 md:px-12 py-8 md:py-12">
-          <div className="max-w-7xl mx-auto">
-            <SectionHeader
-              title="À l'affiche"
-              subtitle="Actuellement au cinéma"
-              icon={Play}
-              onSeeAll={() => navigate("/movies/now-playing")}
-            />
-            <MovieGrid movies={nowPlaying.slice(0, 6)} loading={loading} />
-          </div>
+          <SectionHeader title="À L'AFFICHE" onSeeAll={() => navigate("/movies/now-playing")} />
+          <MovieGrid movies={nowPlaying.slice(0, 6)} loading={loading} />
         </section>
       </main>
 
