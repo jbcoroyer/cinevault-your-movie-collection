@@ -1,11 +1,10 @@
 /**
- * CineVault — Minimal Header
+ * CineVault — Minimal Header avec XP Indicator
  *
- * Design ultra-minimaliste:
- * - Logo cliquable (retour accueil)
+ * Phase 2: Polish Gamification
+ * - XP indicator visible sur mobile
+ * - Design ultra-minimaliste
  * - Menu profil à droite
- * - Pas de navigation (le FloatingDock s'en charge)
- * - Toujours visible sur mobile ET desktop
  */
 
 import { useNavigate } from "react-router-dom";
@@ -22,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MobileXPIndicator } from "@/components/gamification/MobileXPIndicator";
 
 export const MinimalHeader = () => {
   const navigate = useNavigate();
@@ -46,11 +46,20 @@ export const MinimalHeader = () => {
             onClick={() => navigate("/")}
             className="flex items-center"
           >
-            <span className="font-display text-lg md:text-xl tracking-wider text-white">CINEVAULT</span>
+            <span className="font-display text-lg md:text-xl tracking-wider text-white">
+              CINEVAULT
+            </span>
           </motion.button>
 
-          {/* Right section - Profile menu */}
+          {/* Right section - Profile menu + XP */}
           <div className="flex items-center gap-3">
+            {/* XP Indicator (mobile) */}
+            {!loading && user && (
+              <div className="md:hidden">
+                <MobileXPIndicator compact />
+              </div>
+            )}
+
             {!loading && user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -65,11 +74,18 @@ export const MinimalHeader = () => {
                   </button>
                 </DropdownMenuTrigger>
 
-                <DropdownMenuContent align="end" className="w-56 bg-background/95 backdrop-blur-xl border-white/10">
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56 bg-background/95 backdrop-blur-xl border-white/10"
+                >
                   {/* User info */}
                   <div className="px-3 py-2">
-                    <p className="font-medium text-white">{profile?.username || "User"}</p>
-                    {profile?.username && <p className="text-sm text-white/50">@{profile.username}</p>}
+                    <p className="font-medium text-white">
+                      {profile?.username || "User"}
+                    </p>
+                    {profile?.username && (
+                      <p className="text-sm text-white/50">@{profile.username}</p>
+                    )}
                   </div>
 
                   <DropdownMenuSeparator className="bg-white/10" />
@@ -119,7 +135,7 @@ export const MinimalHeader = () => {
                   "flex items-center gap-2 px-4 py-2",
                   "border border-white/20 rounded-full",
                   "text-sm text-white",
-                  "hover:bg-white hover:text-black transition-all",
+                  "hover:bg-white hover:text-black transition-all"
                 )}
               >
                 <LogIn className="w-4 h-4" />
