@@ -1,287 +1,376 @@
 /**
- * CineVault - XP Toast Component
- * 
- * Toast animé pour afficher les gains d'XP
- * Apparaît après chaque action récompensée
+ * CineVault — XP Toast avec animations premium
+ *
+ * Phase 2: Polish Gamification
+ * - Animations Framer Motion spectaculaires
+ * - Confetti sur level up
+ * - Son optionnel
+ * - Progression visuelle
  */
 
-import { useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Star, Flame, Trophy, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Zap, Star, TrendingUp, Sparkles, Trophy, Flame } from "lucide-react";
+import { getLevelFromXp, getXpProgress } from "@/data/videoClubData";
+import confetti from "canvas-confetti";
 
-interface XPToastData {
+// ============================================
+// Types
+// ============================================
+
+interface XPGain {
   id: string;
   amount: number;
-  reason?: string;
-  type?: "xp" | "streak" | "badge" | "bonus";
+  reason: string;
+  previousXp: number;
+  newXp: number;
+  levelUp?: boolean;
+  newLevel?: number;
 }
 
-// Singleton pattern for global toast management
-let toastCallback: ((data: XPToastData) => void) | null = null;
+interface XPToastContextType {
+  showXPGain: (amount: number, reason: string, previousXp: number) => void;
+}
 
-export const showXPToast = (amount: number, reason?: string, type: XPToastData["type"] = "xp") => {
-  if (toastCallback) {
-    toastCallback({
-      id: Math.random().toString(36).substring(7),
-      amount,
-      reason,
-      type,
+const XPToastContext = createContext<XPToastContextType | null>(null);
+
+// ============================================
+// Hook
+// ============================================
+
+export const useXPToast = () => {
+  const context = useContext(XPToastContext);
+  if (!context) {
+    throw new Error("useXPToast must be used within XPToastProvider");
+  }
+  return context;
+};
+
+// ============================================
+// Confetti Effect
+// ============================================
+
+const triggerConfetti = () => {
+  const count = 200;
+  const defaults = {
+    origin: { y: 0.7 },
+    zIndex: 9999,
+  };
+
+  function fire(particleRatio: number, opts: confetti.Options) {
+    confetti({
+      ...defaults,
+      ...opts,
+      particleCount: Math.floor(count * particleRatio),
     });
   }
+
+  fire(0.25, {
+    spread: 26,
+    startVelocity: 55,
+    colors: ["#f59e0b", "#fbbf24", "#fcd34d"],
+  });
+
+  fire(0.2, {
+    spread: 60,
+    colors: ["#f59e0b", "#ea580c", "#dc2626"],
+  });
+
+  fire(0.35, {
+    spread: 100,
+    decay: 0.91,
+    scalar: 0.8,
+    colors: ["#fbbf24", "#f59e0b", "#d97706"],
+  });
+
+  fire(0.1, {
+    spread: 120,
+    startVelocity: 25,
+    decay: 0.92,
+    scalar: 1.2,
+    colors: ["#fcd34d", "#fbbf24", "#f59e0b"],
+  });
+
+  fire(0.1, {
+    spread: 120,
+    startVelocity: 45,
+    colors: ["#ea580c", "#f59e0b", "#fbbf24"],
+  });
 };
 
-/**
- * XPToastProvider - Place this at app root level
- */
-export const XPToastProvider = ({ children }: { children: React.ReactNode }) => {
-  const [toasts, setToasts] = useState<XPToastData[]>([]);
+// ============================================
+// XP Toast Component
+// ============================================
 
-  const addToast = useCallback((data: XPToastData) => {
-    setToasts(prev => [...prev, data]);
-    
-    // Auto-remove after animation
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== data.id));
-    }, 2500);
-  }, []);
+const XPToast: React.FC<{ gain: XPGain; onComplete: () => void }> = ({
+  gain,
+  onComplete,
+}) => {
+  const previousLevel = getLevelFromXp(gain.previousXp);
+  const newLevel = getLevelFromXp(gain.newXp);
+  const isLevelUp = newLevel > previousLevel;
+  const { percentage } = getXpProgress(gain.newXp);
 
   useEffect(() => {
-    toastCallback = addToast;
-    return () => {
-      toastCallback = null;
-    };
-  }, [addToast]);
+    if (isLevelUp) {
+      triggerConfetti();
+      // Optionnel: jouer un son
+      try {
+        const audioContext = new (window.AudioContext ||
+          (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
 
-  return (
-    <>
-      {children}
-      <XPToastContainer toasts={toasts} />
-    </>
-  );
-};
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
 
-/**
- * XPToastContainer - Renders active toasts
- */
-const XPToastContainer = ({ toasts }: { toasts: XPToastData[] }) => {
-  return (
-    <div className="fixed top-20 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
-      <AnimatePresence>
-        {toasts.map((toast) => (
-          <XPToast key={toast.id} data={toast} />
-        ))}
-      </AnimatePresence>
-    </div>
-  );
-};
+        // Joyful ascending notes
+        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+        oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+        oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+        oscillator.frequency.setValueAtTime(1046.5, audioContext.currentTime + 0.3); // C6
 
-/**
- * Individual XP Toast
- */
-const XPToast = ({ data }: { data: XPToastData }) => {
-  const { amount, reason, type = "xp" } = data;
+        oscillator.type = "sine";
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.5
+        );
 
-  const config = {
-    xp: {
-      icon: Zap,
-      color: "from-amber-500 to-orange-500",
-      bgColor: "bg-amber-500/20",
-      textColor: "text-amber-500",
-      label: "XP",
-    },
-    streak: {
-      icon: Flame,
-      color: "from-orange-500 to-red-500",
-      bgColor: "bg-orange-500/20",
-      textColor: "text-orange-500",
-      label: "Streak",
-    },
-    badge: {
-      icon: Trophy,
-      color: "from-yellow-500 to-amber-500",
-      bgColor: "bg-yellow-500/20",
-      textColor: "text-yellow-500",
-      label: "Badge",
-    },
-    bonus: {
-      icon: Sparkles,
-      color: "from-purple-500 to-pink-500",
-      bgColor: "bg-purple-500/20",
-      textColor: "text-purple-500",
-      label: "Bonus",
-    },
-  }[type];
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+      } catch (e) {
+        // Audio not supported
+      }
+    }
 
-  const Icon = config.icon;
+    const timer = setTimeout(onComplete, isLevelUp ? 4000 : 3000);
+    return () => clearTimeout(timer);
+  }, [isLevelUp, onComplete]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 50, scale: 0.8 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 50, scale: 0.8 }}
-      transition={{ 
-        type: "spring", 
-        stiffness: 300, 
-        damping: 25 
-      }}
+      initial={{ opacity: 0, y: 50, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-2xl",
-        "bg-background/95 backdrop-blur-xl",
-        "border border-border/50 shadow-xl",
-        "pointer-events-auto"
+        "fixed bottom-24 md:bottom-28 left-1/2 -translate-x-1/2 z-[100]",
+        "px-6 py-4 rounded-2xl",
+        "bg-gradient-to-r",
+        isLevelUp
+          ? "from-amber-500 via-orange-500 to-red-500"
+          : "from-amber-500/90 to-orange-500/90",
+        "backdrop-blur-xl shadow-2xl",
+        isLevelUp && "shadow-amber-500/50"
       )}
     >
-      {/* Icon with gradient background */}
-      <motion.div
-        initial={{ rotate: -180, scale: 0 }}
-        animate={{ rotate: 0, scale: 1 }}
-        transition={{ delay: 0.1, type: "spring" }}
+      {/* Glow effect */}
+      <div
         className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center",
-          config.bgColor
+          "absolute inset-0 rounded-2xl opacity-50 blur-xl",
+          isLevelUp
+            ? "bg-gradient-to-r from-amber-400 to-orange-500"
+            : "bg-amber-500/30"
         )}
-      >
-        <Icon className={cn("w-5 h-5", config.textColor)} />
-      </motion.div>
+      />
 
-      {/* Amount */}
-      <div className="flex flex-col">
-        <motion.span
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
+      <div className="relative flex items-center gap-4">
+        {/* Icon */}
+        <motion.div
+          animate={
+            isLevelUp
+              ? {
+                  rotate: [0, -10, 10, -10, 10, 0],
+                  scale: [1, 1.2, 1],
+                }
+              : {
+                  scale: [1, 1.1, 1],
+                }
+          }
+          transition={{
+            duration: isLevelUp ? 0.6 : 0.3,
+            repeat: isLevelUp ? 2 : 0,
+          }}
           className={cn(
-            "text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent",
-            config.color
+            "w-12 h-12 rounded-xl flex items-center justify-center",
+            "bg-white/20 backdrop-blur-sm"
           )}
         >
-          +{amount} {config.label}
-        </motion.span>
-        
-        {reason && (
-          <motion.span
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-xs text-muted-foreground"
+          {isLevelUp ? (
+            <Trophy className="w-6 h-6 text-white" />
+          ) : (
+            <Zap className="w-6 h-6 text-white fill-white" />
+          )}
+        </motion.div>
+
+        {/* Content */}
+        <div className="flex flex-col">
+          {isLevelUp ? (
+            <>
+              <motion.span
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-white font-bold text-lg flex items-center gap-2"
+              >
+                <Sparkles className="w-5 h-5" />
+                NIVEAU {newLevel} !
+              </motion.span>
+              <span className="text-white/80 text-sm">{gain.reason}</span>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", delay: 0.1 }}
+                  className="text-white font-bold text-xl"
+                >
+                  +{gain.amount} XP
+                </motion.span>
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <TrendingUp className="w-4 h-4 text-white/80" />
+                </motion.div>
+              </div>
+              <span className="text-white/80 text-sm">{gain.reason}</span>
+            </>
+          )}
+        </div>
+
+        {/* Progress ring (non level-up only) */}
+        {!isLevelUp && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            className="relative w-10 h-10"
           >
-            {reason}
-          </motion.span>
+            <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+              <circle
+                cx="18"
+                cy="18"
+                r="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                className="text-white/20"
+              />
+              <motion.circle
+                cx="18"
+                cy="18"
+                r="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                className="text-white"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: percentage / 100 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                style={{
+                  strokeDasharray: "100",
+                  strokeDashoffset: 0,
+                }}
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+              {newLevel}
+            </span>
+          </motion.div>
         )}
       </div>
 
       {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(5)].map((_, i) => (
+      <AnimatePresence>
+        {[...Array(isLevelUp ? 8 : 4)].map((_, i) => (
           <motion.div
             key={i}
-            initial={{ 
-              opacity: 1, 
-              scale: 0,
-              x: 20 + i * 10,
-              y: 20
-            }}
-            animate={{ 
-              opacity: 0, 
+            initial={{
+              opacity: 1,
+              y: 0,
+              x: Math.random() * 100 - 50,
               scale: 1,
-              y: -20 - i * 10,
             }}
-            transition={{ 
-              delay: 0.2 + i * 0.1, 
-              duration: 0.8,
-              ease: "easeOut"
+            animate={{
+              opacity: 0,
+              y: -60 - Math.random() * 40,
+              x: Math.random() * 100 - 50,
+              scale: 0.5,
             }}
-            className={cn(
-              "absolute w-2 h-2 rounded-full",
-              type === "xp" && "bg-amber-500",
-              type === "streak" && "bg-orange-500",
-              type === "badge" && "bg-yellow-500",
-              type === "bonus" && "bg-purple-500",
-            )}
-          />
+            transition={{
+              duration: 1.5,
+              delay: i * 0.1,
+              ease: "easeOut",
+            }}
+            className="absolute top-0 left-1/2"
+          >
+            <Star
+              className={cn(
+                "w-3 h-3",
+                i % 2 === 0 ? "text-amber-300" : "text-orange-300"
+              )}
+              fill="currentColor"
+            />
+          </motion.div>
         ))}
-      </div>
+      </AnimatePresence>
     </motion.div>
   );
 };
 
-/**
- * Mini XP Indicator - Shows in-line XP gains
- */
-export const MiniXPGain = ({ 
-  amount, 
-  className 
-}: { 
-  amount: number;
-  className?: string;
-}) => {
-  const [visible, setVisible] = useState(true);
+// ============================================
+// Provider
+// ============================================
 
-  useEffect(() => {
-    const timer = setTimeout(() => setVisible(false), 2000);
-    return () => clearTimeout(timer);
+export const XPToastProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [gains, setGains] = useState<XPGain[]>([]);
+
+  const showXPGain = useCallback(
+    (amount: number, reason: string, previousXp: number) => {
+      const newXp = previousXp + amount;
+      const previousLevel = getLevelFromXp(previousXp);
+      const newLevel = getLevelFromXp(newXp);
+
+      const gain: XPGain = {
+        id: `${Date.now()}-${Math.random()}`,
+        amount,
+        reason,
+        previousXp,
+        newXp,
+        levelUp: newLevel > previousLevel,
+        newLevel: newLevel > previousLevel ? newLevel : undefined,
+      };
+
+      setGains((prev) => [...prev, gain]);
+    },
+    []
+  );
+
+  const removeGain = useCallback((id: string) => {
+    setGains((prev) => prev.filter((g) => g.id !== id));
   }, []);
 
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.span
-          initial={{ opacity: 0, y: 10, scale: 0.8 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -10 }}
-          className={cn(
-            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full",
-            "bg-amber-500/20 text-amber-500 text-xs font-bold",
-            className
-          )}
-        >
-          <Zap className="w-3 h-3" />
-          +{amount}
-        </motion.span>
-      )}
-    </AnimatePresence>
-  );
-};
-
-/**
- * Floating XP Counter - For big gains
- */
-export const FloatingXPCounter = ({
-  amount,
-  x,
-  y,
-  onComplete,
-}: {
-  amount: number;
-  x: number;
-  y: number;
-  onComplete?: () => void;
-}) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onComplete?.();
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [onComplete]);
-
-  return (
-    <motion.div
-      initial={{ opacity: 1, y: 0, scale: 1 }}
-      animate={{ opacity: 0, y: -50, scale: 1.5 }}
-      transition={{ duration: 1.5, ease: "easeOut" }}
-      style={{ 
-        position: "fixed", 
-        left: x, 
-        top: y,
-        pointerEvents: "none",
-        zIndex: 100
-      }}
-      className="flex items-center gap-1 text-amber-500 font-bold text-lg"
-    >
-      <Zap className="w-5 h-5" />
-      +{amount}
-    </motion.div>
+    <XPToastContext.Provider value={{ showXPGain }}>
+      {children}
+      <AnimatePresence>
+        {gains.map((gain) => (
+          <XPToast
+            key={gain.id}
+            gain={gain}
+            onComplete={() => removeGain(gain.id)}
+          />
+        ))}
+      </AnimatePresence>
+    </XPToastContext.Provider>
   );
 };
 

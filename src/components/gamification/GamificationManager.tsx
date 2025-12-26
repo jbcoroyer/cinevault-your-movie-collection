@@ -1,259 +1,261 @@
 /**
- * GamificationManager - Gestionnaire unifié des notifications de gamification
- * 
- * Ce composant gère :
- * - L'affichage du bonus quotidien
- * - Les célébrations de paliers de streak
- * - L'intégration avec le système de notifications
- * - La création automatique de notifications en base
+ * CineVault — Gamification Manager Amélioré
+ *
+ * Phase 2: Polish Gamification
+ * - Notifications XP plus visuelles
+ * - Streak tracking amélioré
+ * - Level up celebrations
+ * - Intégration avec XPToast
  */
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
-import { DailyBonusDialog } from "./DailyBonusDialog";
-import { StreakMilestoneDialog } from "./StreakMilestoneDialog";
-import { processDailyLogin, DailyLoginResult } from "@/services/gamificationService";
-import { createNotification } from "@/services/notificationService";
+import { supabase } from "@/integrations/supabase/client";
+import { useXPToast } from "./XPToast";
+import { toast } from "sonner";
+import { Trophy, Flame, Star, Gift } from "lucide-react";
 
-// Paliers de streak avec bonus XP
-const STREAK_MILESTONES = [
-  { days: 7, xpBonus: 50 },
-  { days: 14, xpBonus: 75 },
-  { days: 30, xpBonus: 100 },
-  { days: 100, xpBonus: 150 },
-  { days: 365, xpBonus: 200 },
-];
+// ============================================
+// XP Configuration
+// ============================================
+
+export const XP_REWARDS = {
+  // Collection actions
+  ADD_PHYSICAL_MOVIE: 50,
+  ADD_PHYSICAL_4K: 75,
+  ADD_PHYSICAL_STEELBOOK: 100,
+  ADD_PHYSICAL_COLLECTOR: 150,
+
+  // Social actions
+  WRITE_REVIEW: 30,
+  RATE_MOVIE: 10,
+  ADD_TO_WATCHLIST: 5,
+  MARK_AS_WATCHED: 15,
+  ADD_TO_FAVORITES: 10,
+
+  // Engagement
+  DAILY_LOGIN: 25,
+  STREAK_BONUS_3: 50,
+  STREAK_BONUS_7: 100,
+  STREAK_BONUS_30: 500,
+
+  // Lists
+  CREATE_LIST: 20,
+  ADD_TO_LIST: 5,
+  SHARE_COLLECTION: 50,
+} as const;
+
+// ============================================
+// Gamification Manager Component
+// ============================================
 
 interface GamificationManagerProps {
   children: React.ReactNode;
 }
 
-export function GamificationManager({ children }: GamificationManagerProps) {
-  const { user } = useAuth();
-  const { checkBadges } = useBadgeNotification();
-  
-  // État des dialogues
-  const [showDailyBonus, setShowDailyBonus] = useState(false);
-  const [showMilestone, setShowMilestone] = useState(false);
-  
-  // Données du bonus quotidien
-  const [dailyBonusData, setDailyBonusData] = useState<{
-    streak: number;
-    xpEarned: number;
-    popcornEarned: number;
-    streakBroken: boolean;
-    newBadges: string[];
-  } | null>(null);
-  
-  // Données du palier de streak
-  const [milestoneData, setMilestoneData] = useState<{
-    milestone: number;
-    currentStreak: number;
-    xpBonus: number;
-  } | null>(null);
+export const GamificationManager: React.FC<GamificationManagerProps> = ({
+  children,
+}) => {
+  const { user, profile } = useAuth();
+  const { showXPGain } = useXPToast();
+  const lastXpRef = useRef<number>(0);
+  const hasInitializedRef = useRef(false);
 
-  // Queue pour afficher les dialogues dans l'ordre
-  const [dialogQueue, setDialogQueue] = useState<('daily' | 'milestone')[]>([]);
-  const [hasProcessedToday, setHasProcessedToday] = useState(false);
-
-  // Vérifier si un palier a été atteint
-  const checkMilestoneReached = useCallback((previousStreak: number, newStreak: number) => {
-    for (const milestone of STREAK_MILESTONES) {
-      // Vérifie si on vient de passer ce palier
-      if (previousStreak < milestone.days && newStreak >= milestone.days) {
-        return milestone;
-      }
-    }
-    return null;
-  }, []);
-
-  // Créer une notification pour un palier de streak
-  const createStreakMilestoneNotification = useCallback(async (userId: string, milestone: number, streak: number) => {
-    try {
-      await createNotification(
-        userId,
-        'badge_earned',
-        `🔥 Palier de ${milestone} jours !`,
-        `Félicitations ! Vous avez atteint ${streak} jours de connexion consécutive.`,
-        { milestone, streak, type: 'streak_milestone' }
-      );
-    } catch (error) {
-      console.error('[Gamification] Error creating milestone notification:', error);
-    }
-  }, []);
-
-  // Créer une notification pour un nouveau badge
-  const createBadgeNotification = useCallback(async (userId: string, badgeIds: string[]) => {
-    if (badgeIds.length === 0) return;
-    
-    try {
-      await createNotification(
-        userId,
-        'badge_earned',
-        badgeIds.length === 1 ? '🏆 Nouveau badge débloqué !' : `🏆 ${badgeIds.length} nouveaux badges !`,
-        badgeIds.length === 1 
-          ? 'Vous avez débloqué un nouveau badge. Consultez votre collection !'
-          : `Vous avez débloqué ${badgeIds.length} nouveaux badges. Consultez votre collection !`,
-        { badgeIds, type: 'new_badges' }
-      );
-    } catch (error) {
-      console.error('[Gamification] Error creating badge notification:', error);
-    }
-  }, []);
-
-  // Vérifier le localStorage pour éviter le double traitement
+  // Initialize with current XP
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    const lastProcessed = localStorage.getItem("cinevault_gamification_processed");
-    if (lastProcessed === today) {
-      setHasProcessedToday(true);
+    if (profile?.total_xp !== undefined && !hasInitializedRef.current) {
+      lastXpRef.current = profile.total_xp;
+      hasInitializedRef.current = true;
     }
-  }, []);
+  }, [profile?.total_xp]);
 
-  // Process daily login
-  useEffect(() => {
-    const handleDailyLogin = async () => {
-      if (!user || hasProcessedToday) return;
+  // Award XP function
+  const awardXP = useCallback(
+    async (amount: number, reason: string) => {
+      if (!user) return;
 
       try {
-        console.log('[GamificationManager] Processing daily login...');
-        const result = await processDailyLogin(user.id);
+        const currentXp = lastXpRef.current;
 
-        if (!result) {
-          console.log('[GamificationManager] No result from daily login');
-          setHasProcessedToday(true);
-          return;
-        }
+        // Update in database
+        const { error } = await supabase.rpc("add_user_xp", {
+          p_user_id: user.id,
+          p_xp_amount: amount,
+        });
 
-        console.log('[GamificationManager] Daily login result:', result);
+        if (error) throw error;
 
-        // Toujours marquer comme traité pour éviter les appels multiples
-        const today = new Date().toISOString().split("T")[0];
-        localStorage.setItem("cinevault_gamification_processed", today);
-        setHasProcessedToday(true);
+        // Show toast with animation
+        showXPGain(amount, reason, currentXp);
 
-        // Si déjà connecté aujourd'hui, pas de popup
-        if (result.alreadyLoggedIn) {
-          console.log('[GamificationManager] Already logged in today');
-          return;
-        }
-
-        const queue: ('daily' | 'milestone')[] = [];
-
-        // Vérifier si un palier de streak a été atteint
-        const currentStreak = result.streak?.current_streak || 1;
-        const previousStreak = currentStreak - 1; // Approximation
-        
-        // Vérifier les paliers
-        const milestoneReached = STREAK_MILESTONES.find(m => m.days === currentStreak);
-        
-        if (milestoneReached) {
-          console.log('[GamificationManager] Milestone reached:', milestoneReached);
-          setMilestoneData({
-            milestone: milestoneReached.days,
-            currentStreak,
-            xpBonus: milestoneReached.xpBonus,
-          });
-          queue.push('milestone');
-          
-          // Créer notification pour le palier
-          await createStreakMilestoneNotification(user.id, milestoneReached.days, currentStreak);
-        }
-
-        // Préparer les données du bonus quotidien
-        if (result.bonus && !result.bonus.alreadyClaimed) {
-          setDailyBonusData({
-            streak: currentStreak,
-            xpEarned: result.bonus.xpEarned || 25,
-            popcornEarned: result.bonus.popcornEarned || 5,
-            streakBroken: result.streakBroken || false,
-            newBadges: result.newBadges || [],
-          });
-          queue.push('daily');
-        }
-
-        // Créer notifications pour les nouveaux badges
-        if (result.newBadges && result.newBadges.length > 0) {
-          await createBadgeNotification(user.id, result.newBadges);
-        }
-
-        // Vérifier les badges (déclenche le contexte BadgeNotification)
-        await checkBadges();
-
-        // Afficher les dialogues
-        if (queue.length > 0) {
-          setDialogQueue(queue);
-        }
-
+        // Update ref
+        lastXpRef.current = currentXp + amount;
       } catch (error) {
-        console.error("[GamificationManager] Error processing daily login:", error);
-        setHasProcessedToday(true);
+        console.error("Error awarding XP:", error);
+      }
+    },
+    [user, showXPGain]
+  );
+
+  // Listen for collection changes
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`gamification-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "physical_movies",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const format = payload.new.format;
+          let xpAmount = XP_REWARDS.ADD_PHYSICAL_MOVIE;
+          let reason = "Film ajouté à la collection";
+
+          switch (format) {
+            case "4k":
+              xpAmount = XP_REWARDS.ADD_PHYSICAL_4K;
+              reason = "Film 4K ajouté";
+              break;
+            case "steelbook":
+              xpAmount = XP_REWARDS.ADD_PHYSICAL_STEELBOOK;
+              reason = "Steelbook ajouté";
+              break;
+            case "collector":
+              xpAmount = XP_REWARDS.ADD_PHYSICAL_COLLECTOR;
+              reason = "Édition Collector ajoutée";
+              break;
+          }
+
+          awardXP(xpAmount, reason);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "reviews",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          awardXP(XP_REWARDS.WRITE_REVIEW, "Avis publié");
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "user_movies",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const oldData = payload.old as any;
+          const newData = payload.new as any;
+
+          // Rating added/changed
+          if (
+            newData.rating &&
+            (!oldData.rating || newData.rating !== oldData.rating)
+          ) {
+            awardXP(XP_REWARDS.RATE_MOVIE, "Film noté");
+          }
+
+          // Marked as watched
+          if (newData.status === "watched" && oldData.status !== "watched") {
+            awardXP(XP_REWARDS.MARK_AS_WATCHED, "Film marqué comme vu");
+          }
+
+          // Added to favorites
+          if (newData.is_favorite && !oldData.is_favorite) {
+            awardXP(XP_REWARDS.ADD_TO_FAVORITES, "Ajouté aux favoris");
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, awardXP]);
+
+  // Check streak on mount
+  useEffect(() => {
+    if (!user) return;
+
+    const checkStreak = async () => {
+      try {
+        const { data: streakData } = await supabase
+          .from("user_streaks")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!streakData) return;
+
+        const streak = streakData.current_streak;
+
+        // Streak milestone notifications
+        if (streak === 3) {
+          toast(
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <Flame className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="font-semibold">Streak de 3 jours ! 🔥</p>
+                <p className="text-sm text-muted-foreground">
+                  +{XP_REWARDS.STREAK_BONUS_3} XP bonus
+                </p>
+              </div>
+            </div>,
+            { duration: 4000 }
+          );
+        } else if (streak === 7) {
+          toast(
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                <Flame className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="font-semibold">1 semaine de streak ! 🎉</p>
+                <p className="text-sm text-muted-foreground">
+                  +{XP_REWARDS.STREAK_BONUS_7} XP bonus
+                </p>
+              </div>
+            </div>,
+            { duration: 5000 }
+          );
+        } else if (streak === 30) {
+          toast(
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <p className="font-semibold">30 jours consécutifs ! 🏆</p>
+                <p className="text-sm text-muted-foreground">
+                  +{XP_REWARDS.STREAK_BONUS_30} XP bonus légendaire !
+                </p>
+              </div>
+            </div>,
+            { duration: 6000 }
+          );
+        }
+      } catch (error) {
+        console.error("Error checking streak:", error);
       }
     };
 
-    // Délai pour laisser l'UI se charger
-    const timer = setTimeout(handleDailyLogin, 1500);
-    return () => clearTimeout(timer);
-  }, [user, hasProcessedToday, checkBadges, createStreakMilestoneNotification, createBadgeNotification]);
+    checkStreak();
+  }, [user]);
 
-  // Gérer la queue des dialogues
-  useEffect(() => {
-    if (dialogQueue.length === 0) return;
+  return <>{children}</>;
+};
 
-    const currentDialog = dialogQueue[0];
-    
-    if (currentDialog === 'milestone' && milestoneData && !showMilestone && !showDailyBonus) {
-      setShowMilestone(true);
-    } else if (currentDialog === 'daily' && dailyBonusData && !showMilestone && !showDailyBonus) {
-      setShowDailyBonus(true);
-    }
-  }, [dialogQueue, milestoneData, dailyBonusData, showMilestone, showDailyBonus]);
-
-  // Fermer le dialogue du palier
-  const handleCloseMilestone = useCallback(() => {
-    setShowMilestone(false);
-    setTimeout(() => {
-      setDialogQueue(prev => prev.slice(1));
-    }, 300);
-  }, []);
-
-  // Fermer le dialogue du bonus quotidien
-  const handleCloseDailyBonus = useCallback(() => {
-    setShowDailyBonus(false);
-    setTimeout(() => {
-      setDialogQueue(prev => prev.slice(1));
-    }, 300);
-  }, []);
-
-  return (
-    <>
-      {children}
-
-      {/* Dialogue de palier de streak */}
-      {milestoneData && (
-        <StreakMilestoneDialog
-          open={showMilestone}
-          onOpenChange={(open) => !open && handleCloseMilestone()}
-          milestone={milestoneData.milestone}
-          currentStreak={milestoneData.currentStreak}
-          xpBonus={milestoneData.xpBonus}
-          onClose={handleCloseMilestone}
-        />
-      )}
-
-      {/* Dialogue de bonus quotidien */}
-      {dailyBonusData && (
-        <DailyBonusDialog
-          open={showDailyBonus}
-          onOpenChange={(open) => !open && handleCloseDailyBonus()}
-          streak={dailyBonusData.streak}
-          xpEarned={dailyBonusData.xpEarned}
-          popcornEarned={dailyBonusData.popcornEarned}
-          streakBroken={dailyBonusData.streakBroken}
-          newBadges={dailyBonusData.newBadges}
-        />
-      )}
-    </>
-  );
-}
+export default GamificationManager;
