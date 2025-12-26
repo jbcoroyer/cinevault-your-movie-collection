@@ -9,17 +9,7 @@
 
 import { useNavigate, NavLink, useLocation, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Home,
-  Search,
-  Library,
-  Trophy,
-  ListVideo,
-  LogIn,
-  Plus,
-  Zap,
-  Flame,
-} from "lucide-react";
+import { Home, Search, Library, Trophy, ListVideo, LogIn, Plus, Zap, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProfileMenu } from "./ProfileMenu";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,13 +24,7 @@ import { useAddMovie } from "@/contexts/AddMovieContext";
 /**
  * XP Badge for Desktop Header
  */
-const DesktopXPBadge = ({
-  totalXp,
-  streak,
-}: {
-  totalXp: number;
-  streak: number;
-}) => {
+const DesktopXPBadge = ({ totalXp, streak }: { totalXp: number; streak: number }) => {
   const level = getLevelFromXp(totalXp);
   const { percentage } = getXpProgress(totalXp);
 
@@ -52,7 +36,7 @@ const DesktopXPBadge = ({
         "bg-gradient-to-r from-amber-500/10 to-orange-500/10",
         "border border-amber-500/20",
         "cursor-pointer transition-all duration-300",
-        "hover:border-amber-500/40 hover:shadow-md hover:shadow-amber-500/10"
+        "hover:border-amber-500/40 hover:shadow-md hover:shadow-amber-500/10",
       )}
     >
       {/* Level with progress ring */}
@@ -61,15 +45,12 @@ const DesktopXPBadge = ({
           className={cn(
             "w-7 h-7 rounded-full flex items-center justify-center",
             "bg-gradient-to-br from-amber-500 to-orange-600",
-            "text-white text-xs font-bold"
+            "text-white text-xs font-bold",
           )}
         >
           {level}
         </div>
-        <svg
-          className="absolute -inset-0.5 w-8 h-8 -rotate-90"
-          viewBox="0 0 36 36"
-        >
+        <svg className="absolute -inset-0.5 w-8 h-8 -rotate-90" viewBox="0 0 36 36">
           <circle
             cx="18"
             cy="18"
@@ -94,9 +75,7 @@ const DesktopXPBadge = ({
 
       {/* XP text */}
       <div className="flex flex-col">
-        <span className="text-xs font-semibold text-amber-500">
-          {totalXp.toLocaleString()} XP
-        </span>
+        <span className="text-xs font-semibold text-amber-500">{totalXp.toLocaleString()} XP</span>
         {streak > 0 && (
           <span className="text-[10px] text-amber-500/70 flex items-center gap-1">
             <Flame className="w-3 h-3" />
@@ -132,11 +111,7 @@ export const Header = () => {
       setCollectionCount(count || 0);
 
       // XP
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("total_xp")
-        .eq("id", user.id)
-        .single();
+      const { data: profile } = await supabase.from("profiles").select("total_xp").eq("id", user.id).single();
 
       setTotalXp(profile?.total_xp || 0);
 
@@ -177,13 +152,13 @@ export const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50 hidden md:block">
-      <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+      <div className="container mx-auto px-4 h-14 grid grid-cols-[1fr_auto_1fr] items-center">
         {/* Logo */}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate("/")}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 justify-self-start"
         >
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
             <Library className="w-4 h-4 text-white" />
@@ -194,7 +169,7 @@ export const Header = () => {
         </motion.button>
 
         {/* Navigation */}
-        <nav className="flex items-center">
+        <nav className="flex items-center justify-self-center">
           {navItems.map(({ to, icon: Icon, label, exact, isMain, hasBadge }) => {
             const active = isActive(to, exact);
 
@@ -210,13 +185,11 @@ export const Header = () => {
                       "bg-amber-500/10 border border-amber-500/30",
                       active
                         ? "bg-amber-500/20 border-amber-500/50 shadow-lg shadow-amber-500/10"
-                        : "hover:bg-amber-500/15"
+                        : "hover:bg-amber-500/15",
                     )}
                   >
                     <Icon className="w-4 h-4 text-amber-500" />
-                    <span className="text-amber-600 dark:text-amber-400">
-                      {label}
-                    </span>
+                    <span className="text-amber-600 dark:text-amber-400">{label}</span>
                     {collectionCount > 0 && (
                       <motion.span
                         key={collectionCount}
@@ -233,19 +206,13 @@ export const Header = () => {
             }
 
             return (
-              <NavLink
-                key={to}
-                to={to}
-                className="relative px-4 py-3 group"
-              >
+              <NavLink key={to} to={to} className="relative px-4 py-3 group">
                 <motion.div
                   whileHover={{ y: -1 }}
                   whileTap={{ scale: 0.98 }}
                   className={cn(
                     "flex items-center gap-2 text-sm font-medium transition-colors",
-                    active
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <div className="relative">
@@ -290,7 +257,7 @@ export const Header = () => {
         </nav>
 
         {/* Right section */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 justify-self-end">
           {!loading && user && (
             <>
               {/* Add Button */}
@@ -304,7 +271,7 @@ export const Header = () => {
                   "hover:from-amber-600 hover:to-orange-600",
                   "text-white text-sm font-medium",
                   "shadow-lg shadow-amber-500/20",
-                  "transition-all duration-300"
+                  "transition-all duration-300",
                 )}
               >
                 <Plus className="w-4 h-4" />
