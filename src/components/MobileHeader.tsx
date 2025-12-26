@@ -1,7 +1,6 @@
 /**
  * CineVault - MobileHeader avec XP & Niveau
- * 
- * AMÉLIORATIONS:
+ * * AMÉLIORATIONS:
  * - XP badge visible à côté du profil
  * - Ring de progression autour de l'avatar
  * - Streak flame indicator
@@ -9,7 +8,19 @@
  */
 
 import { useState, useEffect } from "react";
-import { Disc, LogIn, User, Settings, Info, LogOut, ExternalLink, ChevronRight, Flame, Zap, Trophy } from "lucide-react";
+import {
+  Disc,
+  LogIn,
+  User,
+  Settings,
+  Info,
+  LogOut,
+  ExternalLink,
+  ChevronRight,
+  Flame,
+  Zap,
+  Trophy,
+} from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "./ui/button";
@@ -31,18 +42,10 @@ import { getXpProgress, getLevelFromXp, getTitleForLevel } from "@/data/videoClu
 /**
  * XP Badge Component - Affiche le niveau et la progression
  */
-const XPBadge = ({ 
-  totalXp, 
-  streak,
-  onClick 
-}: { 
-  totalXp: number; 
-  streak: number;
-  onClick?: () => void;
-}) => {
+const XPBadge = ({ totalXp, streak, onClick }: { totalXp: number; streak: number; onClick?: () => void }) => {
   const level = getLevelFromXp(totalXp);
   const { current, required, percentage } = getXpProgress(totalXp);
-  
+
   return (
     <motion.button
       whileTap={{ scale: 0.95 }}
@@ -52,24 +55,23 @@ const XPBadge = ({
         "bg-gradient-to-r from-amber-500/20 to-orange-500/20",
         "border border-amber-500/30",
         "transition-all duration-300",
-        "hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10"
+        "hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10",
       )}
     >
       {/* Level Badge */}
       <div className="relative">
-        <div className={cn(
-          "w-7 h-7 rounded-full flex items-center justify-center",
-          "bg-gradient-to-br from-amber-500 to-orange-600",
-          "text-white text-xs font-bold"
-        )}>
+        <div
+          className={cn(
+            "w-7 h-7 rounded-full flex items-center justify-center",
+            "bg-gradient-to-br from-amber-500 to-orange-600",
+            "text-white text-xs font-bold",
+          )}
+        >
           {level}
         </div>
-        
+
         {/* Progress Ring */}
-        <svg 
-          className="absolute -inset-0.5 w-8 h-8 -rotate-90"
-          viewBox="0 0 32 32"
-        >
+        <svg className="absolute -inset-0.5 w-8 h-8 -rotate-90" viewBox="0 0 32 32">
           <circle
             cx="16"
             cy="16"
@@ -96,9 +98,7 @@ const XPBadge = ({
       {/* XP Count */}
       <div className="flex items-center gap-1">
         <Zap className="w-3.5 h-3.5 text-amber-500" />
-        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
-          {totalXp.toLocaleString()}
-        </span>
+        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">{totalXp.toLocaleString()}</span>
       </div>
 
       {/* Streak (if active) */}
@@ -115,13 +115,13 @@ const XPBadge = ({
 /**
  * Avatar avec ring de progression
  */
-const AvatarWithProgress = ({ 
-  avatarUrl, 
-  initials, 
+const AvatarWithProgress = ({
+  avatarUrl,
+  initials,
   percentage,
-  size = "md"
-}: { 
-  avatarUrl: string | null; 
+  size = "md",
+}: {
+  avatarUrl: string | null;
   initials: string;
   percentage: number;
   size?: "sm" | "md" | "lg";
@@ -129,40 +129,36 @@ const AvatarWithProgress = ({
   const sizeClasses = {
     sm: "w-8 h-8",
     md: "w-10 h-10",
-    lg: "w-12 h-12"
+    lg: "w-12 h-12",
   };
 
   const ringSize = {
     sm: 36,
     md: 44,
-    lg: 52
+    lg: 52,
   };
 
   return (
     <div className="relative">
       {/* Avatar */}
-      <div className={cn(
-        sizeClasses[size],
-        "rounded-full overflow-hidden",
-        "bg-gradient-to-br from-amber-500/20 to-orange-500/20",
-        "border-2 border-amber-500/30",
-        "flex items-center justify-center"
-      )}>
+      <div
+        className={cn(
+          sizeClasses[size],
+          "rounded-full overflow-hidden",
+          "bg-gradient-to-br from-amber-500/20 to-orange-500/20",
+          "border-2 border-amber-500/30",
+          "flex items-center justify-center",
+        )}
+      >
         {avatarUrl ? (
-          <img 
-            src={avatarUrl} 
-            alt="Avatar" 
-            className="w-full h-full object-cover"
-          />
+          <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
         ) : (
-          <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
-            {initials}
-          </span>
+          <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{initials}</span>
         )}
       </div>
 
       {/* Progress Ring */}
-      <svg 
+      <svg
         className="absolute -inset-1 -rotate-90"
         width={ringSize[size]}
         height={ringSize[size]}
@@ -171,7 +167,7 @@ const AvatarWithProgress = ({
         <circle
           cx={ringSize[size] / 2}
           cy={ringSize[size] / 2}
-          r={(ringSize[size] / 2) - 3}
+          r={ringSize[size] / 2 - 3}
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
@@ -180,11 +176,11 @@ const AvatarWithProgress = ({
         <circle
           cx={ringSize[size] / 2}
           cy={ringSize[size] / 2}
-          r={(ringSize[size] / 2) - 3}
+          r={ringSize[size] / 2 - 3}
           fill="none"
           stroke="currentColor"
           strokeWidth="2.5"
-          strokeDasharray={`${percentage * ((ringSize[size] - 6) * Math.PI) / 100} ${(ringSize[size] - 6) * Math.PI}`}
+          strokeDasharray={`${(percentage * ((ringSize[size] - 6) * Math.PI)) / 100} ${(ringSize[size] - 6) * Math.PI}`}
           strokeLinecap="round"
           className="text-amber-500 transition-all duration-500"
         />
@@ -197,7 +193,7 @@ export const MobileHeader = () => {
   const { user, profile, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  
+
   // Gamification data
   const [totalXp, setTotalXp] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -209,11 +205,7 @@ export const MobileHeader = () => {
 
     const fetchGamificationData = async () => {
       // Get XP from profile
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("total_xp")
-        .eq("id", user.id)
-        .single();
+      const { data: profileData } = await supabase.from("profiles").select("total_xp").eq("id", user.id).single();
 
       if (profileData?.total_xp) {
         setTotalXp(profileData.total_xp);
@@ -245,7 +237,7 @@ export const MobileHeader = () => {
             setTotalXp(payload.new.total_xp);
             setLevel(getLevelFromXp(payload.new.total_xp));
           }
-        }
+        },
       )
       .subscribe();
 
@@ -283,14 +275,15 @@ export const MobileHeader = () => {
   const { percentage } = getXpProgress(totalXp);
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 px-4 bg-background/80 backdrop-blur-xl border-b border-border/40 flex justify-between items-center transition-all duration-300"
+      // Modification ici : justify-center au lieu de justify-between pour tout centrer
+      className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 px-4 bg-background/80 backdrop-blur-xl border-b border-border/40 flex justify-center items-center gap-4 transition-all duration-300"
     >
       {/* Logo */}
       <Link to="/" className="flex items-center gap-2.5">
-        <motion.div 
+        <motion.div
           whileTap={{ scale: 0.95 }}
           className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/20"
         >
@@ -308,19 +301,12 @@ export const MobileHeader = () => {
         ) : user ? (
           <>
             {/* XP Badge - Visible when logged in */}
-            <XPBadge 
-              totalXp={totalXp} 
-              streak={streak}
-              onClick={() => navigate("/badges")}
-            />
+            <XPBadge totalXp={totalXp} streak={streak} onClick={() => navigate("/badges")} />
 
             {/* Profile Drawer Trigger */}
             <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
               <DrawerTrigger asChild>
-                <motion.button 
-                  whileTap={{ scale: 0.95 }}
-                  className="relative"
-                >
+                <motion.button whileTap={{ scale: 0.95 }} className="relative">
                   <AvatarWithProgress
                     avatarUrl={getAvatarUrl()}
                     initials={getInitials()}
@@ -343,25 +329,21 @@ export const MobileHeader = () => {
                       <div className="flex-1">
                         <DrawerTitle className="text-lg">{getDisplayName()}</DrawerTitle>
                         <DrawerDescription className="text-sm flex items-center gap-2">
-                          <span className="text-amber-500 font-medium">
-                            {getTitleForLevel(level)}
-                          </span>
+                          <span className="text-amber-500 font-medium">{getTitleForLevel(level)}</span>
                           <span className="text-muted-foreground">•</span>
                           <span>Niveau {level}</span>
                         </DrawerDescription>
-                        
+
                         {/* XP Progress Bar */}
                         <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <motion.div 
+                          <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${percentage}%` }}
                             transition={{ duration: 0.5, ease: "easeOut" }}
                             className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
                           />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {totalXp.toLocaleString()} XP
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">{totalXp.toLocaleString()} XP</p>
                       </div>
                     </div>
                   </DrawerHeader>
