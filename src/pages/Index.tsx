@@ -43,13 +43,13 @@ const getLevelFromXp = (xp: number): number => {
 // ============================================
 
 const SectionHeader = ({ title, subtitle, onSeeAll }: { title: string; subtitle?: string; onSeeAll?: () => void }) => (
-  <div className="flex items-end justify-between mb-6">
+  <div className="flex items-end justify-between mb-4 sm:mb-6">
     <div>
-      <h2 className="font-display text-sm uppercase tracking-[0.2em] text-white/40">{title}</h2>
-      {subtitle && <p className="text-white/30 text-xs mt-1">{subtitle}</p>}
+      <h2 className="font-display text-xs sm:text-sm uppercase tracking-[0.15em] sm:tracking-[0.2em] text-white/40">{title}</h2>
+      {subtitle && <p className="text-white/30 text-[10px] sm:text-xs mt-0.5 sm:mt-1">{subtitle}</p>}
     </div>
     {onSeeAll && (
-      <button onClick={onSeeAll} className="text-xs text-white/30 hover:text-white/60 transition-colors">
+      <button onClick={onSeeAll} className="text-[10px] sm:text-xs text-white/30 hover:text-white/60 transition-colors">
         Tout voir
       </button>
     )}
@@ -59,7 +59,7 @@ const SectionHeader = ({ title, subtitle, onSeeAll }: { title: string; subtitle?
 const MovieGrid = ({ movies, loading }: { movies: Movie[]; loading?: boolean }) => {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
         {Array.from({ length: 12 }).map((_, i) => (
           <MinimalMovieCardSkeleton key={i} />
         ))}
@@ -68,7 +68,7 @@ const MovieGrid = ({ movies, loading }: { movies: Movie[]; loading?: boolean }) 
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
       {movies.map((movie, index) => (
         <MinimalMovieCard key={movie.id} movie={movie} index={index} />
       ))}
@@ -159,12 +159,12 @@ export default function Index() {
         <MinimalHeader />
         <LandingHero />
 
-        <section className="px-4 md:px-12 py-12">
+        <section className="px-4 md:px-12 py-8 sm:py-12">
           <SectionHeader title="Populaires" onSeeAll={() => navigate("/movies")} />
           <MovieGrid movies={popular.slice(0, 12)} loading={loading} />
         </section>
 
-        <section className="px-4 md:px-12 py-12">
+        <section className="px-4 md:px-12 py-8 sm:py-12">
           <SectionHeader title="À l'affiche" onSeeAll={() => navigate("/movies/now-playing")} />
           <MovieGrid movies={nowPlaying.slice(0, 6)} loading={loading} />
         </section>
@@ -192,12 +192,12 @@ export default function Index() {
             </h1>
           </motion.div>
 
-          {/* Stats Row - Chiffres XXL */}
+          {/* Stats Row - Responsive sizing */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-4 gap-4 md:gap-8 mb-8 md:mb-10"
+            className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6 md:gap-8 mb-6 md:mb-10"
           >
             {[
               { value: stats.collection, label: "Collection", href: "/collection" },
@@ -206,10 +206,10 @@ export default function Index() {
               { value: stats.level, label: "Niveau", href: "/badges" },
             ].map((stat, i) => (
               <button key={stat.label} onClick={() => navigate(stat.href)} className="text-left group">
-                <div className="font-display text-3xl md:text-5xl lg:text-6xl font-bold text-white group-hover:text-amber-500 transition-colors">
+                <div className="font-display text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold text-white group-hover:text-amber-500 transition-colors">
                   {stat.value}
                 </div>
-                <div className="text-[10px] md:text-xs uppercase tracking-[0.1em] text-white/30 mt-1">{stat.label}</div>
+                <div className="text-[10px] sm:text-xs uppercase tracking-[0.1em] text-white/30 mt-0.5 sm:mt-1">{stat.label}</div>
               </button>
             ))}
           </motion.div>
@@ -224,43 +224,45 @@ export default function Index() {
             <button
               onClick={() => navigate("/search")}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-full",
-                "bg-white text-black text-sm font-medium",
+                "flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full",
+                "bg-white text-black text-xs sm:text-sm font-medium",
                 "hover:bg-white/90 transition-colors",
               )}
             >
-              <Search className="w-4 h-4" />
-              Chercher un film
+              <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Chercher un film</span>
+              <span className="xs:hidden">Chercher</span>
             </button>
 
             <button
               onClick={() => navigate("/collection")}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-full",
-                "border border-white/20 text-white/70 text-sm",
+                "flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full",
+                "border border-white/20 text-white/70 text-xs sm:text-sm",
                 "hover:border-white/40 hover:text-white transition-colors",
               )}
             >
-              Ma collection
-              <ChevronRight className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Ma collection</span>
+              <span className="sm:hidden">Collection</span>
+              <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
 
             <button
               onClick={() => navigate("/badges")}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-full",
-                "border border-white/20 text-white/70 text-sm",
+                "flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full",
+                "border border-white/20 text-white/70 text-xs sm:text-sm",
                 "hover:border-white/40 hover:text-white transition-colors",
               )}
             >
-              Mes badges
-              <ChevronRight className="w-3.5 h-3.5" />
+              Badges
+              <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
 
             <button
               onClick={() => navigate("/feed")}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-full",
+                "hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-full",
                 "border border-white/20 text-white/70 text-sm",
                 "hover:border-white/40 hover:text-white transition-colors",
               )}
@@ -276,14 +278,14 @@ export default function Index() {
 
         {/* Collection Section */}
         {myCollection.length > 0 && (
-          <section className="px-4 md:px-12 py-10 md:py-14">
+          <section className="px-4 md:px-12 py-8 sm:py-10 md:py-14">
             <SectionHeader
               title="Votre collection"
               subtitle={`${stats.collection} films`}
               onSeeAll={() => navigate("/collection")}
             />
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
               {myCollection.map((pm, index) => {
                 const details = collectionDetails[pm.tmdb_id];
                 if (!details) return null;
@@ -304,21 +306,21 @@ export default function Index() {
 
         {/* Empty State */}
         {myCollection.length === 0 && (
-          <section className="px-4 md:px-12 py-16 md:py-20">
+          <section className="px-4 md:px-12 py-12 sm:py-16 md:py-20">
             <div className="max-w-md mx-auto text-center">
-              <h2 className="font-display text-xl text-white mb-3">Commencez votre collection</h2>
-              <p className="text-white/40 text-sm mb-6">
+              <h2 className="font-display text-lg sm:text-xl text-white mb-2 sm:mb-3">Commencez votre collection</h2>
+              <p className="text-white/40 text-xs sm:text-sm mb-4 sm:mb-6">
                 Ajoutez votre premier film pour commencer à suivre votre collection.
               </p>
               <button
                 onClick={() => navigate("/search")}
                 className={cn(
-                  "inline-flex items-center gap-2 px-5 py-2.5 rounded-full",
-                  "bg-white text-black text-sm font-medium",
+                  "inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full",
+                  "bg-white text-black text-xs sm:text-sm font-medium",
                   "hover:bg-white/90 transition-colors",
                 )}
               >
-                <Search className="w-4 h-4" />
+                <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Rechercher un film
               </button>
             </div>
@@ -329,7 +331,7 @@ export default function Index() {
         <div className="border-t border-white/5" />
 
         {/* Popular Movies */}
-        <section className="px-4 md:px-12 py-10 md:py-14">
+        <section className="px-4 md:px-12 py-8 sm:py-10 md:py-14">
           <SectionHeader title="Populaires" onSeeAll={() => navigate("/movies")} />
           <MovieGrid movies={popular.slice(0, 12)} loading={loading} />
         </section>
@@ -338,7 +340,7 @@ export default function Index() {
         <div className="border-t border-white/5" />
 
         {/* Now Playing */}
-        <section className="px-4 md:px-12 py-10 md:py-14">
+        <section className="px-4 md:px-12 py-8 sm:py-10 md:py-14">
           <SectionHeader title="À l'affiche" onSeeAll={() => navigate("/movies/now-playing")} />
           <MovieGrid movies={nowPlaying.slice(0, 6)} loading={loading} />
         </section>
