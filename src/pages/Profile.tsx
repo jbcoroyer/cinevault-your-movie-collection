@@ -5,10 +5,10 @@
  * - MinimalHeader + FloatingDock (navigation cohérente)
  * - Support profil propre ET profil d'autres utilisateurs
  * - Edition inline
- * - Stats et Top 5
+ * - Stats, Top 5 et Timeline des films vus
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +27,8 @@ import { Top5Section } from "@/components/Top5Section";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { FollowListDialog } from "@/components/FollowListDialog";
 import { getPhysicalMovies } from "@/services/physicalMovies";
+import { WatchedTimeline } from "@/components/profile/WatchedTimeline";
+import { getMovieDetails } from "@/services/tmdb";
 import { cn } from "@/lib/utils";
 
 interface ProfileData {
@@ -54,6 +56,8 @@ export default function Profile() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [physicalCount, setPhysicalCount] = useState(0);
   const [badgeCount, setBadgeCount] = useState(0);
+  const [movieMetadata, setMovieMetadata] = useState<Record<number, { title: string; poster_path: string | null; release_year?: number }>>({});
+  const [loadingTimeline, setLoadingTimeline] = useState(true);
 
   const { userMovies } = useUserMovies();
   const { topMovies, setTopMovie } = useUserTopMovies(targetUserId);
@@ -113,6 +117,48 @@ export default function Profile() {
     };
     fetchBadgeCount();
   }, [targetUserId]);
+
+  // Fetch movie metadata for timeline
+  useEffect(() => {
+    const fetchMovieMetadata = async () => {
+      const watchedMovies = userMovies.filter((m) => m.status === "watched");
+      if (watchedMovies.length === 0) {
+        setLoadingTimeline(false);
+        return;
+      }
+
+      const metadata: Record<number, { title: string; poster_path: string | null; release_year?: number }> = {};
+      
+      // Fetch in batches to avoid too many parallel requests
+      const batchSize = 10;
+      for (let i = 0; i < watchedMovies.length; i += batchSize) {
+        const batch = watchedMovies.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(async (movie) => {
+            if (!metadata[movie.tmdb_id]) {
+              try {
+                const details = await getMovieDetails(movie.tmdb_id);
+                metadata[movie.tmdb_id] = {
+                  title: details.title,
+                  poster_path: details.poster_path,
+                  release_year: details.release_date
+                    ? new Date(details.release_date).getFullYear()
+                    : undefined,
+                };
+              } catch (e) {
+                // Ignore errors for individual movies
+              }
+            }
+          })
+        );
+      }
+      
+      setMovieMetadata(metadata);
+      setLoadingTimeline(false);
+    };
+
+    fetchMovieMetadata();
+  }, [userMovies]);
 
   const handleSaveProfile = async () => {
     if (!editedUsername.trim()) {
@@ -390,7 +436,7 @@ export default function Profile() {
 
         {/* Top 5 */}
         {topMovies && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-12">
             <Top5Section
               topMovies={topMovies}
               onSetMovie={setTopMovie}
@@ -398,6 +444,20 @@ export default function Profile() {
             />
           </motion.div>
         )}
+
+        {/* Watched Timeline */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-12"
+        >
+          <WatchedTimeline
+            userMovies={userMovies}
+            movieMetadata={movieMetadata}
+            isLoading={loadingTimeline}
+          />
+        </motion.div>
       </main>
 
       {/* Follow Dialogs */}
