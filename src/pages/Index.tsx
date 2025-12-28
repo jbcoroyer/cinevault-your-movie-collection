@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { MinimalHeader } from "@/components/MinimalHeader";
 import { FloatingDock } from "@/components/FloatingDock";
+import { BottomNav } from "@/components/BottomNav";
 import { MinimalMovieCard, MinimalMovieCardSkeleton } from "@/components/MinimalMovieCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPopularMovies, getNowPlayingMovies, Movie, getMovieDetails, MovieDetails } from "@/services/tmdb";
@@ -347,6 +348,7 @@ export default function Index() {
       </main>
 
       <FloatingDock />
+      <BottomNav />
     </div>
   );
 }
