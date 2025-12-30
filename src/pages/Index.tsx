@@ -161,7 +161,7 @@ export default function Index() {
         <LandingHero />
 
         <section className="px-4 md:px-12 py-8 sm:py-12">
-          <SectionHeader title="Populaires" onSeeAll={() => navigate("/movies")} />
+          <SectionHeader title="Populaires" onSeeAll={() => navigate("/movies/popular")} />
           <MovieGrid movies={popular.slice(0, 12)} loading={loading} />
         </section>
 
@@ -333,7 +333,7 @@ export default function Index() {
 
         {/* Popular Movies */}
         <section className="px-4 md:px-12 py-8 sm:py-10 md:py-14">
-          <SectionHeader title="Populaires" onSeeAll={() => navigate("/movies")} />
+          <SectionHeader title="Populaires" onSeeAll={() => navigate("/movies/popular")} />
           <MovieGrid movies={popular.slice(0, 12)} loading={loading} />
         </section>
 

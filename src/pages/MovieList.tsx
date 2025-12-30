@@ -9,7 +9,7 @@ import {
   getPopularMoviesPaginated 
 } from "@/services/tmdb";
 
-type ListType = "now-available" | "popular";
+type ListType = "now-available" | "popular" | "now-playing";
 
 const listConfig: Record<ListType, { title: string; fetchFn: (page: number) => Promise<{ movies: Movie[]; totalPages: number }> }> = {
   "now-available": {
@@ -19,6 +19,10 @@ const listConfig: Record<ListType, { title: string; fetchFn: (page: number) => P
   "popular": {
     title: "🔥 Films populaires",
     fetchFn: getPopularMoviesPaginated,
+  },
+  "now-playing": {
+    title: "🎬 À l'affiche",
+    fetchFn: getNowAvailableMoviesPaginated,
   },
 };
 

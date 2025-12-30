@@ -118,7 +118,7 @@ function AnimatedRoutes() {
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/movies" element={<MovieList />} />
+        <Route path="/movies/:category" element={<MovieList />} />
         <Route path="/movie/:id" element={<MovieDetail />} />
         <Route path="/person/:id" element={<PersonDetail />} />
         <Route path="/search" element={<Search />} />
