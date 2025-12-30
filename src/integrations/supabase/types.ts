@@ -1448,6 +1448,51 @@ export type Database = {
           },
         ]
       }
+      quests: {
+        Row: {
+          badge_reward_id: string | null
+          category: string
+          created_at: string | null
+          description: string
+          icon_name: string
+          id: string
+          is_active: boolean | null
+          quest_type: string
+          rarity: string | null
+          target_config: Json
+          title: string
+          xp_reward: number | null
+        }
+        Insert: {
+          badge_reward_id?: string | null
+          category?: string
+          created_at?: string | null
+          description: string
+          icon_name?: string
+          id: string
+          is_active?: boolean | null
+          quest_type: string
+          rarity?: string | null
+          target_config: Json
+          title: string
+          xp_reward?: number | null
+        }
+        Update: {
+          badge_reward_id?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean | null
+          quest_type?: string
+          rarity?: string | null
+          target_config?: Json
+          title?: string
+          xp_reward?: number | null
+        }
+        Relationships: []
+      }
       release_notifications: {
         Row: {
           created_at: string
@@ -2114,6 +2159,57 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_movies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_quests: {
+        Row: {
+          completed_at: string | null
+          current_progress: number | null
+          id: string
+          is_completed: boolean | null
+          last_updated_at: string | null
+          quest_id: string
+          started_at: string | null
+          target_count: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          current_progress?: number | null
+          id?: string
+          is_completed?: boolean | null
+          last_updated_at?: string | null
+          quest_id: string
+          started_at?: string | null
+          target_count: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          current_progress?: number | null
+          id?: string
+          is_completed?: boolean | null
+          last_updated_at?: string | null
+          quest_id?: string
+          started_at?: string | null
+          target_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_quests_quest_id_fkey"
+            columns: ["quest_id"]
+            isOneToOne: false
+            referencedRelation: "quests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_quests_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
