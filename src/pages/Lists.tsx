@@ -6,9 +6,10 @@
  * - Collage de posters pour chaque liste
  * - Animations fluides
  * - MinimalHeader + FloatingDock
+ * - Timeline chronologique pour les films vus
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -17,9 +18,10 @@ import { FloatingDock } from "@/components/FloatingDock";
 import { useUserLists } from "@/hooks/useUserLists";
 import { useUserMovies } from "@/hooks/useUserMovies";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMovieDetails, getImageUrl, Movie } from "@/services/tmdb";
+import { getMovieDetails, getImageUrl, Movie, getYear } from "@/services/tmdb";
 import { CreateListDialog } from "@/components/lists/CreateListDialog";
 import { MinimalMovieCard } from "@/components/MinimalMovieCard";
+import { WatchedTimeline } from "@/components/profile/WatchedTimeline";
 import { Plus, ArrowLeft, Clock, Eye, Heart, Lock, Globe, ChevronRight, Film, ListVideo, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -296,10 +298,28 @@ export default function Lists() {
     );
   }
 
+  // Build movie metadata for WatchedTimeline
+  const movieMetadata = useMemo(() => {
+    const metadata: Record<number, { title: string; poster_path: string | null; release_year?: number }> = {};
+    Object.entries(movies).forEach(([tmdbId, movie]) => {
+      if (movie) {
+        metadata[parseInt(tmdbId)] = {
+          title: movie.title,
+          poster_path: movie.poster_path,
+          release_year: movie.release_date ? parseInt(getYear(movie.release_date)) : undefined,
+        };
+      }
+    });
+    return metadata;
+  }, [movies]);
+
   // Special list detail view
   if (selectedSpecial) {
     const specialList = specialLists.find((l) => l.id === selectedSpecial);
     const specialMovies = specialList?.getMovies() || [];
+
+    // For "watched" list, use Timeline view
+    const isWatchedList = selectedSpecial === "watched";
 
     return (
       <div className="min-h-screen bg-background pb-32">
@@ -321,7 +341,14 @@ export default function Lists() {
               {specialMovies.length} film{specialMovies.length !== 1 ? "s" : ""}
             </p>
 
-            {specialMovies.length > 0 ? (
+            {isWatchedList ? (
+              // Use WatchedTimeline for watched movies
+              <WatchedTimeline 
+                userMovies={userMovies} 
+                movieMetadata={movieMetadata}
+                isLoading={loadingMovies}
+              />
+            ) : specialMovies.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
                 {specialMovies.map((movie, index) => (
                   <motion.div
