@@ -36,9 +36,9 @@ const getUserStats = async (userId: string) => {
       let normalizedFormat = format;
       if (format.includes("blu") || format.includes("bluray")) normalizedFormat = "bluray";
       if (format.includes("4k") || format.includes("uhd")) normalizedFormat = "4k";
-      if (format.includes("vhs")) normalizedFormat = "vhs";
       if (format.includes("dvd") && !format.includes("hd")) normalizedFormat = "dvd";
-      if (format.includes("laser")) normalizedFormat = "laserdisc";
+      if (format.includes("collector")) normalizedFormat = "collector";
+      if (format.includes("steelbook")) normalizedFormat = "steelbook";
       
       formatCounts[normalizedFormat] = (formatCounts[normalizedFormat] || 0) + 1;
     });

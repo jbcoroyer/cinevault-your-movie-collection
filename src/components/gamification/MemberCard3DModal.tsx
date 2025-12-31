@@ -48,7 +48,7 @@ export function MemberCard3DModal({
   const displayTitle = equippedTitle || defaultTitle;
 
   const hasGoldEffect = equippedFrame === 'frame_gold' || equippedTheme === 'theme_golden';
-  const hasHolographic = equippedFrame === 'frame_neon' || equippedFrame === 'frame_vhs';
+  const hasHolographic = equippedFrame === 'frame_neon' || equippedFrame === 'frame_collector';
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);

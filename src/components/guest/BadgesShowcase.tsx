@@ -49,8 +49,8 @@ const DEMO_BADGES: DemoBadge[] = [
   // Format
   { id: "4k_pioneer", title: "4K Pioneer", description: "Possédez 10 films en 4K UHD", icon: Gem, rarity: "rare", xp: 300, category: "Format" },
   { id: "steelbook_hunter", title: "Steelbook Hunter", description: "Collection de 5 Steelbooks", icon: Shield, rarity: "rare", xp: 400, category: "Format" },
-  { id: "disc_jockey", title: "Disc Jockey", description: "Possédez 5 Laserdiscs", icon: Disc, rarity: "legendary", xp: 500, category: "Format" },
-  { id: "analogique_forever", title: "Analogique Forever", description: "Possédez 10 VHS", icon: Flame, rarity: "epic", xp: 400, category: "Format" },
+  { id: "collector_elite", title: "Collector Elite", description: "Possédez 10 éditions Collector", icon: Crown, rarity: "legendary", xp: 500, category: "Format" },
+  { id: "bluray_master", title: "Blu-ray Master", description: "Possédez 25 Blu-rays", icon: Disc, rarity: "epic", xp: 400, category: "Format" },
   
   // Social
   { id: "influenceur", title: "Influenceur", description: "Avoir 50 abonnés", icon: Users, rarity: "rare", xp: 300, category: "Social" },

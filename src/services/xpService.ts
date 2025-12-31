@@ -11,8 +11,7 @@ const XP_SOURCES = {
   DVD: 25,
   "Blu-ray": 30,
   "4K UHD": 40,
-  VHS: 50,
-  Laserdisc: 60,
+  Collector: 50,
   review: 15,
 };
 
@@ -28,8 +27,7 @@ export interface XpGain {
 export function getXpForFormat(format: string): number {
   const normalizedFormat = format.toLowerCase();
   
-  if (normalizedFormat.includes("vhs")) return XP_SOURCES.VHS;
-  if (normalizedFormat.includes("laserdisc")) return XP_SOURCES.Laserdisc;
+  if (normalizedFormat.includes("collector") || normalizedFormat.includes("steelbook")) return XP_SOURCES.Collector;
   if (normalizedFormat.includes("4k") || normalizedFormat.includes("uhd")) return XP_SOURCES["4K UHD"];
   if (normalizedFormat.includes("blu")) return XP_SOURCES["Blu-ray"];
   if (normalizedFormat.includes("dvd")) return XP_SOURCES.DVD;
@@ -42,9 +40,9 @@ export function getXpForFormat(format: string): number {
  */
 export function calculateRarity(format: string): Rarity {
   const random = Math.random() * 100;
-  const isRareFormat = format.toLowerCase().includes("vhs") || format.toLowerCase().includes("laserdisc");
+  const isRareFormat = format.toLowerCase().includes("collector") || format.toLowerCase().includes("steelbook");
   
-  // Probabilités ajustées pour formats rares
+  // Probabilités ajustées pour formats collector
   if (isRareFormat) {
     if (random < 5) return "grail";
     if (random < 20) return "legendary";
