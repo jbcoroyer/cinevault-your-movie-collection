@@ -1,9 +1,10 @@
 /**
- * CineVault - Badges Page
+ * CineVault - Badges & Progression Page
  *
- * Page de badges avec:
- * - MinimalHeader + FloatingDock (navigation cohérente)
+ * Page complète de gamification avec:
  * - Progression XP et niveau
+ * - Défis hebdomadaires
+ * - Quêtes permanentes
  * - Grille de badges par catégorie
  */
 
@@ -16,8 +17,9 @@ import { getPhysicalMovies } from "@/services/physicalMovies";
 import { MinimalHeader } from "@/components/MinimalHeader";
 import { FloatingDock } from "@/components/FloatingDock";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { useBadgeNotification } from "@/contexts/BadgeNotificationContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WeeklyChallenges } from "@/components/gamification/WeeklyChallenges";
+import { QuestsSection } from "@/components/gamification/QuestsSection";
 import { cn } from "@/lib/utils";
 import { type Rarity, RARITY_CONFIG } from "@/data/videoClubData";
 import {
@@ -42,6 +44,9 @@ import {
   Gift,
   Lock,
   ArrowLeft,
+  Swords,
+  Map,
+  Medal,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, ElementType> = {
@@ -72,6 +77,7 @@ const ICON_MAP: Record<string, ElementType> = {
 
 const BADGE_CATEGORIES = [
   { id: "collection", label: "Collection", icon: Library },
+  { id: "discovery", label: "Découverte", icon: Map },
   { id: "format", label: "Formats", icon: Disc },
   { id: "social", label: "Social", icon: Users },
   { id: "secret", label: "Secrets", icon: Sparkles },
@@ -167,6 +173,7 @@ export default function Badges() {
   const [loading, setLoading] = useState(true);
   const [collectionCount, setCollectionCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("challenges");
 
   const totalXp = profile?.total_xp || 0;
   const { level, currentLevelXp, xpForNextLevel, progress } = calculateLevel(totalXp);
@@ -180,7 +187,10 @@ export default function Badges() {
       }
 
       try {
-        const [badgesData, physicalMovies] = await Promise.all([fetchAllBadges(user.id), getPhysicalMovies(user.id)]);
+        const [badgesData, physicalMovies] = await Promise.all([
+          fetchAllBadges(user.id), 
+          getPhysicalMovies(user.id)
+        ]);
 
         setBadges(badgesData);
         setCollectionCount(physicalMovies.length);
@@ -197,7 +207,9 @@ export default function Badges() {
   }, [user, authLoading]);
 
   const unlockedCount = badges.filter((b) => b.isUnlocked).length;
-  const filteredBadges = selectedCategory === "all" ? badges : badges.filter((b) => b.category === selectedCategory);
+  const filteredBadges = selectedCategory === "all" 
+    ? badges 
+    : badges.filter((b) => b.category === selectedCategory);
 
   // Loading state
   if (loading || authLoading) {
@@ -260,9 +272,11 @@ export default function Badges() {
 
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-            <h1 className="text-2xl md:text-3xl font-display font-bold text-white mb-2">Mes Badges</h1>
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-white mb-2">
+              Progression & Récompenses
+            </h1>
             <p className="text-white/50">
-              {unlockedCount} / {badges.length} badges débloqués
+              Relevez des défis, complétez des quêtes et débloquez des badges
             </p>
           </motion.div>
 
@@ -271,7 +285,7 @@ export default function Badges() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10"
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10"
           >
             {/* Level Card */}
             <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
@@ -305,7 +319,7 @@ export default function Badges() {
 
             {/* XP Card */}
             <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center">
                   <Zap className="w-7 h-7 text-purple-500" />
                 </div>
@@ -314,7 +328,7 @@ export default function Badges() {
                   <p className="text-2xl font-bold text-white">{totalXp.toLocaleString()} XP</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-white/10">
+              <div className="grid grid-cols-2 gap-4 pt-4 mt-4 border-t border-white/10">
                 <div>
                   <p className="text-white/50 text-xs">Films</p>
                   <p className="text-lg font-semibold text-white">{collectionCount}</p>
@@ -325,68 +339,144 @@ export default function Badges() {
                 </div>
               </div>
             </div>
-          </motion.div>
 
-          {/* Category Tabs */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex gap-2 mb-6 overflow-x-auto pb-2"
-          >
-            <button
-              onClick={() => setSelectedCategory("all")}
-              className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
-                selectedCategory === "all" ? "bg-white text-black" : "bg-white/10 text-white/70 hover:text-white",
-              )}
-            >
-              Tous ({badges.length})
-            </button>
-            {BADGE_CATEGORIES.map((cat) => {
-              const count = badges.filter((b) => b.category === cat.id).length;
-              const Icon = cat.icon;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
-                    selectedCategory === cat.id ? "bg-white text-black" : "bg-white/10 text-white/70 hover:text-white",
-                  )}
-                >
-                  <Icon className="w-4 h-4" />
-                  {cat.label} ({count})
-                </button>
-              );
-            })}
-          </motion.div>
-
-          {/* Badges Grid */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
-          >
-            {filteredBadges.map((badge, index) => (
-              <motion.div
-                key={badge.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 * index }}
-              >
-                <BadgeCard badge={badge} />
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {filteredBadges.length === 0 && (
-            <div className="text-center py-16">
-              <Trophy className="w-12 h-12 text-white/20 mx-auto mb-4" />
-              <p className="text-white/50">Aucun badge dans cette catégorie</p>
+            {/* Badges Summary Card */}
+            <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <Medal className="w-7 h-7 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-white/50 text-sm">Badges débloqués</p>
+                  <p className="text-2xl font-bold text-white">{unlockedCount} / {badges.length}</p>
+                </div>
+              </div>
+              <div className="pt-4 mt-4 border-t border-white/10">
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(unlockedCount / badges.length) * 100}%` }}
+                    transition={{ duration: 1, delay: 0.7 }}
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
+                  />
+                </div>
+                <p className="text-xs text-white/50 mt-2">
+                  {Math.round((unlockedCount / badges.length) * 100)}% de la collection
+                </p>
+              </div>
             </div>
-          )}
+          </motion.div>
+
+          {/* Main Content Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="bg-white/5 border border-white/10 p-1">
+              <TabsTrigger 
+                value="challenges" 
+                className="data-[state=active]:bg-white data-[state=active]:text-black gap-2"
+              >
+                <Swords className="w-4 h-4" />
+                Défis
+              </TabsTrigger>
+              <TabsTrigger 
+                value="quests"
+                className="data-[state=active]:bg-white data-[state=active]:text-black gap-2"
+              >
+                <Map className="w-4 h-4" />
+                Quêtes
+              </TabsTrigger>
+              <TabsTrigger 
+                value="badges"
+                className="data-[state=active]:bg-white data-[state=active]:text-black gap-2"
+              >
+                <Trophy className="w-4 h-4" />
+                Badges
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Challenges Tab */}
+            <TabsContent value="challenges" className="mt-6">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-2xl"
+              >
+                <WeeklyChallenges />
+              </motion.div>
+            </TabsContent>
+
+            {/* Quests Tab */}
+            <TabsContent value="quests" className="mt-6">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <QuestsSection showAll />
+              </motion.div>
+            </TabsContent>
+
+            {/* Badges Tab */}
+            <TabsContent value="badges" className="mt-6">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {/* Category Tabs */}
+                <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+                  <button
+                    onClick={() => setSelectedCategory("all")}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                      selectedCategory === "all" 
+                        ? "bg-white text-black" 
+                        : "bg-white/10 text-white/70 hover:text-white"
+                    )}
+                  >
+                    Tous ({badges.length})
+                  </button>
+                  {BADGE_CATEGORIES.map((cat) => {
+                    const count = badges.filter((b) => b.category === cat.id).length;
+                    const Icon = cat.icon;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={cn(
+                          "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                          selectedCategory === cat.id 
+                            ? "bg-white text-black" 
+                            : "bg-white/10 text-white/70 hover:text-white"
+                        )}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {cat.label} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Badges Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {filteredBadges.map((badge, index) => (
+                    <motion.div
+                      key={badge.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.05 * index }}
+                    >
+                      <BadgeCard badge={badge} />
+                    </motion.div>
+                  ))}
+                </div>
+
+                {filteredBadges.length === 0 && (
+                  <div className="text-center py-16">
+                    <Trophy className="w-12 h-12 text-white/20 mx-auto mb-4" />
+                    <p className="text-white/50">Aucun badge dans cette catégorie</p>
+                  </div>
+                )}
+              </motion.div>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
