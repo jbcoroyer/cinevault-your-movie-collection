@@ -259,9 +259,6 @@ export function getStreakMilestoneData(streak: number) {
 
 export function getFormatRarity(format: string): Rarity {
   switch (format) {
-    case "vhs":
-    case "laserdisc":
-      return "rare";
     case "steelbook":
       return "epic";
     case "collector":

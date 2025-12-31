@@ -69,7 +69,6 @@ const getEbaySearchUrl = (title: string, format: string): string => {
     dvd: "DVD",
     steelbook: "Steelbook",
     collector: "Collector",
-    vhs: "VHS",
   };
 
   const formatLabel = formatMapping[format.toLowerCase()] || format;

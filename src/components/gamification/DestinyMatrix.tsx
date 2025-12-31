@@ -148,12 +148,12 @@ export function useDestinyStats(movies: any[], reviews: any[]): DestinyStats {
       return { guardian: 0, specialist: 0, completist: 0 };
     }
 
-    // Guardian: VHS, films anciens
-    const vhsCount = movies.filter(m => 
-      m.format?.toLowerCase().includes("vhs") || 
-      m.format?.toLowerCase().includes("laserdisc")
+    // Guardian: Collectors et éditions spéciales
+    const collectorCount = movies.filter(m => 
+      m.format?.toLowerCase().includes("collector") || 
+      m.format?.toLowerCase().includes("steelbook")
     ).length;
-    guardian = Math.min(100, (vhsCount / 20) * 100);
+    guardian = Math.min(100, (collectorCount / 20) * 100);
 
     // Specialist: concentration sur un genre (simplifié)
     // En production, on analyserait les genres via TMDB

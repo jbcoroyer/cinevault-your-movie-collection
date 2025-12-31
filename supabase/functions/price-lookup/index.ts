@@ -129,8 +129,6 @@ function generateSearchVariants(title: string, format: string): string[] {
     "4k": ["4K UHD", "4K", "Ultra HD"],
     bluray: ["Blu-ray", "Bluray", "BR"],
     dvd: ["DVD"],
-    vhs: ["VHS"],
-    laserdisc: ["Laserdisc", "LD"],
     steelbook: ["Steelbook", "Steel Book"],
     collector: ["Collector", "Coffret"],
   };
@@ -420,8 +418,6 @@ serve(async (req) => {
         "4k": { min: 1500, median: 2500, max: 4500 },
         bluray: { min: 500, median: 1200, max: 2500 },
         dvd: { min: 200, median: 500, max: 1000 },
-        vhs: { min: 300, median: 800, max: 2000 },
-        laserdisc: { min: 1000, median: 2500, max: 5000 },
         steelbook: { min: 2000, median: 3500, max: 6000 },
         collector: { min: 2500, median: 4500, max: 10000 },
       };

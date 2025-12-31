@@ -203,7 +203,6 @@ const formatLabels: Record<string, string> = {
   dvd: "DVD",
   steelbook: "Steelbook",
   collector: "Collector",
-  vhs: "VHS",
 };
 
 // ============================================

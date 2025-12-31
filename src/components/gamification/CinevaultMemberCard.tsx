@@ -42,7 +42,7 @@ const FRAME_STYLES: Record<string, { border: string; glow: string; animation?: s
     glow: "shadow-[0_0_25px_rgba(217,70,239,0.6)]",
     animation: "animate-pulse",
   },
-  frame_vhs: { 
+  frame_collector: { 
     border: "border-cyan-400 border-4", 
     glow: "shadow-[0_0_30px_rgba(34,211,238,0.4)]",
   },
