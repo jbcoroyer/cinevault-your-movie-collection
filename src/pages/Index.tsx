@@ -156,16 +156,16 @@ export default function Index() {
   // ============================================
   if (!user && !authLoading) {
     return (
-      <div className="min-h-screen bg-background pb-24 md:pb-32">
+      <div className="min-h-screen bg-background pb-24 md:pb-32 overflow-x-hidden">
         <MinimalHeader />
         <LandingHero />
 
-        <section className="px-4 md:px-12 py-8 sm:py-12">
+        <section className="px-4 sm:px-6 py-8 sm:py-12 overflow-hidden">
           <SectionHeader title="Populaires" onSeeAll={() => navigate("/movies/popular")} />
           <MovieGrid movies={popular.slice(0, 12)} loading={loading} />
         </section>
 
-        <section className="px-4 md:px-12 py-8 sm:py-12">
+        <section className="px-4 sm:px-6 py-8 sm:py-12 overflow-hidden">
           <SectionHeader title="À l'affiche" onSeeAll={() => navigate("/movies/now-playing")} />
           <MovieGrid movies={nowPlaying.slice(0, 6)} loading={loading} />
         </section>
@@ -179,12 +179,12 @@ export default function Index() {
   // Authenticated View
   // ============================================
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-32">
+    <div className="min-h-screen bg-background pb-24 md:pb-32 overflow-x-hidden">
       <MinimalHeader />
 
       <main className="pt-20 md:pt-24">
         {/* Header Section */}
-        <section className="px-4 md:px-12 pt-4 pb-8 md:pt-6 md:pb-12">
+        <section className="px-4 sm:px-6 pt-4 pb-8 md:pt-6 md:pb-12">
           {/* Greeting */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8 md:mb-10">
             <p className="text-white/40 text-xs uppercase tracking-[0.15em] mb-1">Bienvenue</p>
@@ -279,7 +279,7 @@ export default function Index() {
 
         {/* Collection Section */}
         {myCollection.length > 0 && (
-          <section className="px-4 md:px-12 py-8 sm:py-10 md:py-14">
+          <section className="px-4 sm:px-6 py-8 sm:py-10 md:py-14">
             <SectionHeader
               title="Votre collection"
               subtitle={`${stats.collection} films`}
@@ -307,7 +307,7 @@ export default function Index() {
 
         {/* Empty State */}
         {myCollection.length === 0 && (
-          <section className="px-4 md:px-12 py-12 sm:py-16 md:py-20">
+          <section className="px-4 sm:px-6 py-12 sm:py-16 md:py-20">
             <div className="max-w-md mx-auto text-center">
               <h2 className="font-display text-lg sm:text-xl text-white mb-2 sm:mb-3">Commencez votre collection</h2>
               <p className="text-white/40 text-xs sm:text-sm mb-4 sm:mb-6">
@@ -332,7 +332,7 @@ export default function Index() {
         <div className="border-t border-white/5" />
 
         {/* Popular Movies */}
-        <section className="px-4 md:px-12 py-8 sm:py-10 md:py-14">
+        <section className="px-4 sm:px-6 py-8 sm:py-10 md:py-14">
           <SectionHeader title="Populaires" onSeeAll={() => navigate("/movies/popular")} />
           <MovieGrid movies={popular.slice(0, 12)} loading={loading} />
         </section>
@@ -341,7 +341,7 @@ export default function Index() {
         <div className="border-t border-white/5" />
 
         {/* Now Playing */}
-        <section className="px-4 md:px-12 py-8 sm:py-10 md:py-14">
+        <section className="px-4 sm:px-6 py-8 sm:py-10 md:py-14">
           <SectionHeader title="À l'affiche" onSeeAll={() => navigate("/movies/now-playing")} />
           <MovieGrid movies={nowPlaying.slice(0, 6)} loading={loading} />
         </section>

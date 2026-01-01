@@ -429,19 +429,19 @@ export const LandingHero: React.FC = () => {
   }, []);
 
   return (
-    <div className="relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-orange-600/5 rounded-full blur-[100px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-amber-500/5 to-transparent rounded-full" />
+    <div className="relative overflow-hidden max-w-full">
+      {/* Background Effects - hidden on mobile to prevent overflow */}
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-amber-500/10 rounded-full blur-[80px] sm:blur-[120px]" />
+        <div className="absolute bottom-1/3 right-1/4 w-[250px] sm:w-[500px] h-[250px] sm:h-[500px] bg-orange-600/5 rounded-full blur-[60px] sm:blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[800px] h-[400px] sm:h-[800px] bg-gradient-radial from-amber-500/5 to-transparent rounded-full" />
       </div>
 
       {/* ============================================
           SECTION 1: HERO - 3 Value Props
           ============================================ */}
-      <section className="relative pt-6 pb-12 sm:pt-8 md:pt-16 sm:pb-16 md:pb-24">
-        <div className="container mx-auto px-4">
+      <section className="relative pt-6 pb-12 sm:pt-8 md:pt-16 sm:pb-16 md:pb-24 overflow-hidden">
+        <div className="mx-auto px-4 sm:px-6 max-w-full">
           <div className="max-w-5xl mx-auto text-center mb-8 sm:mb-12 md:mb-16">
             {/* Badge */}
             <motion.div
@@ -542,8 +542,8 @@ export const LandingHero: React.FC = () => {
       {/* ============================================
           SECTION 2: COMMENT ÇA MARCHE - 3 Étapes
           ============================================ */}
-      <section className="py-10 sm:py-16 md:py-24 bg-white/[0.02]">
-        <div className="container mx-auto px-4">
+      <section className="py-10 sm:py-16 md:py-24 bg-white/[0.02] overflow-hidden">
+        <div className="mx-auto px-4 sm:px-6 max-w-full">
           <div className="max-w-4xl mx-auto">
             {/* Section Title */}
             <div className="text-center mb-8 sm:mb-12 md:mb-16">
@@ -589,8 +589,8 @@ export const LandingHero: React.FC = () => {
       {/* ============================================
           SECTION 3: SHELF PREVIEW - Collection Demo
           ============================================ */}
-      <section className="py-10 sm:py-16 md:py-24">
-        <div className="container mx-auto px-4">
+      <section className="py-10 sm:py-16 md:py-24 overflow-hidden">
+        <div className="mx-auto px-4 sm:px-6 max-w-full">
           <div className="max-w-6xl mx-auto">
             {/* Section Title */}
             <div className="text-center mb-6 sm:mb-8 md:mb-12">
@@ -684,8 +684,8 @@ export const LandingHero: React.FC = () => {
       {/* ============================================
           SECTION 4: STATS COMMUNAUTAIRES
           ============================================ */}
-      <section className="py-16 md:py-20 bg-gradient-to-b from-transparent via-amber-500/5 to-transparent">
-        <div className="container mx-auto px-4">
+      <section className="py-16 md:py-20 bg-gradient-to-b from-transparent via-amber-500/5 to-transparent overflow-hidden">
+        <div className="mx-auto px-4 sm:px-6 max-w-full">
           <div className="max-w-4xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
               {/* Total Films */}
@@ -745,8 +745,8 @@ export const LandingHero: React.FC = () => {
       {/* ============================================
           SECTION 5: FEATURES DÉTAILLÉES
           ============================================ */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
+      <section className="py-16 md:py-24 overflow-hidden">
+        <div className="mx-auto px-4 sm:px-6 max-w-full">
           <div className="max-w-5xl mx-auto">
             {/* Section Title */}
             <div className="text-center mb-12">
@@ -774,8 +774,8 @@ export const LandingHero: React.FC = () => {
       {/* ============================================
           SECTION 6: CTA FINAL
           ============================================ */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
+      <section className="py-16 md:py-24 overflow-hidden">
+        <div className="mx-auto px-4 sm:px-6 max-w-full">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
