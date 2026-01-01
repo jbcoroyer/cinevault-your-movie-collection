@@ -101,7 +101,6 @@ const formatLabels: Record<string, { label: string; color: string }> = {
   dvd: { label: "DVD", color: "bg-zinc-500/20 text-zinc-300 border-zinc-500/30" },
   steelbook: { label: "Steelbook", color: "bg-amber-500/20 text-amber-300 border-amber-500/30" },
   collector: { label: "Collector", color: "bg-rose-500/20 text-rose-300 border-rose-500/30" },
-  vhs: { label: "VHS", color: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
 };
 
 // ============================================

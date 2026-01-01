@@ -1,18 +1,22 @@
 /**
- * CineVault - ValuationDashboardPremium (CORRIGÉ)
+ * CineVault - ValuationDashboardPremium (AMÉLIORÉ)
  *
  * Dashboard principal de valorisation avec les vraies données de collection
  *
- * CORRECTION MAJEURE:
- * - Accepte maintenant les props avec les vraies données
- * - Plus de données mockées hardcodées
- * - Intégration complète avec useCollectionValuation
+ * AMÉLIORATIONS:
+ * - Bouton d'actualisation bien visible
+ * - Distinction claire entre estimations et vrais prix eBay
+ * - CTA pour charger les prix quand pas de données
+ * - Barre de progression du chargement
  */
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Film, TrendingUp, Sparkles, History, Trophy, Package, RefreshCw, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Film, TrendingUp, Sparkles, History, Trophy, Package, RefreshCw, AlertCircle, Zap, DollarSign, BarChart3, ExternalLink } from "lucide-react";
 import { PortfolioValueCard } from "./PortfolioValueCard";
 import { PortfolioChart } from "./PortfolioChart";
 import { RecentSalesWidget } from "./RecentSalesWidget";
@@ -58,6 +62,37 @@ const formatPrice = (cents: number): string => {
       maximumFractionDigits: 0,
     }) + " €"
   );
+};
+
+// Calculer les stats de couverture avec distinction estimations/vrais prix
+const calculateCoverageStats = (movies: CollectionMovie[], moviePrices: Map<string, PriceData>) => {
+  let withRealPrice = 0;
+  let withEstimate = 0;
+  let withoutPrice = 0;
+
+  movies.forEach((movie) => {
+    const priceKey = `${movie.tmdbId}-${movie.format}`;
+    const price = moviePrices.get(priceKey);
+    
+    if (price) {
+      if (price.source === "ebay" && price.sampleSize > 0) {
+        withRealPrice++;
+      } else {
+        withEstimate++;
+      }
+    } else {
+      withoutPrice++;
+    }
+  });
+
+  return {
+    withRealPrice,
+    withEstimate,
+    withoutPrice,
+    total: movies.length,
+    realCoverage: movies.length > 0 ? Math.round((withRealPrice / movies.length) * 100) : 0,
+    totalCoverage: movies.length > 0 ? Math.round(((withRealPrice + withEstimate) / movies.length) * 100) : 0,
+  };
 };
 
 // Préparer les données pour les widgets enfants
@@ -225,18 +260,128 @@ const LoadingSkeleton = () => (
 );
 
 // ============================================
-// Empty State Component
+// Empty State / Need Refresh Component
 // ============================================
 
-const EmptyState = () => (
-  <div className="flex flex-col items-center justify-center py-20 text-center">
-    <Package className="w-16 h-16 text-zinc-700 mb-4" />
-    <h3 className="text-xl font-semibold text-zinc-400 mb-2">Aucune donnée de valorisation</h3>
-    <p className="text-zinc-500 max-w-md">
-      Ajoutez des films à votre collection et actualisez les prix pour voir l'estimation de votre patrimoine
-      cinématographique.
+const NeedPricesState = ({ 
+  movieCount, 
+  onRefresh, 
+  refreshing 
+}: { 
+  movieCount: number; 
+  onRefresh?: () => void; 
+  refreshing?: boolean;
+}) => (
+  <div className="flex flex-col items-center justify-center py-16 text-center">
+    <div className="relative mb-6">
+      <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border border-purple-500/30">
+        <DollarSign className="w-12 h-12 text-purple-400" />
+      </div>
+      <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center animate-bounce">
+        <Zap className="w-4 h-4 text-black" />
+      </div>
+    </div>
+    
+    <h3 className="text-2xl font-bold text-white mb-3">
+      Découvrez la valeur de votre collection
+    </h3>
+    <p className="text-zinc-400 max-w-md mb-6">
+      Obtenez les prix réels du marché eBay pour vos <strong className="text-white">{movieCount} films</strong>. 
+      Les cotations sont basées sur les ventes récentes.
+    </p>
+    
+    <Button
+      onClick={onRefresh}
+      disabled={refreshing}
+      size="lg"
+      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white gap-2 px-8"
+    >
+      {refreshing ? (
+        <>
+          <RefreshCw className="w-5 h-5 animate-spin" />
+          Recherche des prix...
+        </>
+      ) : (
+        <>
+          <BarChart3 className="w-5 h-5" />
+          Analyser ma collection
+        </>
+      )}
+    </Button>
+    
+    <p className="text-xs text-zinc-600 mt-4">
+      Cette opération peut prendre quelques secondes
     </p>
   </div>
+);
+
+// ============================================
+// Coverage Stats Card
+// ============================================
+
+const CoverageStatsCard = ({
+  stats,
+  onRefresh,
+  refreshing,
+}: {
+  stats: ReturnType<typeof calculateCoverageStats>;
+  onRefresh?: () => void;
+  refreshing?: boolean;
+}) => (
+  <Card className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 border-blue-500/20 backdrop-blur-sm">
+    <CardHeader className="pb-2">
+      <CardTitle className="text-sm font-medium text-blue-200 flex items-center justify-between">
+        <span className="flex items-center gap-2">
+          <BarChart3 className="h-4 w-4" />
+          Couverture des Prix
+        </span>
+        <Button
+          onClick={onRefresh}
+          disabled={refreshing}
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-blue-300 hover:text-white hover:bg-blue-500/20"
+        >
+          <RefreshCw className={cn("w-3 h-3 mr-1", refreshing && "animate-spin")} />
+          {refreshing ? "..." : "Actualiser"}
+        </Button>
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-3">
+      {/* Real prices progress */}
+      <div>
+        <div className="flex justify-between text-xs mb-1">
+          <span className="text-green-400 flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-green-500" />
+            Prix eBay réels
+          </span>
+          <span className="text-white font-medium">{stats.withRealPrice}/{stats.total}</span>
+        </div>
+        <Progress value={stats.realCoverage} className="h-2 bg-zinc-800" />
+      </div>
+      
+      {/* Estimates */}
+      {stats.withEstimate > 0 && (
+        <div>
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-amber-400 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              Estimations
+            </span>
+            <span className="text-zinc-400">{stats.withEstimate}</span>
+          </div>
+        </div>
+      )}
+      
+      {/* Missing */}
+      {stats.withoutPrice > 0 && (
+        <div className="text-xs text-zinc-500 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" />
+          {stats.withoutPrice} film{stats.withoutPrice > 1 ? "s" : ""} sans cotation
+        </div>
+      )}
+    </CardContent>
+  </Card>
 );
 
 // ============================================
@@ -258,9 +403,25 @@ export const ValuationDashboardPremium = ({
     return <LoadingSkeleton />;
   }
 
-  // Empty state
-  if (!valuation || movies.length === 0) {
-    return <EmptyState />;
+  // Calculate coverage stats
+  const coverageStats = calculateCoverageStats(movies, moviePrices);
+  
+  // Show "need prices" state if no real prices found
+  if (movies.length > 0 && coverageStats.withRealPrice === 0 && !valuation) {
+    return <NeedPricesState movieCount={movies.length} onRefresh={onRefresh} refreshing={refreshing} />;
+  }
+
+  // Empty collection state
+  if (movies.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Package className="w-16 h-16 text-zinc-700 mb-4" />
+        <h3 className="text-xl font-semibold text-zinc-400 mb-2">Aucun film dans votre collection</h3>
+        <p className="text-zinc-500 max-w-md">
+          Ajoutez des films physiques pour voir l'estimation de leur valeur sur le marché.
+        </p>
+      </div>
+    );
   }
 
   // Prepare data
@@ -271,36 +432,59 @@ export const ValuationDashboardPremium = ({
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
+      {/* Header avec bouton d'actualisation */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
             Trésorerie de la Collection
           </h2>
           <p className="text-muted-foreground mt-1">
-            Analysez la valeur et l'évolution de votre patrimoine cinématographique.
+            Prix basés sur les ventes réelles eBay France & Allemagne
           </p>
         </div>
-        {refreshing && (
-          <Badge variant="outline" className="bg-purple-500/10 border-purple-500/30 text-purple-300 animate-pulse">
-            <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-            Actualisation...
-          </Badge>
-        )}
+        <div className="flex items-center gap-3">
+          {lastUpdated && (
+            <span className="text-xs text-zinc-500">
+              Mis à jour {new Date(lastUpdated).toLocaleDateString("fr-FR", {
+                day: "numeric",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          )}
+          <Button
+            onClick={onRefresh}
+            disabled={refreshing}
+            variant="outline"
+            size="sm"
+            className="border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:text-white gap-2"
+          >
+            <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
+            {refreshing ? "Actualisation..." : "Actualiser les prix"}
+          </Button>
+        </div>
       </div>
 
-      {/* Cartes de Valeur Principales */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Cartes de Valeur Principales - 4 colonnes sur desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Valeur totale */}
         <PortfolioValueCard
-          totalValueMedian={valuation.totalValueMedian}
-          totalValueMin={valuation.totalValueMin}
-          totalValueMax={valuation.totalValueMax}
+          totalValueMedian={valuation?.totalValueMedian || 0}
+          totalValueMin={valuation?.totalValueMin}
+          totalValueMax={valuation?.totalValueMax}
           itemCount={movies.length}
-          itemsWithPrice={valuation.itemsWithPrice}
-          itemsWithoutPrice={valuation.itemsWithoutPrice}
+          itemsWithPrice={valuation?.itemsWithPrice || coverageStats.withRealPrice + coverageStats.withEstimate}
+          itemsWithoutPrice={valuation?.itemsWithoutPrice || coverageStats.withoutPrice}
           lastUpdated={lastUpdated?.toISOString()}
           loading={refreshing}
+        />
+
+        {/* Couverture des prix */}
+        <CoverageStatsCard 
+          stats={coverageStats} 
+          onRefresh={onRefresh} 
+          refreshing={refreshing} 
         />
 
         {/* Édition la plus précieuse */}
@@ -314,21 +498,30 @@ export const ValuationDashboardPremium = ({
           <CardContent>
             {mostValuable ? (
               <div className="cursor-pointer group" onClick={() => onMovieClick?.(mostValuable.movie.tmdbId)}>
-                <div className="text-xl font-bold text-white truncate group-hover:text-purple-400 transition-colors">
+                <div className="text-lg font-bold text-white truncate group-hover:text-purple-400 transition-colors">
                   {mostValuable.movie.title}
                 </div>
                 <p className="text-xs text-purple-400 mt-1">
                   {formatLabels[mostValuable.movie.format.toLowerCase()] || mostValuable.movie.format} •{" "}
                   {formatPrice(mostValuable.price.median)}
                 </p>
-                {mostValuable.price.sampleSize > 0 && (
-                  <p className="text-[10px] text-zinc-500 mt-0.5">
-                    Basé sur {mostValuable.price.sampleSize} ventes eBay
-                  </p>
+                {mostValuable.price.sampleSize > 0 ? (
+                  <a
+                    href={`https://www.ebay.fr/sch/i.html?_nkw=${encodeURIComponent(mostValuable.movie.title + " " + mostValuable.movie.format)}&_sacat=11232&LH_Complete=1&LH_Sold=1`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-[10px] text-blue-400 mt-1 flex items-center gap-1 hover:underline"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    {mostValuable.price.sampleSize} ventes eBay
+                  </a>
+                ) : (
+                  <p className="text-[10px] text-amber-500/70 mt-1">Prix estimé</p>
                 )}
               </div>
             ) : (
-              <div className="text-zinc-500 text-sm">Aucune donnée disponible</div>
+              <div className="text-zinc-500 text-sm">Actualisez pour voir</div>
             )}
           </CardContent>
         </Card>
@@ -346,13 +539,18 @@ export const ValuationDashboardPremium = ({
               <>
                 <div className="text-2xl font-bold text-white">+{hiddenPotential.percent}%</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Sur {hiddenPotential.count} édition{hiddenPotential.count > 1 ? "s" : ""} avec potentiel de revente
+                  Sur {hiddenPotential.count} édition{hiddenPotential.count > 1 ? "s" : ""} avec potentiel
                 </p>
+              </>
+            ) : coverageStats.withRealPrice === 0 ? (
+              <>
+                <div className="text-2xl font-bold text-zinc-600">—</div>
+                <p className="text-xs text-amber-500/70 mt-1">Actualisez les prix</p>
               </>
             ) : (
               <>
-                <div className="text-2xl font-bold text-zinc-600">—</div>
-                <p className="text-xs text-muted-foreground mt-1">Pas assez de données pour calculer</p>
+                <div className="text-2xl font-bold text-green-500">Optimal</div>
+                <p className="text-xs text-muted-foreground mt-1">Vos films sont bien cotés</p>
               </>
             )}
           </CardContent>
@@ -372,7 +570,7 @@ export const ValuationDashboardPremium = ({
               <CardDescription>Historique de la cotation de votre vidéothèque</CardDescription>
             </CardHeader>
             <CardContent>
-              <PortfolioChart totalValue={valuation.totalValueMedian} itemCount={movies.length} />
+              <PortfolioChart totalValue={valuation?.totalValueMedian || 0} itemCount={movies.length} />
             </CardContent>
           </Card>
         </div>
