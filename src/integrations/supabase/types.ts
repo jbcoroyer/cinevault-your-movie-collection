@@ -2029,6 +2029,48 @@ export type Database = {
           },
         ]
       }
+      unlockable_features: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string
+          icon_name: string
+          id: string
+          is_active: boolean | null
+          name: string
+          preview_data: Json | null
+          rarity: string
+          unlock_type: string
+          unlock_value: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          description: string
+          icon_name?: string
+          id: string
+          is_active?: boolean | null
+          name: string
+          preview_data?: Json | null
+          rarity?: string
+          unlock_type: string
+          unlock_value: number
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          preview_data?: Json | null
+          rarity?: string
+          unlock_type?: string
+          unlock_value?: number
+        }
+        Relationships: []
+      }
       user_badges: {
         Row: {
           badge_id: string
@@ -2330,6 +2372,42 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_top_movies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_unlocks: {
+        Row: {
+          feature_id: string
+          id: string
+          unlocked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          feature_id: string
+          id?: string
+          unlocked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          feature_id?: string
+          id?: string
+          unlocked_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_unlocks_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "unlockable_features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_unlocks_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"

@@ -6,6 +6,7 @@
  * - Défis hebdomadaires
  * - Quêtes permanentes
  * - Grille de badges par catégorie
+ * - Récompenses à débloquer
  */
 
 import { useEffect, useState, type ElementType } from "react";
@@ -20,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WeeklyChallenges } from "@/components/gamification/WeeklyChallenges";
 import { QuestsSection } from "@/components/gamification/QuestsSection";
+import { UnlockablesShowcase } from "@/components/gamification/UnlockablesShowcase";
 import { cn } from "@/lib/utils";
 import { type Rarity, RARITY_CONFIG } from "@/data/videoClubData";
 import {
@@ -47,6 +49,7 @@ import {
   Swords,
   Map,
   Medal,
+  Unlock,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, ElementType> = {
@@ -173,7 +176,7 @@ export default function Badges() {
   const [loading, setLoading] = useState(true);
   const [collectionCount, setCollectionCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<string>("challenges");
+  const [activeTab, setActiveTab] = useState<string>("rewards");
 
   const totalXp = profile?.total_xp || 0;
   const { level, currentLevelXp, xpForNextLevel, progress } = calculateLevel(totalXp);
@@ -369,7 +372,14 @@ export default function Badges() {
 
           {/* Main Content Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="bg-white/5 border border-white/10 p-1">
+            <TabsList className="bg-white/5 border border-white/10 p-1 flex-wrap">
+              <TabsTrigger 
+                value="rewards" 
+                className="data-[state=active]:bg-white data-[state=active]:text-black gap-2"
+              >
+                <Gift className="w-4 h-4" />
+                Récompenses
+              </TabsTrigger>
               <TabsTrigger 
                 value="challenges" 
                 className="data-[state=active]:bg-white data-[state=active]:text-black gap-2"
@@ -392,6 +402,17 @@ export default function Badges() {
                 Badges
               </TabsTrigger>
             </TabsList>
+
+            {/* Rewards Tab - NEW */}
+            <TabsContent value="rewards" className="mt-6">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-3xl"
+              >
+                <UnlockablesShowcase />
+              </motion.div>
+            </TabsContent>
 
             {/* Challenges Tab */}
             <TabsContent value="challenges" className="mt-6">
