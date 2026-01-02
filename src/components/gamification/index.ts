@@ -7,3 +7,4 @@
 export { GamificationManager, XP_REWARDS } from "./GamificationManager";
 export { XPToastProvider, useXPToast } from "./XPToast";
 export { MobileXPIndicator } from "./MobileXPIndicator";
+export { UnlockablesShowcase } from "./UnlockablesShowcase";
