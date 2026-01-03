@@ -283,132 +283,137 @@ export default function Badges() {
             </p>
           </motion.div>
 
-          {/* Stats Cards */}
+          {/* Stats Cards - Horizontal scroll on mobile */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10"
+            className="mb-8"
           >
-            {/* Level Card */}
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                  <Sparkles className="w-7 h-7 text-amber-500" />
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 scrollbar-hide">
+              {/* Level Card */}
+              <div className="flex-shrink-0 w-[280px] md:w-auto p-4 md:p-5 rounded-xl bg-white/5 border border-white/10">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-11 h-11 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-white/50 text-xs">Niveau actuel</p>
+                    <p className="text-lg font-bold text-white">Niveau {level}</p>
+                    <p className="text-amber-500 text-xs">{levelTitle}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-white/50 text-sm">Niveau actuel</p>
-                  <p className="text-2xl font-bold text-white">Niveau {level}</p>
-                  <p className="text-amber-500 text-sm">{levelTitle}</p>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-white/50">Progression</span>
+                    <span className="text-white">
+                      {currentLevelXp}/{xpForNextLevel} XP
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 1, delay: 0.5 }}
+                      className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/50">Progression</span>
-                  <span className="text-white">
-                    {currentLevelXp} / {xpForNextLevel} XP
-                  </span>
-                </div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 1, delay: 0.5 }}
-                    className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
-                  />
-                </div>
-              </div>
-            </div>
 
-            {/* XP Card */}
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                  <Zap className="w-7 h-7 text-purple-500" />
+              {/* XP Card */}
+              <div className="flex-shrink-0 w-[240px] md:w-auto p-4 md:p-5 rounded-xl bg-white/5 border border-white/10">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-11 h-11 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <p className="text-white/50 text-xs">Expérience totale</p>
+                    <p className="text-lg font-bold text-white">{totalXp.toLocaleString()} XP</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-white/50 text-sm">Expérience totale</p>
-                  <p className="text-2xl font-bold text-white">{totalXp.toLocaleString()} XP</p>
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/10">
+                  <div>
+                    <p className="text-white/50 text-[10px]">Films</p>
+                    <p className="text-base font-semibold text-white">{collectionCount}</p>
+                  </div>
+                  <div>
+                    <p className="text-white/50 text-[10px]">Badges</p>
+                    <p className="text-base font-semibold text-white">{unlockedCount}</p>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 mt-4 border-t border-white/10">
-                <div>
-                  <p className="text-white/50 text-xs">Films</p>
-                  <p className="text-lg font-semibold text-white">{collectionCount}</p>
-                </div>
-                <div>
-                  <p className="text-white/50 text-xs">Badges</p>
-                  <p className="text-lg font-semibold text-white">{unlockedCount}</p>
-                </div>
-              </div>
-            </div>
 
-            {/* Badges Summary Card */}
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                  <Medal className="w-7 h-7 text-blue-500" />
+              {/* Badges Summary Card */}
+              <div className="flex-shrink-0 w-[240px] md:w-auto p-4 md:p-5 rounded-xl bg-white/5 border border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                    <Medal className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-white/50 text-xs">Badges</p>
+                    <p className="text-lg font-bold text-white">{unlockedCount}/{badges.length}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-white/50 text-sm">Badges débloqués</p>
-                  <p className="text-2xl font-bold text-white">{unlockedCount} / {badges.length}</p>
+                <div className="pt-3 mt-3 border-t border-white/10">
+                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(unlockedCount / badges.length) * 100}%` }}
+                      transition={{ duration: 1, delay: 0.7 }}
+                      className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
+                    />
+                  </div>
+                  <p className="text-[10px] text-white/50 mt-1.5">
+                    {Math.round((unlockedCount / badges.length) * 100)}% de la collection
+                  </p>
                 </div>
-              </div>
-              <div className="pt-4 mt-4 border-t border-white/10">
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(unlockedCount / badges.length) * 100}%` }}
-                    transition={{ duration: 1, delay: 0.7 }}
-                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
-                  />
-                </div>
-                <p className="text-xs text-white/50 mt-2">
-                  {Math.round((unlockedCount / badges.length) * 100)}% de la collection
-                </p>
               </div>
             </div>
           </motion.div>
 
           {/* Main Content Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="bg-white/5 border border-white/10 p-1 flex-wrap">
+            <TabsList className="w-full bg-white/5 border border-white/10 p-1 grid grid-cols-4 h-auto">
               <TabsTrigger 
                 value="rewards" 
-                className="data-[state=active]:bg-white data-[state=active]:text-black gap-2"
+                className="data-[state=active]:bg-white data-[state=active]:text-black flex-col sm:flex-row gap-1 sm:gap-2 py-2 px-2 sm:px-4 text-xs sm:text-sm"
               >
                 <Gift className="w-4 h-4" />
-                Récompenses
+                <span className="hidden xs:inline">Récompenses</span>
+                <span className="xs:hidden">Rewards</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="challenges" 
-                className="data-[state=active]:bg-white data-[state=active]:text-black gap-2"
+                className="data-[state=active]:bg-white data-[state=active]:text-black flex-col sm:flex-row gap-1 sm:gap-2 py-2 px-2 sm:px-4 text-xs sm:text-sm"
               >
                 <Swords className="w-4 h-4" />
-                Défis
+                <span className="hidden xs:inline">Défis</span>
+                <span className="xs:hidden">Défis</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="quests"
-                className="data-[state=active]:bg-white data-[state=active]:text-black gap-2"
+                className="data-[state=active]:bg-white data-[state=active]:text-black flex-col sm:flex-row gap-1 sm:gap-2 py-2 px-2 sm:px-4 text-xs sm:text-sm"
               >
                 <Map className="w-4 h-4" />
-                Quêtes
+                <span className="hidden xs:inline">Quêtes</span>
+                <span className="xs:hidden">Quêtes</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="badges"
-                className="data-[state=active]:bg-white data-[state=active]:text-black gap-2"
+                className="data-[state=active]:bg-white data-[state=active]:text-black flex-col sm:flex-row gap-1 sm:gap-2 py-2 px-2 sm:px-4 text-xs sm:text-sm"
               >
                 <Trophy className="w-4 h-4" />
-                Badges
+                <span className="hidden xs:inline">Badges</span>
+                <span className="xs:hidden">Badges</span>
               </TabsTrigger>
             </TabsList>
 
-            {/* Rewards Tab - NEW */}
-            <TabsContent value="rewards" className="mt-6">
+            {/* Rewards Tab */}
+            <TabsContent value="rewards" className="mt-4 sm:mt-6">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="max-w-3xl"
               >
                 <UnlockablesShowcase />
               </motion.div>
