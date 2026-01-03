@@ -399,22 +399,57 @@ function FeatureDetailContent({ feature, stats, onClose, onNavigate }: FeatureDe
         )}
       </div>
 
-      {/* Action button */}
-      {isUnlocked && navigation ? (
-        <Button 
-          onClick={handleNavigate}
-          className="w-full bg-white text-black hover:bg-white/90 gap-2"
-        >
-          <ExternalLink className="w-4 h-4" />
-          {navigation.action || 'Accéder'}
-        </Button>
-      ) : isUnlocked ? (
-        <div className="p-4 rounded-xl bg-gradient-to-r from-white/5 to-white/10 border border-white/20 text-center">
-          <div className="flex items-center justify-center gap-2 text-white">
-            <Unlock className="w-5 h-5" style={{ color: rarityConfig.glowColor }} />
-            <span className="font-medium">Fonctionnalité débloquée !</span>
-          </div>
-          <p className="text-xs text-white/50 mt-1">Disponible dans l'application</p>
+      {/* Action button - Enhanced for cosmetics */}
+      {isUnlocked ? (
+        <div className="space-y-3">
+          {/* Cosmetic preview for unlocked cosmetics */}
+          {feature.category === 'cosmetic' && (
+            <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-fuchsia-500/10 border border-purple-500/20">
+              <div className="flex items-center gap-3 mb-2">
+                <Palette className="w-5 h-5 text-purple-400" />
+                <span className="text-sm font-medium text-white">Aperçu sur votre profil</span>
+              </div>
+              <p className="text-xs text-white/50">
+                {feature.id.includes('frame') && "Ce cadre apparaîtra autour de votre photo de profil et sur votre carte membre."}
+                {feature.id.includes('theme') && "Ce thème modifiera les couleurs de votre carte membre et de certains éléments de votre profil."}
+                {feature.id.includes('title') && "Ce titre sera affiché sous votre nom sur votre profil et dans les classements."}
+                {!feature.id.includes('frame') && !feature.id.includes('theme') && !feature.id.includes('title') && 
+                  "Cette personnalisation s'affichera sur votre profil public."}
+              </p>
+            </div>
+          )}
+          
+          <Button 
+            onClick={() => {
+              onNavigate('/profile');
+              onClose();
+            }}
+            className="w-full bg-white text-black hover:bg-white/90 gap-2"
+          >
+            {feature.category === 'cosmetic' ? (
+              <>
+                <User className="w-4 h-4" />
+                Équiper sur mon profil
+              </>
+            ) : navigation ? (
+              <>
+                <ExternalLink className="w-4 h-4" />
+                {navigation.action || 'Accéder'}
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4" />
+                Fonctionnalité active
+              </>
+            )}
+          </Button>
+
+          <p className="text-[10px] text-center text-white/40">
+            {feature.category === 'cosmetic' 
+              ? "Rendez-vous sur votre profil pour équiper cette récompense"
+              : "Cette fonctionnalité est maintenant disponible"
+            }
+          </p>
         </div>
       ) : (
         <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
@@ -513,8 +548,61 @@ export function UnlockablesShowcase({ className }: UnlockablesShowcaseProps) {
   const DetailHeader = isMobile ? SheetHeader : DialogHeader;
   const DetailTitle = isMobile ? SheetTitle : DialogTitle;
 
+  // Get unlocked cosmetics for quick access section
+  const unlockedCosmetics = features.filter(f => f.category === 'cosmetic' && f.isUnlocked);
+
   return (
     <div className={cn("space-y-5", className)}>
+      {/* Quick Access for unlocked cosmetics */}
+      {unlockedCosmetics.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-xl bg-gradient-to-br from-purple-500/10 via-fuchsia-500/5 to-transparent border border-purple-500/20"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-purple-400" />
+              <span className="text-sm font-medium text-white">Cosmétiques débloquées</span>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => navigate('/profile')}
+              className="text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 gap-1 h-7 px-2"
+            >
+              <User className="w-3 h-3" />
+              Équiper
+            </Button>
+          </div>
+          <p className="text-xs text-white/50 mb-3">
+            Personnalisez votre profil et carte membre avec vos récompenses
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {unlockedCosmetics.map((cosmetic) => {
+              const IconComponent = ICON_MAP[cosmetic.icon_name] || Gift;
+              const rarity = cosmetic.rarity as Rarity;
+              const rarityConfig = RARITY_CONFIG[rarity] || RARITY_CONFIG.common;
+              return (
+                <button
+                  key={cosmetic.id}
+                  onClick={() => handleFeatureSelect(cosmetic)}
+                  className="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 transition-colors"
+                >
+                  <div 
+                    className="w-6 h-6 rounded flex items-center justify-center"
+                    style={{ backgroundColor: `${rarityConfig.glowColor}20` }}
+                  >
+                    <IconComponent className="w-3.5 h-3.5" style={{ color: rarityConfig.glowColor }} />
+                  </div>
+                  <span className="text-xs text-white/80 whitespace-nowrap">{cosmetic.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
       {/* Stats header - compact */}
       <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-gradient-to-r from-white/5 to-white/10 border border-white/10">
         <div>
@@ -540,8 +628,8 @@ export function UnlockablesShowcase({ className }: UnlockablesShowcaseProps) {
         </div>
       </div>
 
-      {/* Category filter - horizontal scroll on mobile */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+      {/* Category filter - horizontal scroll on mobile - FIXED */}
+      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
         {categories.map((cat) => {
           const count = cat === "all" 
             ? features.length 
@@ -552,21 +640,30 @@ export function UnlockablesShowcase({ className }: UnlockablesShowcaseProps) {
           const catInfo = cat !== "all" ? CATEGORY_INFO[cat] : null;
           const CatIcon = catInfo?.icon;
           
+          // Shorter labels for mobile
+          const shortLabels: Record<string, string> = {
+            feature: "Fonct.",
+            cosmetic: "Cosm.",
+            social: "Social",
+            stats: "Stats"
+          };
+          
           return (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all min-h-[36px]",
+                "flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all min-h-[36px]",
                 selectedCategory === cat
                   ? "bg-white text-black"
                   : "bg-white/10 text-white/70 hover:text-white hover:bg-white/15"
               )}
             >
               {CatIcon && <CatIcon className="w-3.5 h-3.5" />}
-              {cat === "all" ? "Toutes" : catInfo?.label}
+              <span className="hidden xs:inline">{cat === "all" ? "Toutes" : catInfo?.label}</span>
+              <span className="xs:hidden">{cat === "all" ? "Tout" : shortLabels[cat] || catInfo?.label}</span>
               <span className={cn(
-                "text-[10px] px-1.5 py-0.5 rounded",
+                "text-[10px] px-1 py-0.5 rounded ml-0.5",
                 selectedCategory === cat ? "bg-black/10" : "bg-white/10"
               )}>
                 {unlockedInCat}/{count}

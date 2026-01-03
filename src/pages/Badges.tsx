@@ -446,12 +446,12 @@ export default function Badges() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                {/* Category Tabs */}
-                <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+                {/* Category Tabs - Fixed overflow */}
+                <div className="flex gap-2 mb-6 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
                   <button
                     onClick={() => setSelectedCategory("all")}
                     className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                      "flex-shrink-0 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors min-h-[36px]",
                       selectedCategory === "all" 
                         ? "bg-white text-black" 
                         : "bg-white/10 text-white/70 hover:text-white"
@@ -467,14 +467,16 @@ export default function Badges() {
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.id)}
                         className={cn(
-                          "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                          "flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors min-h-[36px]",
                           selectedCategory === cat.id 
                             ? "bg-white text-black" 
                             : "bg-white/10 text-white/70 hover:text-white"
                         )}
                       >
-                        <Icon className="w-4 h-4" />
-                        {cat.label} ({count})
+                        <Icon className="w-3.5 h-3.5" />
+                        <span className="hidden xs:inline">{cat.label}</span>
+                        <span className="xs:hidden">{cat.label.slice(0, 4)}.</span>
+                        <span className="text-[10px] opacity-70">({count})</span>
                       </button>
                     );
                   })}
