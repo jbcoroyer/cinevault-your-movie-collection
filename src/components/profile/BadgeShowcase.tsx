@@ -54,20 +54,43 @@ interface BadgeShowcaseProps {
   maxSlots?: number;
 }
 
-const rarityColors: Record<string, string> = {
-  common: "from-slate-500 to-slate-700",
-  rare: "from-blue-500 to-blue-700",
-  epic: "from-purple-500 to-purple-700",
-  legendary: "from-amber-400 to-orange-600",
-  holographic: "from-pink-400 via-purple-400 to-cyan-400",
-};
-
-const rarityGlow: Record<string, string> = {
-  common: "",
-  rare: "shadow-[0_0_15px_rgba(59,130,246,0.3)]",
-  epic: "shadow-[0_0_20px_rgba(168,85,247,0.4)]",
-  legendary: "shadow-[0_0_25px_rgba(245,158,11,0.5)]",
-  holographic: "shadow-[0_0_30px_rgba(236,72,153,0.5)]",
+// Metallic color schemes matching the HoloBadge component
+const rarityMetals: Record<string, {
+  primary: string;
+  secondary: string;
+  glow: string;
+  iconBg: string;
+}> = {
+  common: {
+    primary: "from-zinc-400 via-zinc-300 to-zinc-500",
+    secondary: "from-zinc-600 to-zinc-700",
+    glow: "",
+    iconBg: "from-zinc-500 to-zinc-600",
+  },
+  rare: {
+    primary: "from-blue-400 via-sky-300 to-blue-500",
+    secondary: "from-blue-700 to-blue-900",
+    glow: "shadow-[0_0_20px_rgba(59,130,246,0.4)]",
+    iconBg: "from-blue-500 to-blue-700",
+  },
+  epic: {
+    primary: "from-purple-400 via-fuchsia-300 to-purple-500",
+    secondary: "from-purple-800 to-purple-950",
+    glow: "shadow-[0_0_25px_rgba(168,85,247,0.5)]",
+    iconBg: "from-purple-500 to-purple-700",
+  },
+  legendary: {
+    primary: "from-amber-300 via-yellow-200 to-amber-400",
+    secondary: "from-amber-700 to-amber-900",
+    glow: "shadow-[0_0_30px_rgba(245,158,11,0.6)]",
+    iconBg: "from-amber-500 to-orange-600",
+  },
+  holographic: {
+    primary: "from-pink-300 via-purple-300 to-cyan-300",
+    secondary: "from-violet-900 to-slate-950",
+    glow: "shadow-[0_0_35px_rgba(236,72,153,0.5)]",
+    iconBg: "from-violet-500 to-fuchsia-600",
+  },
 };
 
 export function BadgeShowcase({ userId, isEditable = false, maxSlots = 3 }: BadgeShowcaseProps) {
@@ -230,6 +253,7 @@ export function BadgeShowcase({ userId, isEditable = false, maxSlots = 3 }: Badg
             {availableBadges.map((badge) => {
               const Icon = getIconComponent(badge.badge.icon_name);
               const rarity = badge.rarity || "common";
+              const metal = rarityMetals[rarity] || rarityMetals.common;
               
               return (
                 <motion.button
@@ -237,17 +261,34 @@ export function BadgeShowcase({ userId, isEditable = false, maxSlots = 3 }: Badg
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleSelectBadge(badge)}
-                  className={cn(
-                    "relative aspect-square rounded-xl p-3 flex flex-col items-center justify-center gap-2 border border-white/10 transition-all",
-                    "bg-gradient-to-br",
-                    rarityColors[rarity] || rarityColors.common,
-                    rarityGlow[rarity] || ""
-                  )}
+                  className="relative aspect-square rounded-xl overflow-hidden"
                 >
-                  <Icon className="w-6 h-6 text-white" />
-                  <span className="text-[10px] text-white/90 font-medium text-center leading-tight line-clamp-2">
-                    {badge.badge.title}
-                  </span>
+                  {/* Metallic border */}
+                  <div className={cn(
+                    "absolute inset-0 rounded-xl p-[2px] bg-gradient-to-br",
+                    metal.primary,
+                    metal.glow,
+                  )} style={{ '--tw-gradient-stops': undefined } as any}>
+                    <div className={cn(
+                      "absolute inset-0 rounded-xl bg-gradient-to-br",
+                      metal.primary,
+                    )} />
+                  </div>
+                  {/* Inner badge */}
+                  <div className={cn(
+                    "absolute inset-[2px] rounded-lg bg-gradient-to-br flex flex-col items-center justify-center gap-1",
+                    metal.secondary,
+                  )}>
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br",
+                      metal.iconBg,
+                    )}>
+                      <Icon className="w-4 h-4 text-white drop-shadow-md" />
+                    </div>
+                    <span className="text-[8px] text-white/90 font-medium text-center leading-tight line-clamp-2 px-1">
+                      {badge.badge.title}
+                    </span>
+                  </div>
                 </motion.button>
               );
             })}
@@ -273,6 +314,7 @@ export function BadgeShowcase({ userId, isEditable = false, maxSlots = 3 }: Badg
           if (badge) {
             const Icon = getIconComponent(badge.badge.icon_name);
             const rarity = badge.rarity || "common";
+            const metal = rarityMetals[rarity] || rarityMetals.common;
             
             return (
               <motion.div
@@ -281,15 +323,36 @@ export function BadgeShowcase({ userId, isEditable = false, maxSlots = 3 }: Badg
                 animate={{ opacity: 1, scale: 1 }}
                 className="relative group"
               >
-                <div
-                  className={cn(
-                    "w-16 h-16 md:w-20 md:h-20 rounded-xl flex items-center justify-center border border-white/20",
-                    "bg-gradient-to-br",
-                    rarityColors[rarity] || rarityColors.common,
-                    rarityGlow[rarity] || ""
-                  )}
-                >
-                  <Icon className="w-7 h-7 md:w-8 md:h-8 text-white drop-shadow-lg" />
+                {/* Metallic pin badge */}
+                <div className={cn(
+                  "relative w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden",
+                  metal.glow,
+                )}>
+                  {/* Metallic border */}
+                  <div className={cn(
+                    "absolute inset-0 rounded-xl p-[2px] bg-gradient-to-br",
+                    metal.primary,
+                  )} />
+                  {/* Inner bevel */}
+                  <div className="absolute inset-[2px] rounded-lg bg-gradient-to-br from-white/20 via-transparent to-black/30" />
+                  {/* Badge body */}
+                  <div className={cn(
+                    "absolute inset-[3px] rounded-lg bg-gradient-to-br flex items-center justify-center",
+                    metal.secondary,
+                  )}>
+                    {/* Icon container */}
+                    <div className={cn(
+                      "w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-gradient-to-br",
+                      metal.iconBg,
+                    )}>
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/30 via-transparent to-black/20" />
+                      <Icon className="w-5 h-5 md:w-6 md:h-6 text-white drop-shadow-md relative z-10" />
+                    </div>
+                  </div>
+                  {/* Edge highlight */}
+                  <div className="absolute inset-0 rounded-xl pointer-events-none" style={{
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.3)",
+                  }} />
                 </div>
                 
                 {isEditable && (
