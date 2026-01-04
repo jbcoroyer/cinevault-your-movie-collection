@@ -28,7 +28,10 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { FollowListDialog } from "@/components/FollowListDialog";
 import { getPhysicalMovies } from "@/services/physicalMovies";
 import { WatchedTimeline } from "@/components/profile/WatchedTimeline";
+import { BadgeShowcase } from "@/components/profile/BadgeShowcase";
+import { AnimatedAvatar } from "@/components/profile/AnimatedAvatar";
 import { getMovieDetails } from "@/services/tmdb";
+import { isFeatureUnlocked } from "@/services/unlockablesService";
 import { cn } from "@/lib/utils";
 
 interface ProfileData {
@@ -58,6 +61,8 @@ export default function Profile() {
   const [badgeCount, setBadgeCount] = useState(0);
   const [movieMetadata, setMovieMetadata] = useState<Record<number, { title: string; poster_path: string | null; release_year?: number }>>({});
   const [loadingTimeline, setLoadingTimeline] = useState(true);
+  const [hasBadgeShowcase, setHasBadgeShowcase] = useState(false);
+  const [hasAnimatedAvatar, setHasAnimatedAvatar] = useState(false);
 
   const { userMovies } = useUserMovies();
   const { topMovies, setTopMovie } = useUserTopMovies(targetUserId);
@@ -116,6 +121,22 @@ export default function Profile() {
       setBadgeCount(count || 0);
     };
     fetchBadgeCount();
+  }, [targetUserId]);
+
+  // Check unlocked features
+  useEffect(() => {
+    const checkFeatures = async () => {
+      if (!targetUserId) return;
+      
+      const [badgeShowcase, animatedAvatar] = await Promise.all([
+        isFeatureUnlocked(targetUserId, "badge_showcase"),
+        isFeatureUnlocked(targetUserId, "animated_avatar"),
+      ]);
+      
+      setHasBadgeShowcase(badgeShowcase);
+      setHasAnimatedAvatar(animatedAvatar);
+    };
+    checkFeatures();
   }, [targetUserId]);
 
   // Fetch movie metadata for timeline
@@ -284,19 +305,13 @@ export default function Profile() {
                   }}
                 />
               ) : (
-                <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
-                  {profileData.avatar_url ? (
-                    <img
-                      src={profileData.avatar_url}
-                      alt={profileData.username || "Avatar"}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-2xl md:text-3xl font-bold text-white/30">
-                      {(profileData.username || "U").slice(0, 2).toUpperCase()}
-                    </span>
-                  )}
-                </div>
+                <AnimatedAvatar
+                  src={profileData.avatar_url}
+                  fallback={(profileData.username || "U").slice(0, 2).toUpperCase()}
+                  size="lg"
+                  isAnimated={hasAnimatedAvatar}
+                  frame={profileData.equipped_frame}
+                />
               )}
             </div>
 
@@ -433,6 +448,18 @@ export default function Profile() {
           <StatCard icon={Disc} label="Collection" value={physicalCount} />
           <StatCard icon={Trophy} label="Badges" value={badgeCount} onClick={() => navigate("/badges")} />
         </motion.div>
+
+        {/* Badge Showcase - visible if unlocked */}
+        {hasBadgeShowcase && targetUserId && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mb-12 p-4 rounded-xl bg-white/5 border border-white/10"
+          >
+            <BadgeShowcase userId={targetUserId} isEditable={isOwnProfile} />
+          </motion.div>
+        )}
 
         {/* Top 5 */}
         {topMovies && (

@@ -83,6 +83,30 @@ export type Database = {
         }
         Relationships: []
       }
+      badge_showcase: {
+        Row: {
+          badge_id: string
+          created_at: string
+          id: string
+          slot: number
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          created_at?: string
+          id?: string
+          slot: number
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          created_at?: string
+          id?: string
+          slot?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           added_at: string | null
