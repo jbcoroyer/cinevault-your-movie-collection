@@ -16,54 +16,60 @@ interface HoloBadgeProps {
   className?: string;
 }
 
-// Metallic color schemes for each rarity - inspired by Pokémon gym badges
+// Metallic color schemes for each rarity - real metal pin style
 const rarityMetals: Record<string, {
-  primary: string;
-  secondary: string;
-  border: string;
+  frame: string;
+  frameHighlight: string;
+  frameShadow: string;
+  surface: string;
+  icon: string;
   glow: string;
-  iconBg: string;
-  shimmer: string;
+  accent: string;
 }> = {
   common: {
-    primary: "from-zinc-400 via-zinc-300 to-zinc-500",
-    secondary: "from-zinc-600 to-zinc-700",
-    border: "from-zinc-300 via-zinc-500 to-zinc-400",
+    frame: "#71717a",
+    frameHighlight: "#a1a1aa",
+    frameShadow: "#3f3f46",
+    surface: "#27272a",
+    icon: "#d4d4d8",
     glow: "",
-    iconBg: "from-zinc-500 to-zinc-600",
-    shimmer: "rgba(161, 161, 170, 0.3)",
+    accent: "#52525b",
   },
   rare: {
-    primary: "from-blue-400 via-sky-300 to-blue-500",
-    secondary: "from-blue-700 to-blue-900",
-    border: "from-blue-300 via-cyan-400 to-blue-400",
-    glow: "shadow-[0_0_25px_rgba(59,130,246,0.4)]",
-    iconBg: "from-blue-500 to-blue-700",
-    shimmer: "rgba(59, 130, 246, 0.5)",
+    frame: "#94a3b8",
+    frameHighlight: "#e2e8f0",
+    frameShadow: "#475569",
+    surface: "#1e293b",
+    icon: "#38bdf8",
+    glow: "0 0 20px rgba(56,189,248,0.4)",
+    accent: "#0ea5e9",
   },
   epic: {
-    primary: "from-purple-400 via-fuchsia-300 to-purple-500",
-    secondary: "from-purple-800 to-purple-950",
-    border: "from-purple-300 via-pink-400 to-purple-400",
-    glow: "shadow-[0_0_30px_rgba(168,85,247,0.5)]",
-    iconBg: "from-purple-500 to-purple-700",
-    shimmer: "rgba(168, 85, 247, 0.5)",
+    frame: "#a855f7",
+    frameHighlight: "#d8b4fe",
+    frameShadow: "#6b21a8",
+    surface: "#1e1b4b",
+    icon: "#c084fc",
+    glow: "0 0 25px rgba(168,85,247,0.5)",
+    accent: "#9333ea",
   },
   legendary: {
-    primary: "from-amber-300 via-yellow-200 to-amber-400",
-    secondary: "from-amber-700 to-amber-900",
-    border: "from-yellow-300 via-amber-400 to-orange-400",
-    glow: "shadow-[0_0_35px_rgba(245,158,11,0.6)]",
-    iconBg: "from-amber-500 to-orange-600",
-    shimmer: "rgba(245, 158, 11, 0.6)",
+    frame: "#d4a853",
+    frameHighlight: "#fef08a",
+    frameShadow: "#92400e",
+    surface: "#1c1917",
+    icon: "#fbbf24",
+    glow: "0 0 30px rgba(251,191,36,0.5)",
+    accent: "#f59e0b",
   },
   holographic: {
-    primary: "from-pink-300 via-purple-300 to-cyan-300",
-    secondary: "from-violet-900 to-slate-950",
-    border: "from-pink-400 via-purple-500 to-cyan-400",
-    glow: "shadow-[0_0_40px_rgba(236,72,153,0.5)]",
-    iconBg: "from-violet-500 to-fuchsia-600",
-    shimmer: "rgba(236, 72, 153, 0.6)",
+    frame: "#e879f9",
+    frameHighlight: "#f0abfc",
+    frameShadow: "#86198f",
+    surface: "#0c0a09",
+    icon: "#f0abfc",
+    glow: "0 0 35px rgba(232,121,249,0.5)",
+    accent: "#d946ef",
   },
 };
 
@@ -79,7 +85,7 @@ export const HoloBadge = ({
 }: HoloBadgeProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
-  const [glare, setGlare] = useState({ x: 50, y: 50, opacity: 0 });
+  const [lightPos, setLightPos] = useState({ x: 50, y: 0 });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current || isLocked) return;
@@ -91,247 +97,313 @@ export const HoloBadge = ({
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
 
-    const rotateX = ((y - centerY) / centerY) * -15;
-    const rotateY = ((x - centerX) / centerX) * 15;
+    const rotateX = ((y - centerY) / centerY) * -12;
+    const rotateY = ((x - centerX) / centerX) * 12;
 
     setRotation({ x: rotateX, y: rotateY });
-    setGlare({ x: (x / rect.width) * 100, y: (y / rect.height) * 100, opacity: 1 });
+    setLightPos({ x: (x / rect.width) * 100, y: (y / rect.height) * 100 });
   };
 
   const handleMouseLeave = () => {
     setRotation({ x: 0, y: 0 });
-    setGlare((prev) => ({ ...prev, opacity: 0 }));
+    setLightPos({ x: 50, y: 0 });
   };
 
   const metal = rarityMetals[rarity] || rarityMetals.common;
+  const lockedMetal = rarityMetals.common;
+
+  const currentMetal = isLocked ? lockedMetal : metal;
 
   return (
-    <div className={cn("relative group", className)} onClick={onClick} style={{ perspective: "1000px" }}>
+    <div className={cn("relative group", className)} onClick={onClick} style={{ perspective: "800px" }}>
       <motion.div
         ref={cardRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         className={cn(
-          "relative w-full aspect-[3/4] transition-all duration-300 ease-out select-none",
+          "relative w-full aspect-square transition-all duration-200 ease-out select-none",
           isLocked ? "cursor-not-allowed" : "cursor-pointer",
         )}
         style={{
           transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
           transformStyle: "preserve-3d",
         }}
-        whileHover={!isLocked ? { scale: 1.05 } : undefined}
+        whileHover={!isLocked ? { scale: 1.08 } : undefined}
+        whileTap={!isLocked ? { scale: 0.98 } : undefined}
       >
-        {/* Outer metallic ring/border - the "pin" frame */}
-        <div
-          className={cn(
-            "absolute inset-0 rounded-2xl p-[3px]",
-            isLocked ? "opacity-40" : metal.glow,
-          )}
+        {/* Drop shadow for 3D lift effect */}
+        <div 
+          className="absolute inset-0 rounded-xl"
           style={{
-            background: isLocked 
-              ? "linear-gradient(135deg, #3f3f46 0%, #27272a 50%, #3f3f46 100%)"
-              : `linear-gradient(135deg, var(--tw-gradient-stops))`,
+            transform: "translateZ(-10px)",
+            boxShadow: isLocked 
+              ? "0 8px 20px rgba(0,0,0,0.4)"
+              : `0 10px 30px rgba(0,0,0,0.5), ${currentMetal.glow}`,
+          }}
+        />
+
+        {/* Metallic frame - outer bezel */}
+        <div 
+          className="absolute inset-0 rounded-xl overflow-hidden"
+          style={{
+            background: `linear-gradient(145deg, 
+              ${currentMetal.frameHighlight} 0%, 
+              ${currentMetal.frame} 20%, 
+              ${currentMetal.frameShadow} 45%,
+              ${currentMetal.frame} 55%,
+              ${currentMetal.frameHighlight} 80%,
+              ${currentMetal.frame} 100%
+            )`,
+            boxShadow: `
+              inset 0 2px 4px rgba(255,255,255,0.3),
+              inset 0 -2px 4px rgba(0,0,0,0.4)
+            `,
           }}
         >
-          <div className={cn(
-            "absolute inset-0 rounded-2xl bg-gradient-to-br",
-            isLocked ? "from-zinc-600 via-zinc-500 to-zinc-600" : metal.border,
-          )} />
-          
-          {/* Inner metallic bevel for depth */}
-          <div className="absolute inset-[3px] rounded-xl bg-gradient-to-br from-white/30 via-transparent to-black/30" />
-        </div>
+          {/* Brushed metal texture */}
+          <div 
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 1px,
+                rgba(255,255,255,0.03) 1px,
+                rgba(255,255,255,0.03) 2px
+              )`,
+            }}
+          />
 
-        {/* Main badge body */}
-        <div
-          className={cn(
-            "absolute inset-[4px] rounded-xl overflow-hidden",
-            isLocked ? "bg-zinc-900" : "",
-          )}
-          style={{
-            background: isLocked 
-              ? "linear-gradient(180deg, #18181b 0%, #09090b 100%)"
-              : `linear-gradient(180deg, var(--tw-gradient-stops))`,
-          }}
-        >
-          <div className={cn(
-            "absolute inset-0 bg-gradient-to-b",
-            isLocked ? "from-zinc-800 to-zinc-950" : metal.secondary,
-          )} />
-
-          {/* Enamel-like inner surface with shine */}
-          <div className="absolute inset-[6px] rounded-lg overflow-hidden">
-            {/* Base enamel color */}
-            <div className={cn(
-              "absolute inset-0 bg-gradient-to-br",
-              isLocked ? "from-zinc-800/80 to-zinc-900/80" : metal.secondary,
-            )} />
-
-            {/* Top highlight for convex effect */}
+          {/* Light reflection on metal frame */}
+          {!isLocked && (
             <div 
-              className="absolute inset-0 opacity-60"
+              className="absolute inset-0 transition-opacity duration-200"
               style={{
-                background: "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 40%, rgba(0,0,0,0.2) 100%)",
+                background: `radial-gradient(
+                  ellipse 60% 40% at ${lightPos.x}% ${lightPos.y}%,
+                  rgba(255,255,255,0.4) 0%,
+                  transparent 60%
+                )`,
+                opacity: 0.8,
               }}
             />
-
-            {/* Shimmer effect on hover */}
-            {!isLocked && (
-              <motion.div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: `radial-gradient(circle at ${glare.x}% ${glare.y}%, ${metal.shimmer} 0%, transparent 50%)`,
-                  opacity: glare.opacity * 0.8,
-                }}
-              />
-            )}
-
-            {/* Rainbow holographic effect for legendary/holographic */}
-            {!isLocked && (rarity === "legendary" || rarity === "holographic") && (
-              <motion.div
-                className="absolute inset-0 pointer-events-none mix-blend-color-dodge opacity-30"
-                style={{
-                  backgroundImage: `linear-gradient(${45 + glare.x * 0.5}deg, 
-                    transparent 20%, 
-                    rgba(255,0,100,0.4) 35%, 
-                    rgba(255,200,0,0.4) 45%, 
-                    rgba(0,255,200,0.4) 55%, 
-                    rgba(100,0,255,0.4) 65%, 
-                    transparent 80%)`,
-                  backgroundSize: "200% 200%",
-                  backgroundPosition: `${glare.x}% ${glare.y}%`,
-                }}
-              />
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Central emblem/icon container - raised "jewel" effect */}
+        {/* Inner enamel surface - the pin's face */}
         <div 
-          className="absolute left-1/2 top-[30%] -translate-x-1/2 -translate-y-1/2"
-          style={{ transform: `translateX(-50%) translateY(-50%) translateZ(20px)` }}
+          className="absolute inset-[6px] rounded-lg overflow-hidden"
+          style={{
+            background: currentMetal.surface,
+            boxShadow: `
+              inset 0 2px 6px rgba(0,0,0,0.6),
+              inset 0 -1px 2px rgba(255,255,255,0.1)
+            `,
+          }}
         >
-          {/* Outer metallic ring for icon */}
+          {/* Surface gloss effect */}
           <div 
-            className={cn(
-              "relative w-14 h-14 md:w-16 md:h-16 rounded-full p-[2px]",
-              isLocked ? "" : metal.glow,
-            )}
-          >
-            <div className={cn(
-              "absolute inset-0 rounded-full bg-gradient-to-br",
-              isLocked ? "from-zinc-500 to-zinc-700" : metal.primary,
-            )} />
-            
-            {/* Inner bevel */}
-            <div className="absolute inset-[2px] rounded-full bg-gradient-to-br from-white/40 via-transparent to-black/40" />
-            
-            {/* Icon background */}
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(
+                180deg,
+                rgba(255,255,255,0.08) 0%,
+                transparent 30%,
+                transparent 70%,
+                rgba(0,0,0,0.2) 100%
+              )`,
+            }}
+          />
+
+          {/* Dynamic light reflection on surface */}
+          {!isLocked && (
             <div 
-              className={cn(
-                "absolute inset-[3px] rounded-full flex items-center justify-center bg-gradient-to-br",
-                isLocked ? "from-zinc-700 to-zinc-900" : metal.iconBg,
-              )}
+              className="absolute inset-0 transition-all duration-100"
+              style={{
+                background: `radial-gradient(
+                  circle at ${lightPos.x}% ${lightPos.y}%,
+                  rgba(255,255,255,0.12) 0%,
+                  transparent 40%
+                )`,
+              }}
+            />
+          )}
+
+          {/* Holographic rainbow effect for special rarities */}
+          {!isLocked && (rarity === "legendary" || rarity === "holographic") && (
+            <motion.div
+              className="absolute inset-0 mix-blend-overlay opacity-40"
+              style={{
+                background: `linear-gradient(
+                  ${135 + rotation.y * 2}deg,
+                  transparent 10%,
+                  rgba(255,100,100,0.3) 25%,
+                  rgba(255,255,100,0.3) 40%,
+                  rgba(100,255,100,0.3) 55%,
+                  rgba(100,100,255,0.3) 70%,
+                  rgba(255,100,255,0.3) 85%,
+                  transparent 90%
+                )`,
+              }}
+            />
+          )}
+        </div>
+
+        {/* Central icon medallion - raised emblem */}
+        <div 
+          className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2"
+          style={{ 
+            transform: `translate(-50%, -50%) translateZ(15px)`,
+          }}
+        >
+          {/* Medallion outer ring */}
+          <div 
+            className="relative w-12 h-12 md:w-14 md:h-14 rounded-full"
+            style={{
+              background: `linear-gradient(145deg, 
+                ${currentMetal.frameHighlight} 0%, 
+                ${currentMetal.frame} 30%, 
+                ${currentMetal.frameShadow} 70%,
+                ${currentMetal.frame} 100%
+              )`,
+              boxShadow: `
+                0 4px 8px rgba(0,0,0,0.4),
+                inset 0 1px 2px rgba(255,255,255,0.4),
+                inset 0 -1px 2px rgba(0,0,0,0.3)
+              `,
+            }}
+          >
+            {/* Inner icon area */}
+            <div 
+              className="absolute inset-[3px] rounded-full flex items-center justify-center"
+              style={{
+                background: `radial-gradient(
+                  circle at 30% 30%,
+                  ${currentMetal.frame} 0%,
+                  ${currentMetal.frameShadow} 100%
+                )`,
+                boxShadow: `
+                  inset 0 2px 4px rgba(0,0,0,0.3),
+                  inset 0 -1px 2px rgba(255,255,255,0.2)
+                `,
+              }}
             >
-              {/* Inner shine */}
+              {/* Icon shine overlay */}
               <div 
                 className="absolute inset-0 rounded-full"
                 style={{
-                  background: "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.2) 100%)",
+                  background: `linear-gradient(
+                    135deg,
+                    rgba(255,255,255,0.25) 0%,
+                    transparent 50%,
+                    rgba(0,0,0,0.15) 100%
+                  )`,
                 }}
               />
               
               {isLocked ? (
-                <Lock className="w-6 h-6 md:w-7 md:h-7 text-zinc-500 relative z-10" />
+                <Lock 
+                  className="w-5 h-5 md:w-6 md:h-6 relative z-10" 
+                  style={{ color: lockedMetal.icon }}
+                />
               ) : (
-                <Icon className="w-6 h-6 md:w-7 md:h-7 text-white relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
+                <Icon 
+                  className="w-5 h-5 md:w-6 md:h-6 relative z-10" 
+                  style={{ 
+                    color: currentMetal.icon,
+                    filter: `drop-shadow(0 1px 2px rgba(0,0,0,0.5))`,
+                  }}
+                />
               )}
             </div>
           </div>
         </div>
 
-        {/* Content overlay */}
+        {/* Title engraving - embossed metal look */}
         <div 
-          className="absolute inset-0 flex flex-col items-center justify-end pb-4 px-3"
-          style={{ transform: "translateZ(10px)" }}
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 w-[85%]"
+          style={{ transform: `translateX(-50%) translateZ(8px)` }}
         >
-          {/* Title plate - embossed metal look */}
-          <div className="w-full">
-            <div 
+          {/* Title plate */}
+          <div 
+            className="relative px-2 py-1 rounded"
+            style={{
+              background: `linear-gradient(180deg, 
+                rgba(0,0,0,0.3) 0%, 
+                rgba(0,0,0,0.5) 100%
+              )`,
+              boxShadow: isLocked ? 'none' : `
+                inset 0 1px 0 rgba(255,255,255,0.05),
+                0 1px 2px rgba(0,0,0,0.3)
+              `,
+            }}
+          >
+            <h3
               className={cn(
-                "relative px-2 py-1.5 rounded-md mx-auto max-w-[90%]",
-                isLocked ? "bg-zinc-800/80" : "bg-black/40 backdrop-blur-sm",
+                "font-display font-bold uppercase tracking-[0.1em] text-[9px] md:text-[10px] text-center leading-tight truncate",
               )}
+              style={{
+                color: isLocked ? '#52525b' : currentMetal.icon,
+                textShadow: isLocked ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
+              }}
             >
-              {/* Metallic edge effect */}
+              {title}
+            </h3>
+          </div>
+          
+          {/* Description */}
+          <p 
+            className="text-[7px] md:text-[8px] text-center mt-1 leading-tight line-clamp-1 opacity-60"
+            style={{ color: isLocked ? '#52525b' : '#a1a1aa' }}
+          >
+            {description}
+          </p>
+
+          {/* Progress bar for locked badges */}
+          {isLocked && (
+            <div className="flex flex-col items-center gap-0.5 mt-1.5">
+              <div className="w-10 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full rounded-full"
+                  style={{ background: `linear-gradient(90deg, ${lockedMetal.frame}, ${lockedMetal.frameHighlight})` }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+              <span className="text-[6px]" style={{ color: '#52525b' }}>{Math.round(progress)}%</span>
+            </div>
+          )}
+
+          {/* Rarity badge */}
+          {!isLocked && (
+            <div className="flex justify-center mt-1.5">
               <div 
                 className={cn(
-                  "absolute inset-0 rounded-md border",
-                  isLocked ? "border-zinc-700" : "border-white/10",
+                  "px-1.5 py-0.5 rounded text-[6px] md:text-[7px] font-bold uppercase tracking-wider",
+                  (rarity === "legendary" || rarity === "holographic") && "animate-pulse",
                 )}
                 style={{
-                  boxShadow: isLocked ? "none" : "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.2)",
+                  background: `linear-gradient(135deg, ${currentMetal.frameShadow}, ${currentMetal.surface})`,
+                  color: currentMetal.accent,
+                  border: `1px solid ${currentMetal.frame}40`,
+                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.1)`,
                 }}
-              />
-              
-              <h3
-                className={cn(
-                  "font-display font-bold uppercase tracking-wider text-[10px] md:text-xs text-center leading-tight relative z-10",
-                  isLocked ? "text-zinc-500" : "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]",
-                )}
-              >
-                {title}
-              </h3>
-            </div>
-            
-            <p 
-              className={cn(
-                "text-[8px] md:text-[9px] text-center mt-1.5 leading-tight line-clamp-2 px-1",
-                isLocked ? "text-zinc-600" : "text-white/60",
-              )}
-            >
-              {description}
-            </p>
-          </div>
-
-          {/* Rarity indicator / Progress bar */}
-          <div className="mt-2">
-            {!isLocked ? (
-              <div 
-                className={cn(
-                  "px-2 py-0.5 rounded-full text-[7px] md:text-[8px] font-bold uppercase tracking-[0.15em] border",
-                  rarity === "common" && "border-zinc-500/50 bg-zinc-800/80 text-zinc-400",
-                  rarity === "rare" && "border-blue-400/50 bg-blue-950/80 text-blue-300",
-                  rarity === "epic" && "border-purple-400/50 bg-purple-950/80 text-purple-300",
-                  rarity === "legendary" && "border-amber-400/50 bg-amber-950/80 text-amber-300 animate-pulse",
-                  rarity === "holographic" && "border-pink-400/50 bg-gradient-to-r from-pink-950/80 to-cyan-950/80 text-pink-300 animate-pulse",
-                )}
               >
                 {rarity}
               </div>
-            ) : (
-              <div className="flex flex-col items-center gap-1">
-                <div className="w-12 h-1 bg-zinc-800 rounded-full overflow-hidden">
-                  <motion.div 
-                    className="h-full bg-gradient-to-r from-zinc-500 to-zinc-400"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.5 }}
-                  />
-                </div>
-                <span className="text-[7px] text-zinc-600">{Math.round(progress)}%</span>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* Edge highlight for 3D depth */}
+        {/* Overall edge highlight */}
         <div 
-          className="absolute inset-0 rounded-2xl pointer-events-none"
+          className="absolute inset-0 rounded-xl pointer-events-none"
           style={{
-            boxShadow: isLocked 
-              ? "inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.5)"
-              : "inset 0 2px 0 rgba(255,255,255,0.15), inset 0 -2px 0 rgba(0,0,0,0.3)",
+            boxShadow: `
+              inset 0 1px 0 rgba(255,255,255,0.2),
+              inset 0 -1px 0 rgba(0,0,0,0.3)
+            `,
           }}
         />
       </motion.div>
