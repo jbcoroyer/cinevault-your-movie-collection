@@ -14,8 +14,10 @@ import { FloatingDock } from "@/components/FloatingDock";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { HoloBadge } from "@/components/gamification/HoloBadge";
+import { BadgeDetailDialog } from "@/components/gamification/BadgeDetailDialog";
+import { QuestDetailDialog } from "@/components/gamification/QuestDetailDialog";
 import { cn } from "@/lib/utils";
-import { type Rarity, RARITY_CONFIG } from "@/data/videoClubData";
+import { type Rarity } from "@/data/videoClubData";
 import {
   Trophy,
   Film,
@@ -36,13 +38,10 @@ import {
   Tv,
   Clock,
   Gift,
-  Lock,
-  ArrowLeft,
-  ChevronRight,
-  CheckCircle2,
-  Play,
   Map,
   Medal,
+  CheckCircle2,
+  ChevronRight,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, ElementType> = {
@@ -112,7 +111,6 @@ export default function Badges() {
   }, [user, authLoading]);
 
   const unlockedBadges = badges.filter((b) => b.isUnlocked);
-  const lockedBadges = badges.filter((b) => !b.isUnlocked);
 
   // Loading state
   if (loading || authLoading) {
@@ -309,7 +307,7 @@ export default function Badges() {
 
 // ============ QUESTS TAB ============
 
-import { getAllQuests, startQuest, QuestWithProgress } from "@/services/questService";
+import { getAllQuests, QuestWithProgress } from "@/services/questService";
 import {
   getWeeklyChallenges,
   claimChallengeReward,
@@ -323,7 +321,7 @@ function QuestsTab() {
   const [challenges, setChallenges] = useState<WeeklyChallenge[]>([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
-  const [starting, setStarting] = useState<string | null>(null);
+  const [selectedQuest, setSelectedQuest] = useState<QuestWithProgress | null>(null);
 
   useEffect(() => {
     if (user) loadData();
@@ -346,19 +344,6 @@ function QuestsTab() {
     }
   };
 
-  const handleStartQuest = async (questId: string) => {
-    if (!user) return;
-    setStarting(questId);
-    const success = await startQuest(user.id, questId);
-    if (success) {
-      toast.success("Quête commencée !");
-      loadData();
-    } else {
-      toast.error("Erreur");
-    }
-    setStarting(null);
-  };
-
   const handleClaimChallenge = async (challengeId: string) => {
     if (!user) return;
     setClaiming(challengeId);
@@ -375,11 +360,7 @@ function QuestsTab() {
   const getTimeRemaining = () => {
     const now = new Date();
     const daysUntilSunday = 7 - now.getDay();
-    const endOfWeek = new Date();
-    endOfWeek.setDate(now.getDate() + daysUntilSunday);
-    const diff = endOfWeek.getTime() - now.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    return `${days}j`;
+    return `${daysUntilSunday}j`;
   };
 
   if (loading) {
@@ -392,9 +373,8 @@ function QuestsTab() {
     );
   }
 
-  const activeQuests = quests.filter((q) => q.is_started && !q.is_completed);
+  const activeQuests = quests.filter((q) => !q.is_completed);
   const completedQuests = quests.filter((q) => q.is_completed);
-  const availableQuests = quests.filter((q) => !q.is_started && !q.is_completed);
 
   return (
     <div className="space-y-8">
@@ -502,14 +482,14 @@ function QuestsTab() {
         </section>
       )}
 
-      {/* Active Quests */}
+      {/* Active Quests - now all quests are shown, no "start" needed */}
       {activeQuests.length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-              <Play className="w-4 h-4 text-blue-500" />
+            <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <Map className="w-4 h-4 text-purple-500" />
             </div>
-            <h3 className="font-display font-bold text-white">Quêtes en cours</h3>
+            <h3 className="font-display font-bold text-white">Quêtes</h3>
             <span className="text-xs text-white/40 bg-white/10 px-2 py-0.5 rounded-full">
               {activeQuests.length}
             </span>
@@ -517,39 +497,14 @@ function QuestsTab() {
 
           <div className="space-y-3">
             {activeQuests.map((quest, i) => (
-              <QuestCard key={quest.id} quest={quest} index={i} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Available Quests */}
-      {availableQuests.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-              <Map className="w-4 h-4 text-purple-500" />
-            </div>
-            <h3 className="font-display font-bold text-white">Quêtes disponibles</h3>
-          </div>
-
-          <div className="space-y-3">
-            {availableQuests.slice(0, 5).map((quest, i) => (
-              <QuestCard
-                key={quest.id}
-                quest={quest}
-                index={i}
-                onStart={handleStartQuest}
-                starting={starting === quest.id}
+              <QuestCard 
+                key={quest.id} 
+                quest={quest} 
+                index={i} 
+                onClick={() => setSelectedQuest(quest)}
               />
             ))}
           </div>
-
-          {availableQuests.length > 5 && (
-            <p className="text-center text-white/40 text-sm mt-4">
-              +{availableQuests.length - 5} autres quêtes disponibles
-            </p>
-          )}
         </section>
       )}
 
@@ -573,16 +528,36 @@ function QuestsTab() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.05 }}
-                className="flex items-center gap-3 p-3 rounded-xl bg-green-500/5 border border-green-500/10"
+                onClick={() => setSelectedQuest(quest)}
+                className="flex items-center gap-3 p-3 rounded-xl bg-green-500/5 border border-green-500/10 cursor-pointer hover:bg-green-500/10 transition-colors"
               >
                 <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
                 <span className="text-sm text-green-400 flex-1 truncate">{quest.title}</span>
                 <span className="text-xs text-green-400/50">+{quest.xp_reward} XP</span>
+                <ChevronRight className="w-4 h-4 text-green-400/30" />
               </motion.div>
             ))}
           </div>
         </section>
       )}
+
+      {/* Quest Detail Dialog */}
+      <QuestDetailDialog
+        open={!!selectedQuest}
+        onOpenChange={(open) => !open && setSelectedQuest(null)}
+        quest={selectedQuest ? {
+          id: selectedQuest.id,
+          title: selectedQuest.title,
+          description: selectedQuest.description,
+          icon: ICON_MAP[selectedQuest.icon_name] || Target,
+          rarity: selectedQuest.rarity,
+          questType: selectedQuest.quest_type,
+          targetConfig: selectedQuest.target_config,
+          xpReward: selectedQuest.xp_reward,
+          currentProgress: selectedQuest.current_progress,
+          isCompleted: selectedQuest.is_completed,
+        } : null}
+      />
     </div>
   );
 }
@@ -597,11 +572,10 @@ const RARITY_COLORS: Record<string, string> = {
 interface QuestCardProps {
   quest: QuestWithProgress;
   index: number;
-  onStart?: (id: string) => void;
-  starting?: boolean;
+  onClick: () => void;
 }
 
-function QuestCard({ quest, index, onStart, starting }: QuestCardProps) {
+function QuestCard({ quest, index, onClick }: QuestCardProps) {
   const IconComponent = ICON_MAP[quest.icon_name] || Target;
   const rarityColor = RARITY_COLORS[quest.rarity] || RARITY_COLORS.common;
   const targetCount = quest.target_config?.count || 1;
@@ -611,12 +585,8 @@ function QuestCard({ quest, index, onStart, starting }: QuestCardProps) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={cn(
-        "p-4 rounded-xl border transition-all",
-        quest.is_started
-          ? "bg-white/5 border-white/20"
-          : "bg-white/5 border-white/10 hover:border-white/20"
-      )}
+      onClick={onClick}
+      className="p-4 rounded-xl border bg-white/5 border-white/10 hover:border-white/20 cursor-pointer transition-all group"
     >
       <div className="flex items-start gap-3">
         <div
@@ -647,22 +617,12 @@ function QuestCard({ quest, index, onStart, starting }: QuestCardProps) {
           </div>
         </div>
 
-        <div className="text-right shrink-0">
+        <div className="text-right shrink-0 flex flex-col items-end gap-2">
           <div className="flex items-center gap-1 text-amber-400">
             <Sparkles className="w-3.5 h-3.5" />
             <span className="text-sm font-bold">+{quest.xp_reward}</span>
           </div>
-          {!quest.is_started && onStart && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-2 h-7 text-xs border-white/20 hover:bg-white hover:text-black"
-              onClick={() => onStart(quest.id)}
-              disabled={starting}
-            >
-              {starting ? "..." : "Commencer"}
-            </Button>
-          )}
+          <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/40 transition-colors" />
         </div>
       </div>
     </motion.div>
@@ -673,6 +633,7 @@ function QuestCard({ quest, index, onStart, starting }: QuestCardProps) {
 
 function BadgesTab({ badges }: { badges: Badge[] }) {
   const [filter, setFilter] = useState<"all" | "unlocked" | "locked">("all");
+  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
 
   const unlockedBadges = badges.filter((b) => b.isUnlocked);
   const lockedBadges = badges.filter((b) => !b.isUnlocked);
@@ -731,6 +692,7 @@ function BadgesTab({ badges }: { badges: Badge[] }) {
                 rarity={rarity}
                 isLocked={!badge.isUnlocked}
                 progress={badge.progress || 0}
+                onClick={() => setSelectedBadge(badge)}
               />
             </motion.div>
           );
@@ -743,6 +705,23 @@ function BadgesTab({ badges }: { badges: Badge[] }) {
           <p className="text-white/50">Aucun badge dans cette catégorie</p>
         </div>
       )}
+
+      {/* Badge Detail Dialog */}
+      <BadgeDetailDialog
+        open={!!selectedBadge}
+        onOpenChange={(open) => !open && setSelectedBadge(null)}
+        badge={selectedBadge ? {
+          id: selectedBadge.id,
+          title: selectedBadge.title,
+          description: selectedBadge.description,
+          icon: ICON_MAP[selectedBadge.icon_name] || Trophy,
+          rarity: selectedBadge.rarity || "common",
+          isUnlocked: selectedBadge.isUnlocked,
+          progress: selectedBadge.progress || 0,
+          xpReward: selectedBadge.xp_reward,
+          unlockedAt: selectedBadge.unlockedAt,
+        } : null}
+      />
     </div>
   );
 }
