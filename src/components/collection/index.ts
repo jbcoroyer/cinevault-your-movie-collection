@@ -1,5 +1,5 @@
 /**
- * CineVault 2.0 - Exports des nouveaux composants
+ * CineVault 2.0 - Exports des composants collection
  */
 
 // UI Components
@@ -13,8 +13,5 @@ export { MovieCard, MovieCardSkeleton, MovieCardFeatured } from "../MovieCard";
 export { MovieSection, MovieSectionSkeleton } from "../MovieSection";
 
 // Layout Components
-export { Header } from "../Header";
-export { BottomNav } from "../BottomNav";
-
-// Dashboard Components
-export { HeroBento } from "../HeroBento";
+export { MinimalHeader } from "../MinimalHeader";
+export { FloatingDock } from "../FloatingDock";

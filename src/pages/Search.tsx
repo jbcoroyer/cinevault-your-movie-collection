@@ -37,7 +37,7 @@ import { MinimalHeader } from "@/components/MinimalHeader";
 import { FloatingDock } from "@/components/FloatingDock";
 import { MovieCard, MovieCardSkeleton, AvailabilityInfo } from "@/components/MovieCard";
 import { UserCard, UserCardSkeleton } from "@/components/UserCard";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState } from "@/components/EmptyState";
 import {
   searchMovies,
   getGenres,

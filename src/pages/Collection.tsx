@@ -22,8 +22,8 @@ import { ShelfView } from "@/components/collection/ShelfView";
 import { MinimalMovieCard, MinimalMovieCardSkeleton } from "@/components/MinimalMovieCard";
 import { CollectionFiltersDrawer } from "@/components/collection/CollectionFilters";
 import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
-import { AddPhysicalMovieDialog } from "@/components/AddPhysicalMovieDialog";
 import { ValuationDashboardPremium } from "@/components/collection/ValuationDashboardPremium";
+import { useAddMovie } from "@/contexts/AddMovieContext";
 import { WishlistView } from "@/components/collection/WishlistView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -76,8 +76,8 @@ export default function Collection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [editingMovie, setEditingMovie] = useState<PhysicalMovie | null>(null);
-  const [showAddDialog, setShowAddDialog] = useState(false);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const { openAddMovie } = useAddMovie();
 
   // Filter hooks
   const {
@@ -173,10 +173,9 @@ export default function Collection() {
     setEditingMovie(null);
   };
 
-  // Handle movie added
-  const handleMovieAdded = () => {
-    loadCollection();
-    setShowAddDialog(false);
+  // Handle movie added (called from global AddMovieSheet via context)
+  const handleOpenAddMovie = () => {
+    openAddMovie();
   };
 
   // Redirect if not logged in
@@ -244,7 +243,7 @@ export default function Collection() {
 
               {/* Add button */}
               <Button
-                onClick={() => setShowAddDialog(true)}
+                onClick={handleOpenAddMovie}
                 className="bg-white text-black hover:bg-white/90 gap-2 rounded-full"
               >
                 <Plus className="w-4 h-4" />
@@ -327,7 +326,7 @@ export default function Collection() {
                     resetFilters();
                     setSearchQuery("");
                   }}
-                  onAdd={() => setShowAddDialog(true)}
+                  onAdd={handleOpenAddMovie}
                 />
               ) : (
                 <ShelfView
@@ -353,7 +352,7 @@ export default function Collection() {
                     resetFilters();
                     setSearchQuery("");
                   }}
-                  onAdd={() => setShowAddDialog(true)}
+                  onAdd={handleOpenAddMovie}
                 />
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
@@ -428,7 +427,7 @@ export default function Collection() {
         />
       )}
 
-      <AddPhysicalMovieDialog open={showAddDialog} onOpenChange={setShowAddDialog} onMovieAdded={handleMovieAdded} />
+      
 
       <FloatingDock />
     </div>

@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { Header } from "../components/Header";
-import { BottomNav } from "../components/BottomNav";
+import { MinimalHeader } from "../components/MinimalHeader";
+import { FloatingDock } from "../components/FloatingDock";
 import { Button } from "../components/ui/button";
-import { useUserLists } from "../hooks/useUserLists";
+import { useUserLists, ListItem } from "../hooks/useUserLists";
 import { ArrowLeft, Plus, Calendar, Globe, Lock, Share2, Trash2, Layers } from "lucide-react";
 import { useState, useEffect } from "react";
 import { MovieCard } from "../components/MovieCard";
@@ -10,8 +10,6 @@ import { MovieSearchDialog } from "../components/MovieSearchDialog";
 import { getMovieDetails, Movie, MovieDetails } from "../services/tmdb";
 import { toast } from "../hooks/use-toast";
 import { cn } from "../lib/utils";
-
-import { ListItem } from "../hooks/useUserLists";
 
 export default function ListDetail() {
   const { id } = useParams<{ id: string }>();
@@ -138,11 +136,11 @@ export default function ListDetail() {
   if (listsLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <MinimalHeader />
         <div className="container mx-auto p-4 pt-8 flex justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
-        <BottomNav />
+        <FloatingDock />
       </div>
     );
   }
@@ -150,19 +148,19 @@ export default function ListDetail() {
   if (!currentList) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <MinimalHeader />
         <div className="container mx-auto p-4 pt-20 text-center">
           <h2 className="text-xl font-bold mb-4">Liste introuvable</h2>
           <Button onClick={() => navigate("/lists")}>Retour aux listes</Button>
         </div>
-        <BottomNav />
+        <FloatingDock />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <Header />
+      <MinimalHeader />
 
       {/* Hero Header de la Liste avec image de couverture */}
       <div className="relative w-full overflow-hidden">
@@ -335,7 +333,7 @@ export default function ListDetail() {
         excludeIds={listMovies.map((m) => m.id)}
       />
 
-      <BottomNav />
+      <FloatingDock />
     </div>
   );
 }
