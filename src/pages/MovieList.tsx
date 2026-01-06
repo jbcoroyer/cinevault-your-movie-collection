@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { BottomNav } from "@/components/BottomNav";
+import { FloatingDock } from "@/components/FloatingDock";
 import { MovieCard, MovieCardSkeleton } from "@/components/MovieCard";
 import { 
   Movie, 
@@ -164,7 +164,7 @@ export default function MovieList() {
         )}
       </main>
 
-      <BottomNav />
+      <FloatingDock />
     </div>
   );
 }
