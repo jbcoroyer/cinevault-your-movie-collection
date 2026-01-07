@@ -25,6 +25,7 @@ import { EditPhysicalMovieDialog } from "@/components/EditPhysicalMovieDialog";
 import { ValuationDashboardPremium } from "@/components/collection/ValuationDashboardPremium";
 import { useAddMovie } from "@/contexts/AddMovieContext";
 import { WishlistView } from "@/components/collection/WishlistView";
+import { GoalsSection } from "@/components/goals";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,16 +49,17 @@ import {
   Search,
   Grid3X3,
   BookOpen,
+  Target,
   Heart,
   Share2,
 } from "lucide-react";
 import { Movie } from "@/services/tmdb";
 
-// Types pour les onglets - ordre modifié, poster supprimé
-type CollectionTab = "shelf" | "grid" | "valuation" | "wishlist";
+// Types pour les onglets - avec objectifs
+type CollectionTab = "shelf" | "grid" | "goals" | "valuation" | "wishlist";
 
 // Ordre des onglets
-const TAB_ORDER: CollectionTab[] = ["shelf", "grid", "valuation", "wishlist"];
+const TAB_ORDER: CollectionTab[] = ["shelf", "grid", "goals", "valuation", "wishlist"];
 
 export default function Collection() {
   const { user } = useAuth();
@@ -293,11 +295,18 @@ export default function Collection() {
                 <span className="hidden sm:inline">Grille</span>
               </TabsTrigger>
               <TabsTrigger
+                value="goals"
+                className="flex-1 data-[state=active]:bg-white data-[state=active]:text-black gap-2 rounded-lg"
+              >
+                <Target className="w-4 h-4" />
+                <span className="hidden sm:inline">Objectifs</span>
+              </TabsTrigger>
+              <TabsTrigger
                 value="valuation"
                 className="flex-1 data-[state=active]:bg-white data-[state=active]:text-black gap-2 rounded-lg"
               >
                 <TrendingUp className="w-4 h-4" />
-                <span className="hidden sm:inline">Valorisation</span>
+                <span className="hidden sm:inline">Valeur</span>
               </TabsTrigger>
               <TabsTrigger
                 value="wishlist"
@@ -380,6 +389,11 @@ export default function Collection() {
                   })}
                 </div>
               )}
+            </TabsContent>
+
+            {/* Goals Tab */}
+            <TabsContent value="goals" className="mt-6">
+              <GoalsSection movies={movies} movieDetails={movieDetails} />
             </TabsContent>
 
             {/* Valuation Tab */}

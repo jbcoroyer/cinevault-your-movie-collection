@@ -152,6 +152,60 @@ export type Database = {
           },
         ]
       }
+      collection_goals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_count: number
+          deadline: string | null
+          description: string | null
+          goal_type: string
+          id: string
+          is_ai_suggested: boolean
+          is_completed: boolean
+          priority: string | null
+          target_config: Json
+          target_count: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_count?: number
+          deadline?: string | null
+          description?: string | null
+          goal_type: string
+          id?: string
+          is_ai_suggested?: boolean
+          is_completed?: boolean
+          priority?: string | null
+          target_config?: Json
+          target_count?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_count?: number
+          deadline?: string | null
+          description?: string | null
+          goal_type?: string
+          id?: string
+          is_ai_suggested?: boolean
+          is_completed?: boolean
+          priority?: string | null
+          target_config?: Json
+          target_count?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       collection_valuations: {
         Row: {
           biggest_gainers: Json | null
